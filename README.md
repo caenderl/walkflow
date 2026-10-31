@@ -104,7 +104,7 @@ Ein zweiter BLE-Weg (z. B. nativ) implementiert nur `BleAdapter`/`BleDevice` aus
 1. Repository-Einstellungen → *Pages* → Source: **GitHub Actions**.
 2. `public/impressum.html` und `public/datenschutz.html` ausfüllen. Solange dort `TODO` steht, bricht der Pages-Workflow absichtlich ab.
 3. Optional: Repository-Variable `DONATION_URL` setzen (siehe unten).
-4. Push auf `main` deployt.
+4. Deployen von Hand: *Actions → Pages → Run workflow*. Für einen Deploy bei jedem Push auf `main` in `.github/workflows/pages.yml` den auskommentierten `push`-Trigger wieder einschalten.
 
 ### Desktop-Release
 

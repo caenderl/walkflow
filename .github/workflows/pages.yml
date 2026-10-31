@@ -1,8 +1,10 @@
 name: Pages
 
 on:
-  push:
-    branches: [main]
+  # Vorerst nur von Hand (Actions → Pages → Run workflow). Wenn Impressum und
+  # Datenschutz ausgefüllt sind, für Deploy bei jedem Push wieder einkommentieren:
+  # push:
+  #   branches: [main]
   workflow_dispatch:
 
 permissions:
