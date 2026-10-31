@@ -141,8 +141,16 @@
     <div class="hint" id="rangeInfo">Geräte-Range: unbekannt</div>
     <div class="row">
       <button id="csv">CSV exportieren</button>
+      <button id="tcx">TCX exportieren</button>
       <button id="clear">Verlauf löschen</button>
     </div>
+    <label class="hint field">Sportart in der TCX-Datei (Strava, Garmin Connect &amp; Co.)
+      <select id="tcxSport">
+        <option value="Running">Laufen/Gehen (Running)</option>
+        <option value="Other">Sonstiges (Other)</option>
+      </select>
+    </label>
+    <div class="hint">TCX enthält Zeit, Distanz, Speed, kcal und Puls (falls vorhanden) ab dem ersten bis zum letzten Moment mit Bewegung. Werte kommen vom Gerät und können ungenau sein.</div>
   </div>
 
   <div class="card grid">

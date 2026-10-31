@@ -5,7 +5,7 @@ import { drawChart } from './chart';
 import { APP_NAME, APP_VERSION, BUILD_TARGET, DONATION_URL, GITHUB_REPO } from './config';
 import { desktop, setupDesktop } from './desktop';
 import { choose, confirmDialog } from './dialogs';
-import { exportFilename, toCsv, type Sample } from './export';
+import { buildTcx, exportFilename, toCsv, type Sample, type TcxSport } from './export';
 import {
   cmdPause, cmdRequestControl, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, describeMachineStatus, hex,
   OP, parseMachineStatus, parseTrainingStatus, type TreadmillData,
@@ -23,6 +23,7 @@ import { DISCLAIMER_POINTS, DISCLAIMER_TITLE, NOT_AFFILIATED, TESTED_FEATURES, T
 import { $, $button, $input, download, log, store } from './ui';
 
 const HIDDEN_MODE_KEY = 'walkflow.hiddenMode';
+const TCX_SPORT_KEY = 'walkflow.tcxSport';
 const now = () => performance.now();
 
 // ---------- State ----------
@@ -246,6 +247,14 @@ function exportCsv() {
   download(toCsv(samples), 'text/csv', exportFilename(new Date(), 'csv'));
 }
 
+function exportTcx() {
+  const sport = $<HTMLSelectElement>('tcxSport').value as TcxSport;
+  const xml = buildTcx(samples, { sport });
+  if (!xml) { log('Keine Bewegung im Verlauf, nichts zu exportieren'); return; }
+  const firstMoving = samples.find(s => (s.speed ?? 0) > 0);
+  download(xml, 'application/vnd.garmin.tcx+xml', exportFilename(new Date(firstMoving?.ts ?? Date.now()), 'tcx'));
+}
+
 // ---------- Erststart ----------
 async function ensureDisclaimer(): Promise<boolean> {
   if (isDisclaimerAccepted(store.get(DISCLAIMER_STORAGE_KEY))) return true;
@@ -465,6 +474,8 @@ function loadSettings() {
   $input('maxStep').value = String(governor.maxStep);
   const hm = store.get(HIDDEN_MODE_KEY);
   if (hm === 'warn' || hm === 'pause') $<HTMLSelectElement>('hiddenMode').value = hm;
+  const sp = store.get(TCX_SPORT_KEY);
+  if (sp === 'Running' || sp === 'Other') $<HTMLSelectElement>('tcxSport').value = sp;
 }
 
 async function limitChanged() {
@@ -564,6 +575,8 @@ $button('progStart').onclick = () => void runProgram();
 $button('progStop').onclick = () => void doStop();
 
 $button('csv').onclick = exportCsv;
+$button('tcx').onclick = exportTcx;
+$<HTMLSelectElement>('tcxSport').onchange = e => store.set(TCX_SPORT_KEY, (e.target as HTMLSelectElement).value);
 $button('clear').onclick = () => { samples.length = 0; redrawChart(); log('Verlauf gelöscht'); };
 
 $button('rawSend').onclick = () => void rawSend();
