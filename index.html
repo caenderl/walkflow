@@ -12,11 +12,15 @@
 </head>
 <body>
 <!-- Texts come from src/locales/*.ts (data-i18n*); the English text here is only the fallback. -->
-<div class="wrap">
+<div class="app">
   <header class="top">
     <img src="/favicon.svg" alt="" width="32" height="32" class="logo">
     <h1>Walkflow</h1>
-    <span class="hint" data-i18n="header.tagline">Treadmill control via Bluetooth</span>
+    <span class="hint tagline" data-i18n="header.tagline">Treadmill control via Bluetooth</span>
+    <span class="conn">
+      <span id="status" class="status" role="status">Not connected</span>
+      <button id="disconnect" class="small" disabled data-i18n="connection.disconnect">Disconnect</button>
+    </span>
     <span id="prefs" class="prefs"></span>
   </header>
 
@@ -50,133 +54,146 @@
     </div>
   </div>
 
-  <div class="card grid">
-    <div class="row">
-      <button id="connect" class="primary" data-i18n="connection.connect">Connect</button>
-      <button id="demo" data-i18n="connection.demo">Demo (no treadmill)</button>
-      <button id="disconnect" disabled data-i18n="connection.disconnect">Disconnect</button>
-    </div>
-    <div id="status" class="hint">Not connected</div>
-    <div class="hint" data-i18n="connection.vendorAppHint">Close the manufacturer’s app first, the treadmill usually allows only one connection at a time.</div>
-  </div>
+  <!-- Wide screens: main column + sticky controls on the right. Narrow screens: one column, and while connected
+       the dock (start/pause/stop, ±) is fixed to the bottom edge so Stop never scrolls out of view. -->
+  <div class="layout">
+    <div class="main-col">
+      <section class="card welcome">
+        <h2 data-i18n="connection.title">Connect your treadmill</h2>
+        <div class="row">
+          <button id="connect" class="primary" data-i18n="connection.connect">Connect</button>
+          <button id="demo" data-i18n="connection.demo">Demo (no treadmill)</button>
+        </div>
+        <p class="hint" data-i18n="connection.vendorAppHint">Close the manufacturer’s app first, the treadmill usually allows only one connection at a time.</p>
+      </section>
 
-  <div class="notice" id="safetyNotice" data-i18n-rich="notice">⚠ If the connection drops, this app cannot stop the belt. Then you can only stop it on the treadmill: stop button or safety key. Keep both within reach.</div>
+      <div class="notice" id="safetyNotice" data-i18n-rich="notice">⚠ If the connection drops, this app cannot stop the belt. Then you can only stop it on the treadmill: stop button or safety key. Keep both within reach.</div>
 
-  <div class="card stats">
-    <div class="stat"><div class="v" id="vSpeed">–</div><div class="l" data-i18n="stats.speed">km/h (actual)</div></div>
-    <div class="stat"><div class="v" id="vDist">–</div><div class="l" data-i18n="stats.dist">km</div></div>
-    <div class="stat"><div class="v" id="vTime">–</div><div class="l" data-i18n="stats.time">Time</div></div>
-    <div class="stat"><div class="v" id="vIncl">–</div><div class="l" data-i18n="stats.incline">Incline %</div></div>
-    <div class="stat"><div class="v" id="vHr">–</div><div class="l" data-i18n="stats.heartRate">Heart rate (bpm)</div></div>
-    <div class="stat"><div class="v" id="vKcal">–</div><div class="l" data-i18n="stats.kcal">kcal</div></div>
-  </div>
+      <section class="card live">
+        <div class="hero">
+          <div class="hero-speed"><div class="v" id="vSpeed">–</div><div class="l" data-i18n="stats.speed">km/h (actual)</div></div>
+          <div class="hero-stats">
+            <div class="stat"><div class="v" id="vTime">–</div><div class="l" data-i18n="stats.time">Time</div></div>
+            <div class="stat"><div class="v" id="vDist">–</div><div class="l" data-i18n="stats.dist">km</div></div>
+            <div class="stat"><div class="v" id="vKcal">–</div><div class="l" data-i18n="stats.kcal">kcal</div></div>
+            <div class="stat"><div class="v" id="vIncl">–</div><div class="l" data-i18n="stats.incline">Incline %</div></div>
+            <div class="stat"><div class="v" id="vHr">–</div><div class="l" data-i18n="stats.heartRate">Heart rate (bpm)</div></div>
+          </div>
+        </div>
+        <div>
+          <h2 data-i18n="chart.title">Speed over the last 5 minutes</h2>
+          <canvas id="chart" width="560" height="150"></canvas>
+        </div>
+      </section>
 
-  <div class="card grid">
-    <h2 data-i18n="control.title">Controls</h2>
-    <div class="row">
-      <button id="start" class="primary needs-conn" disabled data-i18n="control.start">▶ Start</button>
-      <button id="pause" class="needs-conn" disabled data-i18n="control.pause">⏸ Pause</button>
-      <button id="stop" class="stop needs-conn" disabled data-i18n="control.stop">⏹ Stop</button>
-    </div>
-    <div class="hint"><span data-i18n-rich="control.keys">Keyboard: Space or Esc = stop, ↑ / ↓ = speed ±0.5 (not in the slider or a text field).</span> <span id="globalStopHint"></span></div>
-
-    <div class="big" id="target">3.0 km/h</div>
-    <input type="range" id="slider" class="needs-conn" min="1" max="6" step="0.1" value="3" disabled aria-label="Target speed" data-i18n-aria="control.sliderLabel">
-    <div class="hint center" id="rampInfo">&nbsp;</div>
-    <div class="row">
-      <button id="minus" class="needs-conn" disabled data-i18n="control.minus">− 0.5</button>
-      <button id="plus" class="needs-conn" disabled data-i18n="control.plus">+ 0.5</button>
-    </div>
-    <div class="row">
-      <button class="preset needs-conn" data-speed="2" disabled>2</button>
-      <button class="preset needs-conn" data-speed="3" disabled>3</button>
-      <button class="preset needs-conn" data-speed="4" disabled>4</button>
-      <button class="preset needs-conn" data-speed="5" disabled>5</button>
-    </div>
-    <div class="hint" data-i18n="control.rampHint">The app approaches larger jumps in steps (see settings). Stop always takes effect immediately.</div>
-  </div>
-
-  <div class="card grid">
-    <h2 data-i18n="incline.title">Incline (experimental)</h2>
-    <div class="mid" id="inclTarget">0.0 %</div>
-    <input type="range" id="inclSlider" class="needs-conn" min="0" max="15" step="1" value="0" disabled aria-label="Target incline" data-i18n-aria="incline.sliderLabel">
-    <div class="hint" id="inclInfo"></div>
-  </div>
-
-  <div class="card grid">
-    <h2 data-i18n="program.title">Interval program</h2>
-    <textarea id="progText" spellcheck="false" aria-label="Program" data-i18n-aria="program.textLabel">2 2.0
+      <div class="more">
+        <section class="card grid">
+          <h2 data-i18n="program.title">Interval program</h2>
+          <textarea id="progText" spellcheck="false" aria-label="Program" data-i18n-aria="program.textLabel">2 2.0
 3 3.5
 1 5.0
 3 3.5
 2 2.0</textarea>
-    <div class="hint" data-i18n-rich="program.hint">One line per step: minutes km/h (decimals allowed). Speeds are capped to the limit, jumps run as a ramp. After starting, the program waits about 4.5 s for the treadmill’s countdown.</div>
-    <div class="row">
-      <button id="progStart" class="primary needs-conn" disabled data-i18n="program.start">▶ Start program</button>
-      <button id="progStop" class="needs-conn" disabled data-i18n="program.stop">Cancel &amp; stop</button>
+          <div class="hint" data-i18n-rich="program.hint">One line per step: minutes km/h (decimals allowed). Speeds are capped to the limit, jumps run as a ramp. After starting, the program waits about 4.5 s for the treadmill’s countdown.</div>
+          <div class="row">
+            <button id="progStart" class="primary needs-conn" disabled data-i18n="program.start">▶ Start program</button>
+            <button id="progStop" class="needs-conn" disabled data-i18n="program.stop">Cancel &amp; stop</button>
+          </div>
+          <div class="hint" id="progStatus">No program running</div>
+        </section>
+
+        <section class="card grid">
+          <h2 data-i18n="settings.title">Settings &amp; data</h2>
+          <label class="hint field"><span data-i18n="settings.limit">Personal speed limit (km/h)</span>
+            <input type="number" id="cap" min="1" max="20" step="0.5" value="6">
+          </label>
+          <label class="hint field"><span data-i18n="settings.maxStep">Maximum change per command (km/h)</span>
+            <input type="number" id="maxStep" min="0.1" max="1" step="0.1" value="0.5">
+          </label>
+          <label class="hint field"><span data-i18n="settings.hiddenMode">When the tab goes to the background while the belt is running</span>
+            <select id="hiddenMode">
+              <option value="warn" data-i18n="settings.hiddenWarn">only warn</option>
+              <option value="pause" data-i18n="settings.hiddenPause">pause the belt</option>
+            </select>
+          </label>
+          <div class="hint" id="rangeInfo"></div>
+          <div class="row">
+            <button id="csv" data-i18n="settings.csv">Export CSV</button>
+            <button id="tcx" data-i18n="settings.tcx">Export TCX</button>
+            <button id="clear" data-i18n="settings.clear">Clear history</button>
+          </div>
+          <label class="hint field"><span data-i18n="settings.tcxSport">Sport in the TCX file (Strava, Garmin Connect &amp; co.)</span>
+            <select id="tcxSport">
+              <option value="Running" data-i18n="settings.sportRunning">Running/walking (Running)</option>
+              <option value="Other" data-i18n="settings.sportOther">Other (Other)</option>
+            </select>
+          </label>
+          <div class="hint" data-i18n="settings.tcxHint">TCX contains time, distance, speed, kcal and heart rate (if available) from the first to the last moment with movement. Values come from the device and may be inaccurate.</div>
+        </section>
+
+        <section class="card grid wide">
+          <h2 data-i18n="console.title">Experiment console (Control Point 0x2AD9)</h2>
+          <div class="row">
+            <input type="text" id="raw" class="needs-conn grow2" placeholder="Hex bytes, e.g. 02 2C 01" disabled aria-label="Hex bytes" data-i18n-placeholder="console.placeholder" data-i18n-aria="console.inputLabel">
+            <button id="rawSend" class="needs-conn" disabled data-i18n="console.send">Send</button>
+          </div>
+          <div class="hint" data-i18n-rich="console.hint">Set Speed (02 …) is blocked if it is above the limit, larger than the maximum change, or comes too soon after the last speed command. Start (07) only after confirmation, Set Target Heart Rate (06) not at all. Everything else is sent raw.</div>
+          <div id="log" aria-live="off"></div>
+        </section>
+
+        <details class="card wide" id="info">
+          <summary data-i18n="info.summary">Info, safety &amp; privacy</summary>
+          <h3 data-i18n="info.safetyTitle">Safety and liability</h3>
+          <ul id="infoDisclaimer"></ul>
+          <h3 data-i18n="info.testedTitle">Tested with</h3>
+          <p id="infoTested"></p>
+          <p id="infoAffiliation"></p>
+          <h3 data-i18n="info.privacyTitle">Privacy</h3>
+          <p data-i18n="info.privacy">No accounts, no server, no tracking, no external scripts or fonts. Settings (limit, ramp, language, theme, accepted notice) are stored only locally in this browser. Recordings stay in memory until you export them or close the page.</p>
+          <div id="infoDesktopPrivacy" hidden>
+            <p data-i18n="info.desktopPrivacy">On startup, the desktop app asks GitHub whether there is a newer version. You can turn this off here:</p>
+            <label class="check"><input type="checkbox" id="updateCheck" checked> <span data-i18n="info.updateCheck">check for updates</span></label>
+          </div>
+          <h3 data-i18n="info.licenseTitle">License</h3>
+          <p><span data-i18n="info.license">MIT license, without warranty.</span> <span id="infoSource"></span></p>
+        </details>
+      </div>
     </div>
-    <div class="hint" id="progStatus">No program running</div>
-  </div>
 
-  <div class="card">
-    <h2 data-i18n="chart.title">Speed over the last 5 minutes</h2>
-    <canvas id="chart" width="560" height="150"></canvas>
-  </div>
-
-  <div class="card grid">
-    <h2 data-i18n="settings.title">Settings &amp; data</h2>
-    <label class="hint field"><span data-i18n="settings.limit">Personal speed limit (km/h)</span>
-      <input type="number" id="cap" min="1" max="20" step="0.5" value="6">
-    </label>
-    <label class="hint field"><span data-i18n="settings.maxStep">Maximum change per command (km/h)</span>
-      <input type="number" id="maxStep" min="0.1" max="1" step="0.1" value="0.5">
-    </label>
-    <label class="hint field"><span data-i18n="settings.hiddenMode">When the tab goes to the background while the belt is running</span>
-      <select id="hiddenMode">
-        <option value="warn" data-i18n="settings.hiddenWarn">only warn</option>
-        <option value="pause" data-i18n="settings.hiddenPause">pause the belt</option>
-      </select>
-    </label>
-    <div class="hint" id="rangeInfo"></div>
-    <div class="row">
-      <button id="csv" data-i18n="settings.csv">Export CSV</button>
-      <button id="tcx" data-i18n="settings.tcx">Export TCX</button>
-      <button id="clear" data-i18n="settings.clear">Clear history</button>
+    <div class="side">
+      <section class="card control">
+        <h2 data-i18n="control.title">Controls</h2>
+        <div class="dock">
+          <div class="adjust">
+            <button id="minus" class="needs-conn" disabled data-i18n="control.minus">− 0.5</button>
+            <div class="target"><div class="l" data-i18n="control.target">Target</div><div id="target">3.0 km/h</div></div>
+            <button id="plus" class="needs-conn" disabled data-i18n="control.plus">+ 0.5</button>
+          </div>
+          <div class="row actions">
+            <button id="start" class="primary needs-conn" disabled data-i18n="control.start">▶ Start</button>
+            <button id="pause" class="needs-conn" disabled data-i18n="control.pause">⏸ Pause</button>
+            <button id="stop" class="stop needs-conn" disabled data-i18n="control.stop">⏹ Stop</button>
+          </div>
+        </div>
+        <input type="range" id="slider" class="needs-conn" min="1" max="6" step="0.1" value="3" disabled aria-label="Target speed" data-i18n-aria="control.sliderLabel">
+        <div class="hint center" id="rampInfo">&nbsp;</div>
+        <div class="row">
+          <button class="preset needs-conn" data-speed="2" disabled>2</button>
+          <button class="preset needs-conn" data-speed="3" disabled>3</button>
+          <button class="preset needs-conn" data-speed="4" disabled>4</button>
+          <button class="preset needs-conn" data-speed="5" disabled>5</button>
+        </div>
+        <div class="hint"><span data-i18n-rich="control.keys">Keyboard: Space or Esc = stop, ↑ / ↓ = speed ±0.5 (not in the slider or a text field).</span> <span id="globalStopHint"></span></div>
+        <div class="hint" data-i18n="control.rampHint">The app approaches larger jumps in steps (see settings). Stop always takes effect immediately.</div>
+      </section>
+      <section class="card grid incline">
+        <h2 data-i18n="incline.title">Incline (experimental)</h2>
+        <div class="mid" id="inclTarget">0.0 %</div>
+        <input type="range" id="inclSlider" class="needs-conn" min="0" max="15" step="1" value="0" disabled aria-label="Target incline" data-i18n-aria="incline.sliderLabel">
+        <div class="hint" id="inclInfo"></div>
+      </section>
     </div>
-    <label class="hint field"><span data-i18n="settings.tcxSport">Sport in the TCX file (Strava, Garmin Connect &amp; co.)</span>
-      <select id="tcxSport">
-        <option value="Running" data-i18n="settings.sportRunning">Running/walking (Running)</option>
-        <option value="Other" data-i18n="settings.sportOther">Other (Other)</option>
-      </select>
-    </label>
-    <div class="hint" data-i18n="settings.tcxHint">TCX contains time, distance, speed, kcal and heart rate (if available) from the first to the last moment with movement. Values come from the device and may be inaccurate.</div>
   </div>
-
-  <div class="card grid">
-    <h2 data-i18n="console.title">Experiment console (Control Point 0x2AD9)</h2>
-    <input type="text" id="raw" class="needs-conn" placeholder="Hex bytes, e.g. 02 2C 01" disabled aria-label="Hex bytes" data-i18n-placeholder="console.placeholder" data-i18n-aria="console.inputLabel">
-    <button id="rawSend" class="needs-conn" disabled data-i18n="console.send">Send</button>
-    <div class="hint" data-i18n-rich="console.hint">Set Speed (02 …) is blocked if it is above the limit, larger than the maximum change, or comes too soon after the last speed command. Start (07) only after confirmation, Set Target Heart Rate (06) not at all. Everything else is sent raw.</div>
-  </div>
-
-  <div class="card"><div id="log" aria-live="off"></div></div>
-
-  <details class="card" id="info">
-    <summary data-i18n="info.summary">Info, safety &amp; privacy</summary>
-    <h3 data-i18n="info.safetyTitle">Safety and liability</h3>
-    <ul id="infoDisclaimer"></ul>
-    <h3 data-i18n="info.testedTitle">Tested with</h3>
-    <p id="infoTested"></p>
-    <p id="infoAffiliation"></p>
-    <h3 data-i18n="info.privacyTitle">Privacy</h3>
-    <p data-i18n="info.privacy">No accounts, no server, no tracking, no external scripts or fonts. Settings (limit, ramp, language, theme, accepted notice) are stored only locally in this browser. Recordings stay in memory until you export them or close the page.</p>
-    <div id="infoDesktopPrivacy" hidden>
-      <p data-i18n="info.desktopPrivacy">On startup, the desktop app asks GitHub whether there is a newer version. You can turn this off here:</p>
-      <label class="check"><input type="checkbox" id="updateCheck" checked> <span data-i18n="info.updateCheck">check for updates</span></label>
-    </div>
-    <h3 data-i18n="info.licenseTitle">License</h3>
-    <p><span data-i18n="info.license">MIT license, without warranty.</span> <span id="infoSource"></span></p>
-  </details>
 
   <footer class="hint" id="footer">
     <span id="footerVersion"></span>

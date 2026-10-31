@@ -2,7 +2,7 @@
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import {
-  app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeTheme, powerSaveBlocker, protocol, session, shell,
+  app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeTheme, powerSaveBlocker, protocol, screen, session, shell,
   type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions,
 } from 'electron';
 import { detectLanguage, isLang, setLanguage, t } from '../src/i18n';
@@ -112,9 +112,11 @@ function registerStopShortcut() {
 }
 
 function createWindow() {
+  // Wide enough for the two-column layout (from 1024 px), but never larger than the screen
+  const area = screen.getPrimaryDisplay().workAreaSize;
   win = new BrowserWindow({
-    width: 720,
-    height: 1000,
+    width: Math.min(1360, area.width),
+    height: Math.min(900, area.height),
     minWidth: 360,
     backgroundColor: background(),
     title: 'Walkflow',

@@ -17,7 +17,12 @@ export interface ChartOptions {
 export function drawChart(c: HTMLCanvasElement, samples: readonly Sample[], opts: ChartOptions) {
   const g = c.getContext('2d');
   if (!g) return;
-  const W = c.width, H = c.height;
+  // Draw at the size the CSS gives the canvas, in device pixels, so it stays sharp at any width
+  const dpr = window.devicePixelRatio || 1;
+  const W = c.clientWidth || c.width, H = c.clientHeight || c.height;
+  const bw = Math.round(W * dpr), bh = Math.round(H * dpr);
+  if (c.width !== bw || c.height !== bh) { c.width = bw; c.height = bh; }
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
   const L = 30, B = 16, T = 8, R = 6;
   g.clearRect(0, 0, W, H);
   const { now } = opts, win = CHART_WINDOW_MS;

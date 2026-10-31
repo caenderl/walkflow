@@ -42,6 +42,7 @@ export const en = {
     simKey: 'Pull safety key',
   },
   connection: {
+    title: 'Connect your treadmill',
     connect: 'Connect',
     demo: 'Demo (no treadmill)',
     disconnect: 'Disconnect',
@@ -70,6 +71,7 @@ export const en = {
     pause: '⏸ Pause',
     stop: '⏹ Stop',
     keys: 'Keyboard: **Space** or **Esc** = stop, **↑ / ↓** = speed ±0.5 (not in the slider or a text field).',
+    target: 'Target',
     sliderLabel: 'Target speed',
     minus: '− 0.5',
     plus: '+ 0.5',

@@ -41,6 +41,7 @@ export const fr: Messages = {
     simKey: 'Retirer la clé de sécurité',
   },
   connection: {
+    title: 'Connecter le tapis de course',
     connect: 'Connecter',
     demo: 'Démo (sans tapis)',
     disconnect: 'Déconnecter',
@@ -69,6 +70,7 @@ export const fr: Messages = {
     pause: '⏸ Pause',
     stop: '⏹ Arrêt',
     keys: 'Clavier : **Espace** ou **Échap** = arrêt, **↑ / ↓** = vitesse ±0,5 (pas dans le curseur ni dans un champ de texte).',
+    target: 'Cible',
     sliderLabel: 'Vitesse cible',
     minus: '− 0,5',
     plus: '+ 0,5',

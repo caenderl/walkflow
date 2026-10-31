@@ -41,6 +41,7 @@ export const de: Messages = {
     simKey: 'Sicherheitsschlüssel ziehen',
   },
   connection: {
+    title: 'Laufband verbinden',
     connect: 'Verbinden',
     demo: 'Demo (ohne Laufband)',
     disconnect: 'Trennen',
@@ -69,6 +70,7 @@ export const de: Messages = {
     pause: '⏸ Pause',
     stop: '⏹ Stop',
     keys: 'Tastatur: **Leertaste** oder **Esc** = Stop, **↑ / ↓** = Speed ±0,5 (nicht im Slider/Textfeld).',
+    target: 'Ziel',
     sliderLabel: 'Zielgeschwindigkeit',
     minus: '− 0,5',
     plus: '+ 0,5',

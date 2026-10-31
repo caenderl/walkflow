@@ -414,6 +414,8 @@ function waitUntil(cond: () => boolean, timeoutMs: number): Promise<boolean> {
 }
 
 function setUi(isConnected: boolean) {
+  // Layout switch (style.css): connect buttons vs. live view, fixed control dock on narrow screens
+  document.documentElement.classList.toggle('connected', isConnected);
   $button('connect').disabled = isConnected || !$('unsupported').hidden;
   $button('demo').disabled = isConnected;
   $button('disconnect').disabled = !isConnected;
@@ -650,6 +652,7 @@ renderIncline();
 applyLimits();
 redrawChart();
 setInterval(redrawChart, 1000);
+new ResizeObserver(redrawChart).observe($('chart'));
 
 const env = { ua: navigator.userAgent, hasApi: !!navigator.bluetooth, secure: isSecureContext, touchPoints: navigator.maxTouchPoints };
 if (bluetoothSupportHint(env)) {
