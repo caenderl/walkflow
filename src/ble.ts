@@ -37,19 +37,48 @@ export interface BleAdapter {
 
 // ---------- Serielle Queue ----------
 
+/** Ein wartender Task wurde von einem dringenden Task verdrängt. */
+export class DroppedError extends Error {
+  constructor() { super('verworfen'); this.name = 'DroppedError'; }
+}
+
+interface Job {
+  task: () => Promise<unknown>;
+  resolve: (v: unknown) => void;
+  reject: (e: unknown) => void;
+}
+
 /** Führt Aufgaben strikt nacheinander aus. Ein Fehler bricht die Kette nicht ab. */
 export class SerialQueue {
-  private tail: Promise<unknown> = Promise.resolve();
+  private pending: Job[] = [];
+  private running = false;
 
   run<T>(task: () => Promise<T>): Promise<T> {
-    const p = this.tail.then(task);
-    this.tail = p.catch(() => undefined);
-    return p;
+    return new Promise<T>((resolve, reject) => {
+      this.pending.push({ task, resolve: resolve as (v: unknown) => void, reject });
+      void this.drain();
+    });
   }
 
-  /** Resolved, sobald alles bisher Eingereihte durch ist. */
-  idle(): Promise<void> {
-    return this.tail.then(() => undefined);
+  /**
+   * Verwirft alle noch nicht gestarteten Tasks (DroppedError) und reiht `task` als nächsten ein.
+   * Ein gerade laufender Task wird abgewartet, es läuft nie etwas parallel.
+   */
+  runUrgent<T>(task: () => Promise<T>): Promise<T> {
+    for (const job of this.pending.splice(0)) job.reject(new DroppedError());
+    return this.run(task);
+  }
+
+  private async drain() {
+    if (this.running) return;
+    this.running = true;
+    try {
+      for (let job = this.pending.shift(); job; job = this.pending.shift()) {
+        try { job.resolve(await job.task()); } catch (e) { job.reject(e); }
+      }
+    } finally {
+      this.running = false;
+    }
   }
 }
 
@@ -261,18 +290,21 @@ export class TreadmillClient {
 
   /**
    * Schreibt auf den Control Point. Alle Writes laufen seriell durch eine Queue, mit Response.
-   * Resolved mit false bei Fehler (Fehler wird geloggt), wirft nie.
+   * `urgent` (Stop/Pause): wartende Writes werden verworfen, der laufende wird abgewartet.
+   * Resolved mit false bei Fehler oder Verwerfen (wird geloggt), wirft nie.
    */
-  send(bytes: Uint8Array): Promise<boolean> {
-    return this.queue.run(async () => {
+  send(bytes: Uint8Array, opts: { urgent?: boolean } = {}): Promise<boolean> {
+    const task = async () => {
       this.ev.log(`→ ${hex(bytes)}`);
       const d = this.device;
       if (!d?.connected) throw new Error('nicht verbunden');
       await d.write(FTMS_SERVICE, CH.control, bytes);
-    }).then(
+    };
+    return (opts.urgent ? this.queue.runUrgent(task) : this.queue.run(task)).then(
       () => true,
       (e: unknown) => {
-        this.ev.log(`❌ Schreibfehler: ${e instanceof Error ? e.message : String(e)}`);
+        if (e instanceof DroppedError) this.ev.log(`verworfen: ${hex(bytes)} (Stop/Pause hat Vorrang)`);
+        else this.ev.log(`❌ Schreibfehler: ${e instanceof Error ? e.message : String(e)}`);
         return false;
       },
     );

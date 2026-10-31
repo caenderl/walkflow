@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SerialQueue, TreadmillClient, type BleAdapter, type BleDevice, type TreadmillEvents, type Uuid } from './ble';
+import { DroppedError, SerialQueue, TreadmillClient, type BleAdapter, type BleDevice, type TreadmillEvents, type Uuid } from './ble';
 import { dataView, hex } from './ftms';
 
 function deferred() {
@@ -144,5 +144,42 @@ describe('SerialQueue', () => {
     await expect(q.run(async () => 1)).resolves.toBe(1);
     await expect(q.run(async () => { throw new Error('x'); })).rejects.toThrow('x');
     await expect(q.run(async () => 2)).resolves.toBe(2);
+  });
+});
+
+describe('Vorrang für Stop/Pause', () => {
+  it('SerialQueue.runUrgent verwirft Wartendes, wartet aber den laufenden Task ab', async () => {
+    const q = new SerialQueue();
+    const order: string[] = [];
+    const gate = deferred();
+    const a = q.run(async () => { order.push('a start'); await gate.promise; order.push('a end'); });
+    const b = q.run(async () => { order.push('b'); });
+    const c = q.run(async () => { order.push('c'); });
+    await Promise.resolve();
+    const u = q.runUrgent(async () => { order.push('urgent'); });
+    await expect(b).rejects.toBeInstanceOf(DroppedError);
+    await expect(c).rejects.toBeInstanceOf(DroppedError);
+    expect(order).toEqual(['a start']);
+    gate.resolve();
+    await a; await u;
+    expect(order).toEqual(['a start', 'a end', 'urgent']);
+  });
+
+  it('TreadmillClient: dringender Write verwirft wartende Writes und loggt das', async () => {
+    const { dev, client, logs } = setup();
+    dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
+    await client.connect();
+    const gate = deferred();
+    dev.writeImpl = d => (d[0] === 0x02 ? gate.promise : Promise.resolve());
+    const s1 = client.send(new Uint8Array([0x02, 0x2c, 0x01]));
+    const s2 = client.send(new Uint8Array([0x02, 0x5e, 0x01]));
+    await Promise.resolve();
+    const stop = client.send(new Uint8Array([0x08, 0x01]), { urgent: true });
+    await expect(s2).resolves.toBe(false);
+    expect(logs).toContain('verworfen: 02 5e 01 (Stop/Pause hat Vorrang)');
+    gate.resolve();
+    await expect(s1).resolves.toBe(true);
+    await expect(stop).resolves.toBe(true);
+    expect(dev.writes).toEqual(['start 02 2c 01', 'end 02 2c 01', 'start 08 01', 'end 08 01']);
   });
 });

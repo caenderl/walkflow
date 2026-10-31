@@ -236,3 +236,77 @@ export function parseControlPointResponse(dv: DataView): ControlPointResponse | 
 export function describeControlPointResponse(r: ControlPointResponse): string {
   return `${OP_NAMES[r.requestOp] ?? '0x' + r.requestOp.toString(16)}: ${RESULTS[r.result] ?? r.result}`;
 }
+
+// ---------- Machine Status (0x2ADA) ----------
+
+export type MachineEvent =
+  | { kind: 'reset' }
+  | { kind: 'stopped' }
+  | { kind: 'paused' }
+  | { kind: 'safety-key' }
+  | { kind: 'started' }
+  | { kind: 'target-speed'; kmh: number }
+  | { kind: 'target-incline'; pct: number }
+  | { kind: 'control-lost' }
+  | { kind: 'other'; op: number };
+
+export function parseMachineStatus(dv: DataView): MachineEvent | null {
+  if (dv.byteLength < 1) return null;
+  const op = dv.getUint8(0);
+  switch (op) {
+    case 0x01: return { kind: 'reset' };
+    // Parameter 0x02 = Pause, alles andere (auch fehlend) im Zweifel als Stop werten
+    case 0x02: return dv.byteLength >= 2 && dv.getUint8(1) === 0x02 ? { kind: 'paused' } : { kind: 'stopped' };
+    case 0x03: return { kind: 'safety-key' };
+    case 0x04: return { kind: 'started' };
+    case 0x05: return dv.byteLength >= 3 ? { kind: 'target-speed', kmh: dv.getUint16(1, true) / 100 } : { kind: 'other', op };
+    case 0x06: return dv.byteLength >= 3 ? { kind: 'target-incline', pct: dv.getInt16(1, true) / 10 } : { kind: 'other', op };
+    case 0xff: return { kind: 'control-lost' };
+    default: return { kind: 'other', op };
+  }
+}
+
+export function describeMachineStatus(e: MachineEvent): string {
+  switch (e.kind) {
+    case 'reset': return 'Band zurückgesetzt';
+    case 'stopped': return 'Band gestoppt (am Gerät oder per App)';
+    case 'paused': return 'Band pausiert (am Gerät oder per App)';
+    case 'safety-key': return 'Band per Sicherheitsschlüssel gestoppt';
+    case 'started': return 'Band gestartet';
+    case 'target-speed': return `Ziel-Speed am Band: ${e.kmh} km/h`;
+    case 'target-incline': return `Ziel-Steigung am Band: ${e.pct} %`;
+    case 'control-lost': return 'Steuerrecht verloren (Request Control nötig)';
+    case 'other': return `Machine Status 0x${e.op.toString(16).padStart(2, '0')}`;
+  }
+}
+
+// ---------- Training Status (0x2AD3) ----------
+
+const TRAINING_STATUS: Record<number, string> = {
+  0x00: 'Other', 0x01: 'Idle', 0x02: 'Warming Up', 0x03: 'Low Intensity Interval', 0x04: 'High Intensity Interval',
+  0x05: 'Recovery Interval', 0x06: 'Isometric', 0x07: 'Heart Rate Control', 0x08: 'Fitness Test',
+  0x09: 'Speed Outside Control Region (Low)', 0x0a: 'Speed Outside Control Region (High)', 0x0b: 'Cool Down',
+  0x0c: 'Watt Control', 0x0d: 'Manual Mode', 0x0e: 'Pre-Workout', 0x0f: 'Post-Workout',
+};
+
+export function parseTrainingStatus(dv: DataView): { status: number; text: string } | null {
+  if (dv.byteLength < 2) return null;
+  const status = dv.getUint8(1);
+  return { status, text: TRAINING_STATUS[status] ?? `0x${status.toString(16)}` };
+}
+
+// ---------- Treadmill Data bauen (Simulator, Tests) ----------
+
+export function buildTreadmillData(d: TreadmillData): Uint8Array {
+  const out: number[] = [];
+  const u16 = (v: number) => { const x = Math.round(v) & 0xffff; out.push(x & 0xff, x >> 8); };
+  let flags = 0;
+  if (d.speed === undefined) flags |= 0x0001; else u16(d.speed * 100);
+  if (d.avgSpeed !== undefined) { flags |= 0x0002; u16(d.avgSpeed * 100); }
+  if (d.dist !== undefined) { flags |= 0x0004; const v = Math.round(d.dist); out.push(v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff); }
+  if (d.incl !== undefined) { flags |= 0x0008; u16(d.incl * 10); u16((d.rampAngle ?? 0) * 10); }
+  if (d.kcal !== undefined) { flags |= 0x0080; u16(d.kcal); u16(d.kcalPerHour ?? 0xffff); out.push(d.kcalPerMin ?? 0xff); }
+  if (d.hr !== undefined) { flags |= 0x0100; out.push(d.hr & 0xff); }
+  if (d.time !== undefined) { flags |= 0x0400; u16(d.time); }
+  return new Uint8Array([flags & 0xff, flags >> 8, ...out]);
+}

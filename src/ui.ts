@@ -22,3 +22,13 @@ export function download(content: string, type: string, filename: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
+
+/** localStorage, das im privaten Modus oder bei blockiertem Speicher nicht wirft. */
+export const store = {
+  get(key: string): string | null {
+    try { return localStorage.getItem(key); } catch { return null; }
+  },
+  set(key: string, value: string) {
+    try { localStorage.setItem(key, value); } catch { /* privater Modus */ }
+  },
+};

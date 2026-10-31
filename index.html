@@ -3,16 +3,60 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Laufband Control</title>
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Open-Source-Steuerung für FTMS-Laufbänder per Web Bluetooth">
+<title>Walkflow</title>
 </head>
 <body>
 <div class="wrap">
-  <h1>🏃 Laufband Control</h1>
+  <header class="top">
+    <h1>Walkflow</h1>
+    <span class="hint">Laufband-Steuerung per Bluetooth</span>
+  </header>
 
-  <div class="card row">
-    <button id="connect" class="primary">Verbinden</button>
-    <button id="disconnect" disabled>Trennen</button>
-    <span id="status" class="hint grow2">Nicht verbunden</span>
+  <div id="updateBanner" class="banner info" hidden>
+    <span id="updateText"></span>
+    <button id="updateAction" type="button"></button>
+  </div>
+
+  <div id="alarm" class="banner alarm" role="alert" hidden>
+    <strong>Verbindung verloren. Das Band läuft möglicherweise weiter!</strong>
+    <p>Die App kann es jetzt nicht mehr stoppen. Stoppe es am Gerät: Stopp-Taste drücken oder Sicherheitsschlüssel ziehen.</p>
+    <button id="alarmAck" type="button">Verstanden</button>
+  </div>
+
+  <div id="unsupported" class="banner warn" hidden>
+    <strong id="unsupportedTitle"></strong>
+    <p id="unsupportedText"></p>
+    <p>Ohne Laufband oder ohne Web Bluetooth kannst du die <b>Demo</b> ausprobieren.</p>
+  </div>
+
+  <div id="hiddenBanner" class="banner warn" hidden>
+    <span id="hiddenText"></span>
+    <button id="hiddenAck" type="button">OK</button>
+  </div>
+
+  <div id="demoBanner" class="banner demo" hidden>
+    <strong>Demo:</strong> simuliertes Laufband, keine echte Hardware, alle Werte simuliert.
+    <div class="row">
+      <button id="simLoss" type="button">Verbindungsabbruch simulieren</button>
+      <button id="simKey" type="button">Sicherheitsschlüssel ziehen</button>
+    </div>
+  </div>
+
+  <div class="card grid">
+    <div class="row">
+      <button id="connect" class="primary">Verbinden</button>
+      <button id="demo">Demo (ohne Laufband)</button>
+      <button id="disconnect" disabled>Trennen</button>
+    </div>
+    <div id="status" class="hint">Nicht verbunden</div>
+    <div class="hint">Hersteller-App vorher schließen, das Band erlaubt meist nur eine Verbindung gleichzeitig.</div>
+  </div>
+
+  <div class="notice" id="safetyNotice">
+    <strong>⚠ Bei Verbindungsabbruch kann diese App das Band nicht stoppen.</strong>
+    Stoppen geht dann nur am Gerät: Stopp-Taste oder Sicherheitsschlüssel. Halte beides in Reichweite.
   </div>
 
   <div class="card stats">
@@ -31,10 +75,11 @@
       <button id="pause" class="needs-conn" disabled>⏸ Pause</button>
       <button id="stop" class="stop needs-conn" disabled>⏹ Stop</button>
     </div>
-    <div class="hint">Tastatur: <b>Leertaste</b> oder <b>Esc</b> = Stop, <b>↑ / ↓</b> = Speed ±0,5 (nicht im Slider/Textfeld).</div>
+    <div class="hint">Tastatur: <b>Leertaste</b> oder <b>Esc</b> = Stop, <b>↑ / ↓</b> = Speed ±0,5 (nicht im Slider/Textfeld). <span id="globalStopHint"></span></div>
 
     <div class="big" id="target">3.0 km/h</div>
-    <input type="range" id="slider" class="needs-conn" min="1" max="6" step="0.1" value="3" disabled>
+    <input type="range" id="slider" class="needs-conn" min="1" max="6" step="0.1" value="3" disabled aria-label="Zielgeschwindigkeit">
+    <div class="hint center" id="rampInfo">&nbsp;</div>
     <div class="row">
       <button id="minus" class="needs-conn" disabled>− 0,5</button>
       <button id="plus" class="needs-conn" disabled>+ 0,5</button>
@@ -45,23 +90,24 @@
       <button class="preset needs-conn" data-speed="4" disabled>4</button>
       <button class="preset needs-conn" data-speed="5" disabled>5</button>
     </div>
+    <div class="hint">Größere Sprünge fährt die App in Stufen an (siehe Einstellungen). Stop wirkt immer sofort.</div>
   </div>
 
   <div class="card grid">
     <h2>Steigung (Test)</h2>
     <div class="mid" id="inclTarget">0.0 %</div>
-    <input type="range" id="inclSlider" class="needs-conn" min="0" max="15" step="1" value="0" disabled>
+    <input type="range" id="inclSlider" class="needs-conn" min="0" max="15" step="1" value="0" disabled aria-label="Zielsteigung">
     <div class="hint" id="inclInfo">Range: unbekannt. Ob das Band die Steigung per FTMS annimmt, sagt dir das Log (Set Inclination: OK oder nicht unterstützt).</div>
   </div>
 
   <div class="card grid">
     <h2>Intervall-Programm</h2>
-    <textarea id="progText" spellcheck="false">2 2.0
+    <textarea id="progText" spellcheck="false" aria-label="Programm">2 2.0
 3 3.5
 1 5.0
 3 3.5
 2 2.0</textarea>
-    <div class="hint">Pro Zeile: <b>Minuten km/h</b> (Dezimalzahlen gehen). Speed wird aufs Limit gekappt. Nach dem Start wartet das Programm ca. 4,5 s wegen des Band-Countdowns.</div>
+    <div class="hint">Pro Zeile: <b>Minuten km/h</b> (Dezimalzahlen gehen). Speed wird aufs Limit gekappt, Sprünge laufen als Rampe. Nach dem Start wartet das Programm ca. 4,5 s wegen des Band-Countdowns.</div>
     <div class="row">
       <button id="progStart" class="primary needs-conn" disabled>▶ Programm starten</button>
       <button id="progStop" class="needs-conn" disabled>Abbrechen &amp; Stop</button>
@@ -75,9 +121,18 @@
   </div>
 
   <div class="card grid">
-    <h2>Limit &amp; Daten</h2>
-    <label class="hint">Eigenes Speed-Limit (km/h):
+    <h2>Einstellungen &amp; Daten</h2>
+    <label class="hint field">Eigenes Speed-Limit (km/h)
       <input type="number" id="cap" min="1" max="20" step="0.5" value="6">
+    </label>
+    <label class="hint field">Maximale Änderung pro Befehl (km/h)
+      <input type="number" id="maxStep" min="0.1" max="1" step="0.1" value="0.5">
+    </label>
+    <label class="hint field">Wenn der Tab in den Hintergrund geht, während das Band läuft
+      <select id="hiddenMode">
+        <option value="warn">nur warnen</option>
+        <option value="pause">Band pausieren</option>
+      </select>
     </label>
     <div class="hint" id="rangeInfo">Geräte-Range: unbekannt</div>
     <div class="row">
@@ -88,17 +143,33 @@
 
   <div class="card grid">
     <h2>Experimentier-Konsole (Control Point 0x2AD9)</h2>
-    <input type="text" id="raw" class="needs-conn" placeholder="Hex-Bytes, z. B. 02 2C 01" disabled>
+    <input type="text" id="raw" class="needs-conn" placeholder="Hex-Bytes, z. B. 02 2C 01" disabled aria-label="Hex-Bytes">
     <button id="rawSend" class="needs-conn" disabled>Senden</button>
-    <div class="hint">Set-Speed-Befehle (<code>02 …</code>) über dem Limit werden hier trotzdem blockiert. Alles andere geht roh raus.</div>
+    <div class="hint">Set Speed (<code>02 …</code>) wird blockiert, wenn er über dem Limit liegt, größer als die maximale Änderung ist oder zu kurz nach dem letzten Speed-Befehl kommt. Start (<code>07</code>) nur mit Bestätigung, Set Target Heart Rate (<code>06</code>) gar nicht. Alles andere geht roh raus.</div>
   </div>
 
-  <div class="card"><div id="log"></div></div>
+  <div class="card"><div id="log" aria-live="off"></div></div>
 
-  <div class="hint">
-    Sportstech Live App vorher schließen (meist nur eine Verbindung gleichzeitig).
-    Beim Start stehst du auf den Seitenflächen, nicht auf dem Band. 😉
-  </div>
+  <details class="card" id="info">
+    <summary>Info, Sicherheit &amp; Datenschutz</summary>
+    <h3 id="infoDisclaimerTitle"></h3>
+    <ul id="infoDisclaimer"></ul>
+    <h3>Getestet mit</h3>
+    <p id="infoTested"></p>
+    <p id="infoAffiliation"></p>
+    <h3>Datenschutz</h3>
+    <p>Keine Konten, kein Server, kein Tracking, keine externen Skripte oder Schriften. Einstellungen (Limit, Rampe, bestätigter Hinweis) liegen nur lokal in diesem Browser. Aufzeichnungen bleiben im Speicher, bis du sie exportierst oder die Seite schließt.</p>
+    <p id="infoDesktopPrivacy" hidden>Die Desktop-App fragt beim Start bei GitHub nach, ob es eine neuere Version gibt. Das kannst du hier abschalten:
+      <label class="check"><input type="checkbox" id="updateCheck" checked> nach Updates suchen</label>
+    </p>
+    <h3>Lizenz</h3>
+    <p>MIT-Lizenz, ohne Gewährleistung. <span id="infoSource"></span></p>
+  </details>
+
+  <footer class="hint" id="footer">
+    <span id="footerVersion"></span>
+    <span id="footerLinks"></span>
+  </footer>
 </div>
 <script type="module" src="/src/main.ts"></script>
 </body>

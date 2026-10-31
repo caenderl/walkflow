@@ -28,3 +28,38 @@ textarea { font-family: ui-monospace, monospace; font-size:13px; height:100px; r
 #log { font:12px ui-monospace, monospace; color:var(--mute); height:200px; overflow:auto; white-space:pre-wrap; }
 .hint { color:var(--mute); font-size:.85rem; }
 canvas { width:100%; height:auto; display:block; }
+[hidden] { display:none !important; }
+.top { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.center { text-align:center; }
+h3 { margin:14px 0 6px; font-size:.95rem; }
+.banner { border-radius:14px; padding:14px 18px; display:grid; gap:8px; }
+.banner p { margin:0; }
+.banner.alarm { background:#7f1d1d; color:#fff; border:2px solid var(--warn); }
+.banner.alarm button { background:#fff; color:#7f1d1d; font-weight:700; justify-self:start; }
+.banner.warn { background:#3b2f12; border:1px solid #a16207; }
+.banner.info { background:#14304f; border:1px solid var(--blue); grid-template-columns:1fr auto; align-items:center; }
+.banner.demo { background:#1e293b; border:1px dashed var(--blue); }
+.notice { border-left:4px solid #f59e0b; background:#2a2414; padding:10px 14px; border-radius:8px; font-size:.9rem; }
+.field { display:grid; gap:6px; }
+select { font:inherit; padding:8px; border-radius:8px; border:1px solid #333; background:#12141a; color:var(--fg); }
+details summary { cursor:pointer; font-weight:600; color:var(--mute); }
+details[open] summary { margin-bottom:6px; }
+details ul { padding-left:20px; margin:6px 0; }
+details p { margin:6px 0; }
+.check { display:flex; gap:8px; align-items:center; margin:12px 0; }
+.check input { width:auto; }
+footer { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; padding:0 4px 24px; }
+footer a, details a { color:var(--blue); }
+.dlg { background:var(--card); color:var(--fg); border:1px solid #333; border-radius:14px; padding:20px; max-width:min(520px, calc(100vw - 32px)); }
+.dlg::backdrop { background:rgba(0,0,0,.6); }
+.dlg h2 { color:var(--fg); font-size:1.15rem; }
+.dlg ul { padding-left:20px; }
+.dlg li { margin:6px 0; }
+.dlg .row { margin-top:12px; }
+.chooser { list-style:none; padding:0; margin:8px 0; display:grid; gap:6px; max-height:50vh; overflow:auto; }
+.chooser button { width:100%; text-align:left; }
+@media (max-width: 480px) {
+  body { padding:16px; }
+  .stats { grid-template-columns:repeat(2,1fr); }
+  .big { font-size:1.9rem; }
+}

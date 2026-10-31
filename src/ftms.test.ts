@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cmdPause, cmdRequestControl, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, dataView,
+  buildTreadmillData, cmdPause, cmdRequestControl, describeMachineStatus, parseMachineStatus, parseTrainingStatus, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, dataView,
   decodeSetSpeed, describeControlPointResponse, hex, parseControlPointResponse, parseFeatures,
   parseHeartRate, parseInclinationRange, parseSpeedRange, parseTreadmillData, toBytes,
 } from './ftms';
@@ -140,5 +140,55 @@ describe('Control-Point-Antworten', () => {
   it('kein Response-Paket → null', () => {
     expect(parseControlPointResponse(dataView([0x07]))).toBeNull();
     expect(parseControlPointResponse(dataView([0x80, 0x02]))).toBeNull();
+  });
+});
+
+describe('Machine Status (0x2ADA)', () => {
+  it('erkennt Stop, Pause, Sicherheitsschlüssel, Start und Kontrollverlust', () => {
+    expect(parseMachineStatus(dataView([0x02, 0x01]))).toEqual({ kind: 'stopped' });
+    expect(parseMachineStatus(dataView([0x02, 0x02]))).toEqual({ kind: 'paused' });
+    expect(parseMachineStatus(dataView([0x03]))).toEqual({ kind: 'safety-key' });
+    expect(parseMachineStatus(dataView([0x04]))).toEqual({ kind: 'started' });
+    expect(parseMachineStatus(dataView([0xff]))).toEqual({ kind: 'control-lost' });
+    expect(parseMachineStatus(dataView([0x01]))).toEqual({ kind: 'reset' });
+  });
+
+  it('Zielwerte', () => {
+    expect(parseMachineStatus(dataView([0x05, 0x2c, 0x01]))).toEqual({ kind: 'target-speed', kmh: 3 });
+    expect(parseMachineStatus(dataView([0x06, 0xf6, 0xff]))).toEqual({ kind: 'target-incline', pct: -1 });
+  });
+
+  it('Unbekanntes und Kaputtes', () => {
+    expect(parseMachineStatus(dataView([0x42]))).toEqual({ kind: 'other', op: 0x42 });
+    expect(parseMachineStatus(dataView([0x05, 0x2c]))).toEqual({ kind: 'other', op: 0x05 });
+    expect(parseMachineStatus(dataView([0x02]))).toEqual({ kind: 'stopped' }); // ohne Parameter: im Zweifel gestoppt
+    expect(parseMachineStatus(dataView([]))).toBeNull();
+  });
+
+  it('lesbare Beschreibung', () => {
+    expect(describeMachineStatus({ kind: 'safety-key' })).toBe('Band per Sicherheitsschlüssel gestoppt');
+    expect(describeMachineStatus({ kind: 'target-speed', kmh: 3.5 })).toBe('Ziel-Speed am Band: 3.5 km/h');
+  });
+});
+
+describe('Training Status (0x2AD3)', () => {
+  it('Status-Code und Text', () => {
+    expect(parseTrainingStatus(dataView([0x00, 0x01]))).toEqual({ status: 1, text: 'Idle' });
+    expect(parseTrainingStatus(dataView([0x00, 0x0d]))).toEqual({ status: 13, text: 'Manual Mode' });
+    expect(parseTrainingStatus(dataView([0x00, 0x99]))).toEqual({ status: 0x99, text: '0x99' });
+    expect(parseTrainingStatus(dataView([0x00]))).toBeNull();
+  });
+});
+
+describe('buildTreadmillData', () => {
+  it('Round-Trip mit dem Parser', () => {
+    const d = { speed: 3.4, dist: 1234, incl: 2, rampAngle: 0, kcal: 45, kcalPerHour: 200, kcalPerMin: 3, hr: 0, time: 321 };
+    expect(parseTreadmillData(dataView(buildTreadmillData(d)))).toEqual(d);
+  });
+
+  it('ohne Speed wird Bit 0 gesetzt', () => {
+    const bytes = buildTreadmillData({ time: 5 });
+    expect(bytes[0]! & 1).toBe(1);
+    expect(parseTreadmillData(dataView(bytes))).toEqual({ time: 5 });
   });
 });
