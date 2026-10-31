@@ -32,7 +32,7 @@ export function drawChart(c: HTMLCanvasElement, samples: readonly Sample[], opts
 
   // Colours from the theme tokens in style.css
   const line = cssColor('--line'), label = cssColor('--mute'), target = cssColor('--link'), speed = cssColor('--accent');
-  g.font = '11px system-ui'; g.fillStyle = label; g.strokeStyle = line; g.lineWidth = 1;
+  g.font = '12px system-ui'; g.fillStyle = label; g.strokeStyle = line; g.lineWidth = 1;
   const stepY = Math.max(1, Math.round(ymax / 4));
   for (let y = 0; y <= ymax; y += stepY) {
     g.beginPath(); g.moveTo(L, py(y)); g.lineTo(W - R, py(y)); g.stroke();
@@ -51,8 +51,11 @@ export function drawChart(c: HTMLCanvasElement, samples: readonly Sample[], opts
 
   const pts = samples.filter(s => s.ts >= now - win && s.speed !== undefined);
   if (pts.length > 1) {
-    g.strokeStyle = speed; g.lineWidth = 2; g.beginPath();
+    g.strokeStyle = speed; g.lineWidth = 2; g.lineJoin = 'round'; g.beginPath();
     pts.forEach((s, i) => i ? g.lineTo(px(s.ts), py(s.speed!)) : g.moveTo(px(s.ts), py(s.speed!)));
     g.stroke();
+    // Light fill under the line, closed along the zero axis
+    g.lineTo(px(pts[pts.length - 1]!.ts), py(0)); g.lineTo(px(pts[0]!.ts), py(0)); g.closePath();
+    g.globalAlpha = 0.14; g.fillStyle = speed; g.fill(); g.globalAlpha = 1;
   }
 }

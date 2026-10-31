@@ -73,10 +73,12 @@ describe('colour tokens', () => {
   const text: [fg: string, bg: string][] = [
     ['fg', 'bg'], ['fg', 'card'], ['mute', 'bg'], ['mute', 'card'], ['fg', 'btn'], ['fg', 'input-bg'],
     ['link', 'card'], ['link', 'bg'], ['primary-fg', 'primary'], ['stop-fg', 'stop'], ['alarm-fg', 'alarm-bg'],
-    ['fg', 'warn-bg'], ['fg', 'info-bg'], ['fg', 'demo-bg'], ['fg', 'notice-bg'],
+    ['fg', 'warn-bg'], ['fg', 'info-bg'], ['fg', 'demo-bg'], ['fg', 'notice-bg'], ['fg', 'ok-bg'],
   ];
-  // Controls, chart line and the alarm banner's outline against their surface: 3:1
-  const ui: [fg: string, bg: string][] = [['primary', 'card'], ['stop', 'card'], ['accent', 'card'], ['alarm-border', 'bg']];
+  // Controls, chart line, keyboard focus ring and the alarm banner's outline against their surface: 3:1
+  const ui: [fg: string, bg: string][] = [
+    ['primary', 'card'], ['stop', 'card'], ['accent', 'card'], ['alarm-border', 'bg'], ['focus', 'bg'], ['focus', 'card'],
+  ];
 
   for (const theme of ['light', 'dark'] as const) {
     it(`${theme}: text pairs reach 4.5:1`, () => {

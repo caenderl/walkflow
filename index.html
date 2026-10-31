@@ -11,6 +11,16 @@
 <title>Walkflow</title>
 </head>
 <body>
+<!-- Icons, used via <use href="#i-…">. Filled media symbols, the rest drawn as strokes in the current text colour. -->
+<svg class="sprite" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.6v14.8a1 1 0 0 0 1.5.86l12.2-7.4a1 1 0 0 0 0-1.72L8.5 3.74A1 1 0 0 0 7 4.6z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="5.5" y="4" width="4.5" height="16" rx="1.2" fill="currentColor"/><rect x="14" y="4" width="4.5" height="16" rx="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2.5" fill="currentColor"/></symbol>
+  <symbol id="i-bluetooth" viewBox="0 0 24 24"><path d="M7 7l10 10-5 5V2l5 5L7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-demo" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6.5L4.6 18.4A1.7 1.7 0 0 0 6.1 21h11.8a1.7 1.7 0 0 0 1.5-2.6L14 9.5V3M7.5 15h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v4.5M12 17.2v.1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+</svg>
 <!-- Texts come from src/locales/*.ts (data-i18n*); the English text here is only the fallback. -->
 <div class="app">
   <header class="top">
@@ -19,7 +29,7 @@
     <span class="hint tagline" data-i18n="header.tagline">Treadmill control via Bluetooth</span>
     <span class="conn">
       <span id="status" class="status" role="status">Not connected</span>
-      <button id="disconnect" class="small" disabled data-i18n="connection.disconnect">Disconnect</button>
+      <button id="disconnect" class="small" disabled><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg><span data-i18n="connection.disconnect">Disconnect</span></button>
     </span>
     <span id="prefs" class="prefs"></span>
   </header>
@@ -61,13 +71,13 @@
       <section class="card welcome">
         <h2 data-i18n="connection.title">Connect your treadmill</h2>
         <div class="row">
-          <button id="connect" class="primary" data-i18n="connection.connect">Connect</button>
-          <button id="demo" data-i18n="connection.demo">Demo (no treadmill)</button>
+          <button id="connect" class="primary"><svg class="icon" aria-hidden="true"><use href="#i-bluetooth"/></svg><span data-i18n="connection.connect">Connect</span></button>
+          <button id="demo"><svg class="icon" aria-hidden="true"><use href="#i-demo"/></svg><span data-i18n="connection.demo">Demo (no treadmill)</span></button>
         </div>
         <p class="hint" data-i18n="connection.vendorAppHint">Close the manufacturer’s app first, the treadmill usually allows only one connection at a time.</p>
       </section>
 
-      <div class="notice" id="safetyNotice" data-i18n-rich="notice">⚠ If the connection drops, this app cannot stop the belt. Then you can only stop it on the treadmill: stop button or safety key. Keep both within reach.</div>
+      <div class="notice" id="safetyNotice"><svg class="icon" aria-hidden="true"><use href="#i-warning"/></svg><span data-i18n-rich="notice">If the connection drops, this app cannot stop the belt. Then you can only stop it on the treadmill: stop button or safety key. Keep both within reach.</span></div>
 
       <section class="card live">
         <div class="hero">
@@ -96,7 +106,7 @@
 2 2.0</textarea>
           <div class="hint" data-i18n-rich="program.hint">One line per step: minutes km/h (decimals allowed). Speeds are capped to the limit, jumps run as a ramp. After starting, the program waits about 4.5 s for the treadmill’s countdown.</div>
           <div class="row">
-            <button id="progStart" class="primary needs-conn" disabled data-i18n="program.start">▶ Start program</button>
+            <button id="progStart" class="primary needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><span data-i18n="program.start">Start program</span></button>
             <button id="progStop" class="needs-conn" disabled data-i18n="program.stop">Cancel &amp; stop</button>
           </div>
           <div class="hint" id="progStatus">No program running</div>
@@ -170,14 +180,14 @@
             <button id="plus" class="needs-conn" disabled data-i18n="control.plus">+ 0.5</button>
           </div>
           <div class="row actions">
-            <button id="start" class="primary needs-conn" disabled data-i18n="control.start">▶ Start</button>
-            <button id="pause" class="needs-conn" disabled data-i18n="control.pause">⏸ Pause</button>
-            <button id="stop" class="stop needs-conn" disabled data-i18n="control.stop">⏹ Stop</button>
+            <button id="start" class="primary needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><span data-i18n="control.start">Start</span></button>
+            <button id="pause" class="needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg><span data-i18n="control.pause">Pause</span></button>
+            <button id="stop" class="stop needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-stop"/></svg><span data-i18n="control.stop">Stop</span></button>
           </div>
         </div>
         <input type="range" id="slider" class="needs-conn" min="1" max="6" step="0.1" value="3" disabled aria-label="Target speed" data-i18n-aria="control.sliderLabel">
         <div class="hint center" id="rampInfo">&nbsp;</div>
-        <div class="row">
+        <div class="row presets">
           <button class="preset needs-conn" data-speed="2" disabled>2</button>
           <button class="preset needs-conn" data-speed="3" disabled>3</button>
           <button class="preset needs-conn" data-speed="4" disabled>4</button>
