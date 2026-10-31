@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laufband Control</title>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏃 Laufband Control</h1>
+
+  <div class="card row">
+    <button id="connect" class="primary">Verbinden</button>
+    <button id="disconnect" disabled>Trennen</button>
+    <span id="status" class="hint grow2">Nicht verbunden</span>
+  </div>
+
+  <div class="card stats">
+    <div class="stat"><div class="v" id="vSpeed">–</div><div class="l">km/h (Ist)</div></div>
+    <div class="stat"><div class="v" id="vDist">–</div><div class="l">km</div></div>
+    <div class="stat"><div class="v" id="vTime">–</div><div class="l">Zeit</div></div>
+    <div class="stat"><div class="v" id="vIncl">–</div><div class="l">Steigung %</div></div>
+    <div class="stat"><div class="v" id="vHr">–</div><div class="l">Puls (bpm)</div></div>
+    <div class="stat"><div class="v" id="vKcal">–</div><div class="l">kcal</div></div>
+  </div>
+
+  <div class="card grid">
+    <h2>Steuerung</h2>
+    <div class="row">
+      <button id="start" class="primary needs-conn" disabled>▶ Start</button>
+      <button id="pause" class="needs-conn" disabled>⏸ Pause</button>
+      <button id="stop" class="stop needs-conn" disabled>⏹ Stop</button>
+    </div>
+    <div class="hint">Tastatur: <b>Leertaste</b> oder <b>Esc</b> = Stop, <b>↑ / ↓</b> = Speed ±0,5 (nicht im Slider/Textfeld).</div>
+
+    <div class="big" id="target">3.0 km/h</div>
+    <input type="range" id="slider" class="needs-conn" min="1" max="6" step="0.1" value="3" disabled>
+    <div class="row">
+      <button id="minus" class="needs-conn" disabled>− 0,5</button>
+      <button id="plus" class="needs-conn" disabled>+ 0,5</button>
+    </div>
+    <div class="row">
+      <button class="preset needs-conn" data-speed="2" disabled>2</button>
+      <button class="preset needs-conn" data-speed="3" disabled>3</button>
+      <button class="preset needs-conn" data-speed="4" disabled>4</button>
+      <button class="preset needs-conn" data-speed="5" disabled>5</button>
+    </div>
+  </div>
+
+  <div class="card grid">
+    <h2>Steigung (Test)</h2>
+    <div class="mid" id="inclTarget">0.0 %</div>
+    <input type="range" id="inclSlider" class="needs-conn" min="0" max="15" step="1" value="0" disabled>
+    <div class="hint" id="inclInfo">Range: unbekannt. Ob das Band die Steigung per FTMS annimmt, sagt dir das Log (Set Inclination: OK oder nicht unterstützt).</div>
+  </div>
+
+  <div class="card grid">
+    <h2>Intervall-Programm</h2>
+    <textarea id="progText" spellcheck="false">2 2.0
+3 3.5
+1 5.0
+3 3.5
+2 2.0</textarea>
+    <div class="hint">Pro Zeile: <b>Minuten km/h</b> (Dezimalzahlen gehen). Speed wird aufs Limit gekappt. Nach dem Start wartet das Programm ca. 4,5 s wegen des Band-Countdowns.</div>
+    <div class="row">
+      <button id="progStart" class="primary needs-conn" disabled>▶ Programm starten</button>
+      <button id="progStop" class="needs-conn" disabled>Abbrechen &amp; Stop</button>
+    </div>
+    <div class="hint" id="progStatus">Kein Programm aktiv</div>
+  </div>
+
+  <div class="card">
+    <h2>Geschwindigkeit der letzten 5 Minuten</h2>
+    <canvas id="chart" width="560" height="150"></canvas>
+  </div>
+
+  <div class="card grid">
+    <h2>Limit &amp; Daten</h2>
+    <label class="hint">Eigenes Speed-Limit (km/h):
+      <input type="number" id="cap" min="1" max="20" step="0.5" value="6">
+    </label>
+    <div class="hint" id="rangeInfo">Geräte-Range: unbekannt</div>
+    <div class="row">
+      <button id="csv">CSV exportieren</button>
+      <button id="clear">Verlauf löschen</button>
+    </div>
+  </div>
+
+  <div class="card grid">
+    <h2>Experimentier-Konsole (Control Point 0x2AD9)</h2>
+    <input type="text" id="raw" class="needs-conn" placeholder="Hex-Bytes, z. B. 02 2C 01" disabled>
+    <button id="rawSend" class="needs-conn" disabled>Senden</button>
+    <div class="hint">Set-Speed-Befehle (<code>02 …</code>) über dem Limit werden hier trotzdem blockiert. Alles andere geht roh raus.</div>
+  </div>
+
+  <div class="card"><div id="log"></div></div>
+
+  <div class="hint">
+    Sportstech Live App vorher schließen (meist nur eine Verbindung gleichzeitig).
+    Beim Start stehst du auf den Seitenflächen, nicht auf dem Band. 😉
+  </div>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

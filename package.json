@@ -1,0 +1,23 @@
+{
+  "name": "walkflow",
+  "productName": "Walkflow",
+  "version": "0.1.0",
+  "description": "Open-Source-Steuerung für FTMS-Laufbänder per Web Bluetooth",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/web-bluetooth": "0.0.22",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}
