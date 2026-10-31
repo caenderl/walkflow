@@ -2,7 +2,7 @@ import './style.css';
 import { TreadmillClient, WebBluetoothAdapter, type BleAdapter, type TreadmillEvents } from './ble';
 import { bluetoothSupportHint } from './browser';
 import { drawChart } from './chart';
-import { APP_NAME, APP_VERSION } from './config';
+import { APP_NAME, APP_VERSION, BUILD_TARGET, DONATION_URL, GITHUB_REPO } from './config';
 import { choose, confirmDialog } from './dialogs';
 import { exportFilename, toCsv, type Sample } from './export';
 import {
@@ -10,6 +10,7 @@ import {
   OP, parseMachineStatus, parseTrainingStatus, type TreadmillData,
 } from './ftms';
 import { fmtTime, parseProgram, ProgramRunner, totalSeconds } from './program';
+import { setupPwa } from './pwa';
 import {
   beltMaybeRunning, checkConsoleCommand, decideLimitChange, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION,
   effectiveMax as calcEffectiveMax, isDisclaimerAccepted, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE, LIMIT_STORAGE_KEY,
@@ -503,6 +504,24 @@ function renderInfo() {
   $('infoTested').textContent = `${TESTED_WITH}. Ausprobiert: ${TESTED_FEATURES}. Noch nicht einzeln getestet: ${UNTESTED_FEATURES}.`;
   $('infoAffiliation').textContent = NOT_AFFILIATED;
   $('footerVersion').textContent = `${APP_NAME} ${APP_VERSION} · MIT-Lizenz · unabhängiges Projekt, nicht mit dem Hersteller verbunden`;
+
+  const source = GITHUB_REPO ? `https://github.com/${GITHUB_REPO}` : '';
+  if (source) $('infoSource').append('Quellcode: ', link(source, source.replace('https://', '')));
+  const links: HTMLElement[] = [];
+  if (BUILD_TARGET === 'web') links.push(link('impressum.html', 'Impressum'), link('datenschutz.html', 'Datenschutz'));
+  if (source) links.push(link(source, 'Quellcode'));
+  // Nur im Web-Build und nur, wenn konfiguriert. Keine Gegenleistung, kein Feature hängt daran.
+  if (BUILD_TARGET === 'web' && DONATION_URL) links.push(link(DONATION_URL, 'Freiwillige Unterstützung (keine Gegenleistung)'));
+  const footer = $('footerLinks');
+  links.forEach((a, i) => footer.append(...(i ? [' · ', a] : [a])));
+}
+
+function link(href: string, text: string) {
+  const a = document.createElement('a');
+  a.href = href;
+  a.textContent = text;
+  if (/^https?:/.test(href)) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+  return a;
 }
 
 // ---------- Events ----------
@@ -585,5 +604,6 @@ if (hint) {
   });
 }
 setUi(false);
+setupPwa(connected);
 
 if (!isDisclaimerAccepted(store.get(DISCLAIMER_STORAGE_KEY))) void ensureDisclaimer();

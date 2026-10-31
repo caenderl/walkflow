@@ -29,7 +29,8 @@ textarea { font-family: ui-monospace, monospace; font-size:13px; height:100px; r
 .hint { color:var(--mute); font-size:.85rem; }
 canvas { width:100%; height:auto; display:block; }
 [hidden] { display:none !important; }
-.top { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.logo { display:block; }
 .center { text-align:center; }
 h3 { margin:14px 0 6px; font-size:.95rem; }
 .banner { border-radius:14px; padding:14px 18px; display:grid; gap:8px; }
