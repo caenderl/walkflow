@@ -1,5 +1,5 @@
-// Erzeugt die App-Icons als PNG, ohne Abhängigkeiten (eigener PNG-Encoder, SDF-Rendering).
-// Aufruf: node scripts/make-icons.mjs   (Ergebnis wird eingecheckt)
+// Generates the app icons as PNG, without dependencies (own PNG encoder, SDF rendering).
+// Usage: node scripts/make-icons.mjs   (the output is committed)
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
@@ -42,7 +42,7 @@ function png(size, rgba) {
   ]);
 }
 
-// ---------- Geometrie (Koordinaten 0..1) ----------
+// ---------- Geometry (coordinates 0..1) ----------
 function segDist(px, py, ax, ay, bx, by) {
   const dx = bx - ax, dy = by - ay;
   const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
@@ -54,7 +54,7 @@ function roundRectDist(px, py, x0, y0, x1, y1, r) {
   return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
 }
 
-// Zwei Chevrons ("vorwärts") über einem Band
+// Two chevrons ("forward") above a belt
 const STROKE = 0.085;
 const chevrons = [0, 0.2].flatMap(dx => [
   [0.31 + dx, 0.25, 0.49 + dx, 0.43],
@@ -70,14 +70,14 @@ function content(x, y) {
 }
 
 /**
- * @param shape 'round' = abgerundetes Quadrat mit Transparenz, 'full' = vollflächig (maskable, apple-touch),
- *              'mac' = abgerundetes Quadrat mit Rand (macOS-Raster)
+ * @param shape 'round' = rounded square with transparency, 'full' = full bleed (maskable, apple-touch),
+ *              'mac' = rounded square with margin (macOS grid)
  */
 function render(size, shape) {
   const buf = Buffer.alloc(size * size * 4);
   const SS = 4;
   const inset = shape === 'mac' ? 0.1 : 0;
-  const scale = shape === 'full' ? 0.8 : 1; // maskable: Inhalt in der Safe Zone
+  const scale = shape === 'full' ? 0.8 : 1; // maskable: content inside the safe zone
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {
       let r = 0, g = 0, b = 0, a = 0;
@@ -110,4 +110,4 @@ writeFileSync('public/icons/icon-512.png', render(512, 'round'));
 writeFileSync('public/icons/maskable-512.png', render(512, 'full'));
 writeFileSync('public/icons/apple-touch-icon.png', render(180, 'full'));
 writeFileSync('build/icon.png', render(1024, 'mac'));
-console.log('Icons geschrieben');
+console.log('Icons written');

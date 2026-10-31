@@ -1,5 +1,5 @@
-// Baut die Desktop-Variante: Renderer (ohne Service Worker) nach dist-desktop/, Main + Preload nach dist-electron/.
-// Als Node-Skript statt npm-Script, damit Umgebungsvariablen auch unter Windows gesetzt werden.
+// Builds the desktop variant: renderer (without service worker) to dist-desktop/, main + preload to dist-electron/.
+// A Node script instead of an npm script, so environment variables are set on Windows too.
 import { rmSync } from 'node:fs';
 import { build as esbuild } from 'esbuild';
 import { build as viteBuild } from 'vite';
@@ -26,4 +26,4 @@ await esbuild({
   logLevel: 'warning',
 });
 
-console.log(`Desktop-Build fertig${repo ? ` (Update-Check gegen ${repo})` : ' (ohne Update-Check, GITHUB_REPOSITORY nicht gesetzt)'}`);
+console.log(`Desktop build done${repo ? ` (update check against ${repo})` : ' (no update check, GITHUB_REPOSITORY not set)'}`);

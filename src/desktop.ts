@@ -1,6 +1,8 @@
-// Integration in die Electron-App (nur wenn window.walkflowDesktop existiert, also im Preload bereitgestellt).
+// Integration with the Electron app (only if window.walkflowDesktop exists, i.e. provided by the preload).
 
 import { choose } from './dialogs';
+import { lang, onLanguageChange, t } from './i18n';
+import { bindText } from './i18n-dom';
 import { $, $button, $input, store } from './ui';
 
 interface BtDevice { id: string; name: string }
@@ -16,6 +18,8 @@ export interface WalkflowDesktop {
   respondPairing(r: { confirmed: boolean; pin?: string }): void;
   checkForUpdate(): Promise<{ version: string; url: string } | null>;
   openExternal(url: string): Promise<void>;
+  /** Language for menus and dialogs of the main process */
+  setLanguage(lang: string): void;
 }
 
 declare global {
@@ -33,19 +37,21 @@ export function setupDesktop(opts: { onGlobalStop: () => void; log: (m: string) 
   if (!d) return;
   const mac = d.platform === 'darwin';
 
+  d.setLanguage(lang);
+  onLanguageChange(l => d.setLanguage(l));
+
   d.onGlobalStop(opts.onGlobalStop);
   d.onShortcutStatus(s => {
-    const keys = mac ? '⌘ ⇧ Leertaste' : 'Strg + Umschalt + Leertaste';
-    $('globalStopHint').textContent = s.ok
-      ? `Global (auch wenn das Fenster im Hintergrund ist): ${keys} = Stop.`
-      : 'Globales Stop-Kürzel nicht verfügbar (von einem anderen Programm belegt), Stop geht nur im Fenster.';
-    if (!s.ok) opts.log(`⚠ Globales Kürzel ${s.accelerator} konnte nicht registriert werden`);
+    bindText($('globalStopHint'), () => s.ok
+      ? t.desktop.shortcutOk(mac ? t.desktop.keysMac : t.desktop.keysOther)
+      : t.desktop.shortcutUnavailable);
+    if (!s.ok) opts.log(t.desktop.shortcutFailedLog(s.accelerator));
   });
 
   setupChooser(d, opts.log);
   d.onBluetoothPairing(p => void pairing(d, p));
 
-  // Update-Hinweis (abschaltbar im Info-Bereich)
+  // Update notice (can be turned off in the info section)
   $('infoDesktopPrivacy').hidden = false;
   const cb = $input('updateCheck');
   cb.checked = store.get(UPDATE_CHECK_KEY) !== 'off';
@@ -53,17 +59,17 @@ export function setupDesktop(opts: { onGlobalStop: () => void; log: (m: string) 
   if (cb.checked) {
     void d.checkForUpdate().then(u => {
       if (!u) return;
-      $('updateText').textContent = `Walkflow ${u.version} ist verfügbar (kann Sicherheitsfixes enthalten).`;
+      bindText($('updateText'), () => t.desktop.updateAvailable(u.version));
       const btn = $button('updateAction');
-      btn.textContent = 'Release-Seite öffnen';
+      bindText(btn, () => t.desktop.openRelease);
       btn.onclick = () => void d.openExternal(u.url);
       $('updateBanner').hidden = false;
-      opts.log(`Neue Version verfügbar: ${u.version}`);
+      opts.log(t.desktop.updateLog(u.version));
     });
   }
 }
 
-/** Eigener Geräte-Chooser: Electron hat keinen eingebauten. */
+/** Own device chooser: Electron has none built in. */
 function setupChooser(d: WalkflowDesktop, log: (m: string) => void) {
   let dlg: HTMLDialogElement | null = null;
   let list: HTMLUListElement | null = null;
@@ -86,7 +92,7 @@ function setupChooser(d: WalkflowDesktop, log: (m: string) => void) {
     if (store.get(AUTO_SELECT_KEY) !== 'off' && prev) {
       const hit = devices.find(x => x.id === prev.id);
       if (hit) {
-        log(`Zuletzt verbundenes Gerät automatisch gewählt: ${hit.name || hit.id}`);
+        log(t.desktop.autoSelected(hit.name || hit.id));
         finish(hit.id, hit.name);
         return;
       }
@@ -95,10 +101,10 @@ function setupChooser(d: WalkflowDesktop, log: (m: string) => void) {
       dlg = document.createElement('dialog');
       dlg.className = 'dlg';
       const h = document.createElement('h2');
-      h.textContent = 'Laufband auswählen';
+      h.textContent = t.desktop.chooserTitle;
       const p = document.createElement('p');
       p.className = 'hint';
-      p.textContent = 'Suche läuft … Die Hersteller-App muss geschlossen sein.';
+      p.textContent = t.desktop.chooserSearching;
       list = document.createElement('ul');
       list.className = 'chooser';
       const label = document.createElement('label');
@@ -107,10 +113,10 @@ function setupChooser(d: WalkflowDesktop, log: (m: string) => void) {
       autoBox.type = 'checkbox';
       autoBox.checked = store.get(AUTO_SELECT_KEY) !== 'off';
       autoBox.onchange = () => store.set(AUTO_SELECT_KEY, autoBox!.checked ? 'on' : 'off');
-      label.append(autoBox, ' Nächstes Mal das gewählte Gerät automatisch verbinden');
+      label.append(autoBox, ` ${t.desktop.chooserAuto}`);
       const cancel = document.createElement('button');
       cancel.type = 'button';
-      cancel.textContent = 'Abbrechen';
+      cancel.textContent = t.common.cancel;
       cancel.onclick = () => finish('');
       dlg.addEventListener('cancel', e => { e.preventDefault(); finish(''); });
       dlg.append(h, p, list, label, cancel);
@@ -121,8 +127,8 @@ function setupChooser(d: WalkflowDesktop, log: (m: string) => void) {
       const li = document.createElement('li');
       const b = document.createElement('button');
       b.type = 'button';
-      b.textContent = dev.name || `(ohne Namen) ${dev.id}`;
-      if (prev?.id === dev.id) b.textContent += ' · zuletzt verbunden';
+      b.textContent = dev.name || t.desktop.unnamed(dev.id);
+      if (prev?.id === dev.id) b.textContent += t.desktop.lastConnected;
       b.onclick = () => finish(dev.id, dev.name);
       li.append(b);
       return li;
@@ -137,9 +143,9 @@ async function pairing(d: WalkflowDesktop, p: { kind: string; pin: string | null
     return;
   }
   const r = await choose({
-    title: 'Gerät koppeln?',
-    paragraphs: p.kind === 'confirmPin' && p.pin ? [`Stimmt diese PIN mit der am Gerät überein? ${p.pin}`] : ['Das Gerät möchte gekoppelt werden.'],
-    buttons: [{ id: 'yes', label: 'Koppeln', kind: 'primary' }, { id: 'no', label: 'Abbrechen' }],
+    title: t.desktop.pairTitle,
+    paragraphs: [p.kind === 'confirmPin' && p.pin ? t.desktop.pairConfirmPin(p.pin) : t.desktop.pairRequest],
+    buttons: [{ id: 'yes', label: t.desktop.pair, kind: 'primary' }, { id: 'no', label: t.common.cancel }],
     cancelId: 'no',
   });
   d.respondPairing({ confirmed: r === 'yes' });
@@ -150,7 +156,7 @@ function askPin(): Promise<string | null> {
     const dlg = document.createElement('dialog');
     dlg.className = 'dlg';
     const h = document.createElement('h2');
-    h.textContent = 'PIN für das Koppeln';
+    h.textContent = t.desktop.pinTitle;
     const input = document.createElement('input');
     input.type = 'text';
     input.inputMode = 'numeric';
@@ -160,10 +166,10 @@ function askPin(): Promise<string | null> {
     const ok = document.createElement('button');
     ok.type = 'button';
     ok.className = 'primary';
-    ok.textContent = 'Koppeln';
+    ok.textContent = t.desktop.pair;
     const cancel = document.createElement('button');
     cancel.type = 'button';
-    cancel.textContent = 'Abbrechen';
+    cancel.textContent = t.common.cancel;
     const done = (v: string | null) => { dlg.close(); dlg.remove(); resolve(v); };
     ok.onclick = () => done(input.value.trim() || null);
     cancel.onclick = () => done(null);

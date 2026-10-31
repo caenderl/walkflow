@@ -4,18 +4,19 @@ import {
   DISCLAIMER_VERSION, effectiveMax, isDisclaimerAccepted, loadLimit, parseHexBytes, parseLimit, parseMaxStep,
   planRamp, RAMP_INTERVAL_MS, serializeLimit, SpeedGovernor, StandstillDetector, type ConsoleContext,
 } from './safety';
+import { setLanguage } from './i18n';
 
-describe('Speed-Limit (Bestand)', () => {
-  it('Standard-Limit ist 6 km/h', () => {
+describe('speed limit (existing behaviour)', () => {
+  it('default limit is 6 km/h', () => {
     expect(DEFAULT_SPEED_LIMIT).toBe(6);
   });
 
-  it('effektives Maximum ist das kleinere aus Geräte-Max und eigenem Limit', () => {
+  it('effective maximum is the smaller of device max and personal limit', () => {
     expect(effectiveMax(12, 6)).toBe(6);
     expect(effectiveMax(5, 6)).toBe(5);
   });
 
-  it('parseLimit fällt bei ungültiger Eingabe auf 6 zurück', () => {
+  it('parseLimit falls back to 6 on invalid input', () => {
     expect(parseLimit('4.5')).toBe(4.5);
     expect(parseLimit('')).toBe(6);
     expect(parseLimit('abc')).toBe(6);
@@ -26,87 +27,87 @@ describe('Speed-Limit (Bestand)', () => {
 describe('clampSpeed', () => {
   const range = { min: 1, max: 6 };
 
-  it('kappt nach oben und unten', () => {
+  it('clamps at the top and bottom', () => {
     expect(clampSpeed(9, range)).toBe(6);
     expect(clampSpeed(0.2, range)).toBe(1);
   });
 
-  it('rundet auf 0,1 km/h', () => {
+  it('rounds to 0.1 km/h', () => {
     expect(clampSpeed(3.04, range)).toBe(3);
     expect(clampSpeed(3.06, range)).toBe(3.1);
   });
 
-  it('Rundung führt nie über das Maximum', () => {
+  it('rounding never goes above the maximum', () => {
     expect(clampSpeed(9, { min: 1, max: 5.97 })).toBe(5.9);
   });
 
-  it('liefert nie einen Wert über dem Maximum, auch wenn das Limit unter dem Geräte-Minimum liegt', () => {
+  it('never returns a value above the maximum, even if the limit is below the device minimum', () => {
     expect(clampSpeed(3, { min: 1.5, max: 1 })).toBeNull();
   });
 
-  it('NaN und Unendlich → null', () => {
+  it('NaN and infinity → null', () => {
     expect(clampSpeed(Number.NaN, range)).toBeNull();
     expect(clampSpeed(Number.POSITIVE_INFINITY, range)).toBeNull();
   });
 });
 
-describe('Limit ändern', () => {
-  it('Werte bis 6 km/h ohne Bestätigung', () => {
+describe('changing the limit', () => {
+  it('values up to 6 km/h without confirmation', () => {
     expect(decideLimitChange('5.5', 6)).toEqual({ ok: true, value: 5.5, needsConfirmation: false });
     expect(decideLimitChange('6', 4)).toEqual({ ok: true, value: 6, needsConfirmation: false });
   });
 
-  it('Werte über 6 km/h brauchen Bestätigung, wenn sie das Limit erhöhen', () => {
+  it('values above 6 km/h need a confirmation if they raise the limit', () => {
     expect(decideLimitChange('6.5', 6)).toEqual({ ok: true, value: 6.5, needsConfirmation: true });
     expect(decideLimitChange('8', 7)).toEqual({ ok: true, value: 8, needsConfirmation: true });
   });
 
-  it('Senken braucht nie eine Bestätigung', () => {
+  it('lowering never needs a confirmation', () => {
     expect(decideLimitChange('7', 8)).toEqual({ ok: true, value: 7, needsConfirmation: false });
   });
 
-  it('ungültige oder unsinnige Werte werden abgelehnt', () => {
+  it('invalid or nonsensical values are rejected', () => {
     expect(decideLimitChange('', 6).ok).toBe(false);
     expect(decideLimitChange('abc', 6).ok).toBe(false);
     expect(decideLimitChange('0.5', 6).ok).toBe(false);
     expect(decideLimitChange('25', 6).ok).toBe(false);
   });
 
-  it('rundet auf 0,1 km/h', () => {
+  it('rounds to 0.1 km/h', () => {
     expect(decideLimitChange('4.56', 6)).toMatchObject({ value: 4.6 });
   });
 });
 
-describe('gespeichertes Limit', () => {
-  it('ohne gespeicherten Wert: 6 km/h', () => {
+describe('stored limit', () => {
+  it('no stored value: 6 km/h', () => {
     expect(loadLimit(null, null)).toEqual({ value: 6 });
   });
 
-  it('bestätigte Werte über 6 bleiben erhalten', () => {
+  it('confirmed values above 6 are kept', () => {
     expect(loadLimit(serializeLimit(8, true), null)).toEqual({ value: 8 });
   });
 
-  it('unbestätigte Werte über 6 werden nicht übernommen', () => {
+  it('unconfirmed values above 6 are not adopted', () => {
     expect(loadLimit(serializeLimit(8, false), null).value).toBe(6);
     expect(loadLimit('{"value":9}', null).value).toBe(6);
   });
 
-  it('Prototyp-Wert "cap" wird bis 6 km/h übernommen, darüber nicht', () => {
+  it('the prototype value "cap" is adopted up to 6 km/h, not above', () => {
     expect(loadLimit(null, '5')).toEqual({ value: 5 });
     const r = loadLimit(null, '9');
     expect(r.value).toBe(6);
-    expect(r.note).toMatch(/nicht übernommen/);
+    expect(r.note).toMatch(/not adopted/);
   });
 
-  it('kaputte oder unsinnige Werte → 6 km/h', () => {
-    expect(loadLimit('{kaputt', null).value).toBe(6);
+  it('broken or nonsensical values → 6 km/h', () => {
+    expect(loadLimit('{broken', null).value).toBe(6);
     expect(loadLimit(serializeLimit(50, true), null).value).toBe(6);
     expect(loadLimit(null, 'abc').value).toBe(6);
   });
 });
 
-describe('maximale Änderung pro Befehl', () => {
-  it('Standard 0,5 km/h, erlaubt 0,1 bis 1,0', () => {
+describe('maximum change per command', () => {
+  it('default 0.5 km/h, allowed 0.1 to 1.0', () => {
     expect(DEFAULT_MAX_STEP).toBe(0.5);
     expect(parseMaxStep('0.3')).toBe(0.3);
     expect(parseMaxStep('0,2')).toBe(0.2);
@@ -119,45 +120,45 @@ describe('maximale Änderung pro Befehl', () => {
 describe('planRamp', () => {
   const range = { min: 1, max: 6 };
 
-  it('fährt große Sprünge in Stufen an', () => {
+  it('approaches large jumps in steps', () => {
     expect(planRamp(2, 5, 0.5, range)).toEqual([2.5, 3, 3.5, 4, 4.5, 5]);
     expect(planRamp(5, 2, 0.5, range)).toEqual([4.5, 4, 3.5, 3, 2.5, 2]);
   });
 
-  it('kleine Änderungen in einem Schritt', () => {
+  it('small changes in one step', () => {
     expect(planRamp(2, 2.3, 0.5, range)).toEqual([2.3]);
     expect(planRamp(2, 2.5, 0.5, range)).toEqual([2.5]);
   });
 
-  it('kein Schritt, wenn schon am Ziel', () => {
+  it('no step if already at the target', () => {
     expect(planRamp(3, 3, 0.5, range)).toEqual([]);
   });
 
-  it('kappt das Ziel auf die Range', () => {
+  it('clamps the target to the range', () => {
     expect(planRamp(5, 9, 0.5, range)).toEqual([5.5, 6]);
   });
 
-  it('aus dem Stand: erster Schritt ist das Geräte-Minimum', () => {
+  it('from standstill: the first step is the device minimum', () => {
     expect(planRamp(0, 2, 0.5, range)).toEqual([1, 1.5, 2]);
   });
 
-  it('ungerader Startwert: keine Stufe größer als maxStep', () => {
+  it('odd start value: no step larger than maxStep', () => {
     expect(planRamp(2.05, 3, 0.3, range)).toEqual([2.3, 2.6, 2.9, 3]);
   });
 
-  it('kleine Schritte trotz Gleitkomma-Fehlern', () => {
+  it('small steps despite floating point errors', () => {
     expect(planRamp(0.7, 1, 0.1, { min: 0.5, max: 6 })).toEqual([0.8, 0.9, 1]);
   });
 
-  it('nie ein Befehl über dem Limit, auch nicht beim Abbremsen von oberhalb', () => {
+  it('never a command above the limit, not even when slowing down from above', () => {
     expect(planRamp(6, 4, 0.5, { min: 1, max: 4 })).toEqual([4]);
   });
 
-  it('kein erlaubter Wert → keine Schritte', () => {
+  it('no allowed value → no steps', () => {
     expect(planRamp(2, 3, 0.5, { min: 2, max: 1 })).toEqual([]);
   });
 
-  it('Invarianten für zufällige Eingaben', () => {
+  it('invariants for random inputs', () => {
     let seed = 42;
     const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
     for (let i = 0; i < 2000; i++) {
@@ -196,11 +197,11 @@ describe('SpeedGovernor', () => {
     return { gov, sent, logs };
   }
 
-  it('Mindestabstand ist 1,5 s', () => {
+  it('minimum interval is 1.5 s', () => {
     expect(RAMP_INTERVAL_MS).toBe(1500);
   });
 
-  it('kleine Änderung geht sofort raus', async () => {
+  it('a small change goes out immediately', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(2);
     expect(gov.request(2.5)).toBe(2.5);
@@ -208,7 +209,7 @@ describe('SpeedGovernor', () => {
     expect(sent).toEqual([[0, 2.5]]);
   });
 
-  it('großer Sprung wird in Stufen mit 1,5 s Abstand angefahren', async () => {
+  it('a large jump is approached in steps 1.5 s apart', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(2);
     gov.request(4);
@@ -217,7 +218,7 @@ describe('SpeedGovernor', () => {
     expect(gov.ramping).toBe(false);
   });
 
-  it('schnelle +0,5-Klicks werden nicht zum Sprung', async () => {
+  it('fast +0.5 clicks do not turn into a jump', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(2);
     gov.request(2.5);
@@ -229,7 +230,7 @@ describe('SpeedGovernor', () => {
     expect(sent).toEqual([[0, 2.5], [1500, 3], [3000, 3.5]]);
   });
 
-  it('nie zwei Befehle näher als 1,5 s, auch über getrennte Anfragen', async () => {
+  it('never two commands closer than 1.5 s, even across separate requests', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(3);
     gov.request(3.5);
@@ -239,7 +240,7 @@ describe('SpeedGovernor', () => {
     expect(sent).toEqual([[0, 3.5], [1500, 3]]);
   });
 
-  it('kappt Ziele aufs Limit', async () => {
+  it('caps targets to the limit', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(5.5);
     expect(gov.request(9)).toBe(6);
@@ -247,15 +248,16 @@ describe('SpeedGovernor', () => {
     expect(sent).toEqual([[0, 6]]);
   });
 
-  it('kein erlaubter Wert → null, nichts gesendet', async () => {
-    const { gov, sent } = make();
+  it('no allowed value → null, nothing sent', async () => {
+    const { gov, sent, logs } = make();
     gov.setRange({ min: 2, max: 1 });
     expect(gov.request(3)).toBeNull();
     await vi.advanceTimersByTimeAsync(5000);
     expect(sent).toEqual([]);
+    expect(logs.join()).toMatch(/No allowed speed/);
   });
 
-  it('cancel stoppt die Rampe sofort', async () => {
+  it('cancel stops the ramp immediately', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(2);
     gov.request(5);
@@ -267,17 +269,17 @@ describe('SpeedGovernor', () => {
     expect(gov.ramping).toBe(false);
   });
 
-  it('Schreibfehler bricht die Rampe ab', async () => {
+  it('a write error aborts the ramp', async () => {
     const { gov, sent, logs } = make({ fail: kmh => kmh === 3 });
     gov.noteMeasured(2);
     gov.request(5);
     await vi.advanceTimersByTimeAsync(10_000);
     expect(sent).toEqual([[0, 2.5], [1500, 3]]);
     expect(gov.target).toBeNull();
-    expect(logs.join()).toMatch(/Rampe abgebrochen/);
+    expect(logs.join()).toMatch(/Ramp aborted/);
   });
 
-  it('aus dem Stand beginnt die Rampe am Geräte-Minimum', async () => {
+  it('from standstill, the ramp starts at the device minimum', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(0);
     gov.request(2);
@@ -285,36 +287,36 @@ describe('SpeedGovernor', () => {
     expect(sent.map(s => s[1])).toEqual([1, 1.5, 2]);
   });
 
-  it('ohne Messwert und ohne letzten Befehl: Basis ist das Geräte-Minimum', async () => {
+  it('without a measured value and without a last command: the base is the device minimum', async () => {
     const { gov, sent } = make();
     gov.request(2);
     await vi.advanceTimersByTimeAsync(10_000);
     expect(sent.map(s => s[1])).toEqual([1.5, 2]);
   });
 
-  it('Basis ist der letzte Befehl, solange das Band nachregelt', async () => {
+  it('the base is the last command while the belt is still settling', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(2);
     gov.request(2.5);
     await vi.advanceTimersByTimeAsync(2000);
-    gov.noteMeasured(2.1); // Band hat 2,5 noch nicht erreicht
+    gov.noteMeasured(2.1); // the belt has not reached 2.5 yet
     gov.request(3);
     await vi.advanceTimersByTimeAsync(5000);
     expect(sent.map(s => s[1])).toEqual([2.5, 3]);
   });
 
-  it('Basis ist der Messwert, wenn das Band deutlich anders läuft (z. B. per Fernbedienung geändert)', async () => {
+  it('the base is the measured value if the belt runs clearly differently (e.g. changed with the remote)', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(2);
     gov.request(2.5);
     await vi.advanceTimersByTimeAsync(10_000);
-    gov.noteMeasured(4); // jemand hat am Band auf 4 gestellt
+    gov.noteMeasured(4); // someone set 4 on the treadmill
     gov.request(5);
     await vi.advanceTimersByTimeAsync(10_000);
     expect(sent.map(s => s[1])).toEqual([2.5, 4.5, 5]);
   });
 
-  it('Limit senken unter den letzten Befehl regelt aktiv auf das neue Limit', async () => {
+  it('lowering the limit below the last command actively regulates to the new limit', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(5);
     gov.request(5);
@@ -325,7 +327,7 @@ describe('SpeedGovernor', () => {
     expect(gov.target).toBe(4);
   });
 
-  it('Limit senken während einer Rampe kappt das Ziel', async () => {
+  it('lowering the limit during a ramp caps the target', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(2);
     gov.request(6);
@@ -335,7 +337,7 @@ describe('SpeedGovernor', () => {
     expect(sent.map(s => s[1])).toEqual([2.5, 3, 3.5]);
   });
 
-  it('reset vergisst den letzten Befehl (nach Stop/Disconnect)', async () => {
+  it('reset forgets the last command (after stop/disconnect)', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(3);
     gov.request(3.5);
@@ -344,11 +346,11 @@ describe('SpeedGovernor', () => {
     expect(gov.lastCommand).toBeNull();
     gov.request(2);
     await vi.advanceTimersByTimeAsync(10_000);
-    // nach reset: kein Mindestabstand-Bezug mehr, Basis = Geräte-Minimum
+    // after reset: no minimum interval reference any more, base = device minimum
     expect(sent.map(s => s[1])).toEqual([3.5, 1.5, 2]);
   });
 
-  it('externer Befehl (Konsole) wird als Basis und für den Mindestabstand berücksichtigt', async () => {
+  it('an external command (console) counts as base and for the minimum interval', async () => {
     const { gov, sent } = make();
     gov.noteExternalCommand(3);
     expect(gov.msSinceLastCommand()).toBe(0);
@@ -357,7 +359,7 @@ describe('SpeedGovernor', () => {
     expect(sent).toEqual([[1500, 3.5]]);
   });
 
-  it('maxStep ist einstellbar', async () => {
+  it('maxStep is configurable', async () => {
     const { gov, sent } = make();
     gov.maxStep = 1;
     gov.noteMeasured(2);
@@ -367,84 +369,94 @@ describe('SpeedGovernor', () => {
   });
 });
 
-describe('Experimentier-Konsole', () => {
+describe('experiment console', () => {
   const ctx: ConsoleContext = { maxKmh: 6, maxStep: 0.5, baseKmh: 3, msSinceLastSpeedCommand: 10_000 };
   const le16 = (v: number) => [v & 0xff, (v >> 8) & 0xff];
 
-  it('parst Hex-Bytes mit Leerzeichen oder Kommas', () => {
+  it('parses hex bytes with spaces or commas', () => {
     expect(parseHexBytes('02 2C 01')).toEqual([0x02, 0x2c, 0x01]);
     expect(parseHexBytes(' 08,01 ')).toEqual([0x08, 0x01]);
   });
 
-  it('lehnt alles ab, was kein sauberes Hex-Byte ist', () => {
+  it('rejects anything that is not a clean hex byte', () => {
     expect(parseHexBytes('')).toBeNull();
     expect(parseHexBytes('zz')).toBeNull();
     expect(parseHexBytes('100')).toBeNull();
-    expect(parseHexBytes('2z')).toBeNull(); // parseInt würde hier 2 liefern
+    expect(parseHexBytes('2z')).toBeNull(); // parseInt would return 2 here
   });
 
-  it('blockt Set-Speed über dem Limit', () => {
+  it('blocks Set Speed above the limit', () => {
     const c = { ...ctx, baseKmh: 5.8 };
     expect(checkConsoleCommand([0x02, ...le16(600)], c)).toEqual({ action: 'send', setSpeed: 6 });
     expect(checkConsoleCommand([0x02, ...le16(601)], c).action).toBe('block');
   });
 
-  it('blockt Set-Speed mit falscher Länge', () => {
+  it('blocks Set Speed with the wrong length', () => {
     expect(checkConsoleCommand([0x02, 0x2c], ctx).action).toBe('block');
     expect(checkConsoleCommand([0x02, 0x2c, 0x01, 0x00], ctx).action).toBe('block');
   });
 
-  it('blockt Set-Speed-Sprünge über der maximalen Änderung', () => {
+  it('blocks Set Speed jumps above the maximum change', () => {
     expect(checkConsoleCommand([0x02, ...le16(350)], ctx).action).toBe('send');
     expect(checkConsoleCommand([0x02, ...le16(360)], ctx).action).toBe('block');
     expect(checkConsoleCommand([0x02, ...le16(240)], ctx).action).toBe('block');
   });
 
-  it('blockt Set-Speed innerhalb des Mindestabstands', () => {
+  it('blocks Set Speed within the minimum interval', () => {
     expect(checkConsoleCommand([0x02, ...le16(320)], { ...ctx, msSinceLastSpeedCommand: 1000 }).action).toBe('block');
   });
 
-  it('Start nur mit Bestätigung', () => {
+  it('start only with confirmation', () => {
     expect(checkConsoleCommand([0x07], ctx)).toEqual({ action: 'confirm-start' });
   });
 
-  it('blockt Set Target Heart Rate (das Band würde den Speed selbst regeln)', () => {
+  it('blocks Set Target Heart Rate (the treadmill would control the speed itself)', () => {
     expect(checkConsoleCommand([0x06, 120], ctx).action).toBe('block');
   });
 
-  it('lässt andere Befehle roh durch', () => {
+  it('lets other commands through raw', () => {
     expect(checkConsoleCommand([0x08, 0x01], ctx)).toEqual({ action: 'send' });
     expect(checkConsoleCommand([0x03, 0x32, 0x00], ctx)).toEqual({ action: 'send' });
     expect(checkConsoleCommand([0x00], ctx)).toEqual({ action: 'send' });
   });
+
+  it('the language changes only the reason text, not the decision', () => {
+    const cmd = [0x02, ...le16(601)];
+    const en = checkConsoleCommand(cmd, { ...ctx, baseKmh: 5.8 });
+    setLanguage('fr');
+    const fr = checkConsoleCommand(cmd, { ...ctx, baseKmh: 5.8 });
+    setLanguage('en');
+    expect(en).toEqual({ action: 'block', reason: '6.01 km/h is above the limit (6), blocked' });
+    expect(fr).toEqual({ action: 'block', reason: '6,01 km/h dépasse la limite (6), bloqué' });
+  });
 });
 
-describe('Band läuft möglicherweise', () => {
-  it('nach Start durch die App', () => {
+describe('belt may be running', () => {
+  it('after a start by the app', () => {
     expect(beltMaybeRunning({ startedByApp: true, lastMeasuredKmh: undefined })).toBe(true);
   });
 
-  it('wenn der letzte Messwert > 0 war, egal wie alt', () => {
+  it('if the last measured value was > 0, no matter how old', () => {
     expect(beltMaybeRunning({ startedByApp: false, lastMeasuredKmh: 1.2 })).toBe(true);
   });
 
-  it('nur wenn beides dagegen spricht: nein', () => {
+  it('only if both say otherwise: no', () => {
     expect(beltMaybeRunning({ startedByApp: false, lastMeasuredKmh: 0 })).toBe(false);
     expect(beltMaybeRunning({ startedByApp: false, lastMeasuredKmh: undefined })).toBe(false);
   });
 });
 
 describe('StandstillDetector', () => {
-  it('meldet Stillstand nach 8 s mit 0 km/h, sobald scharf geschaltet', () => {
+  it('reports standstill after 8 s at 0 km/h once armed', () => {
     const d = new StandstillDetector();
     d.arm();
     expect(d.feed(0, 0)).toBe(false);
     expect(d.feed(0, 7999)).toBe(false);
     expect(d.feed(0, 8000)).toBe(true);
-    expect(d.feed(0, 9000)).toBe(false); // nur einmal
+    expect(d.feed(0, 9000)).toBe(false); // only once
   });
 
-  it('Bewegung setzt den Zähler zurück', () => {
+  it('movement resets the counter', () => {
     const d = new StandstillDetector();
     d.arm();
     d.feed(0, 0);
@@ -453,7 +465,7 @@ describe('StandstillDetector', () => {
     expect(d.feed(0, 17_000)).toBe(true);
   });
 
-  it('erneutes arm() (nächster Programmschritt) setzt den Zähler nicht zurück', () => {
+  it('calling arm() again (next program step) does not reset the counter', () => {
     const d = new StandstillDetector();
     d.arm();
     d.feed(0, 0);
@@ -461,18 +473,18 @@ describe('StandstillDetector', () => {
     expect(d.feed(0, 8000)).toBe(true);
   });
 
-  it('nicht scharf → nie', () => {
+  it('not armed → never', () => {
     const d = new StandstillDetector();
     expect(d.feed(0, 0)).toBe(false);
     expect(d.feed(0, 60_000)).toBe(false);
   });
 });
 
-describe('Erststart-Hinweis', () => {
-  it('gilt nur für die aktuelle Version', () => {
+describe('first-run notice', () => {
+  it('only counts for the current version', () => {
     expect(isDisclaimerAccepted(String(DISCLAIMER_VERSION))).toBe(true);
     expect(isDisclaimerAccepted(String(DISCLAIMER_VERSION - 1))).toBe(false);
     expect(isDisclaimerAccepted(null)).toBe(false);
-    expect(isDisclaimerAccepted('ja')).toBe(false);
+    expect(isDisclaimerAccepted('yes')).toBe(false);
   });
 });

@@ -1,10 +1,11 @@
-// electron-builder-Konfiguration.
-// Signierung: Ohne Zertifikat wird macOS ad-hoc signiert ("-"), Windows/Linux bleiben unsigniert.
-// Für Developer ID + Notarisierung später nur die Umgebungsvariablen in GitHub Actions setzen:
-//   CSC_LINK, CSC_KEY_PASSWORD (Zertifikat), APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
+// electron-builder configuration.
+// Signing: without a certificate macOS is signed ad hoc ("-"), Windows/Linux stay unsigned.
+// For Developer ID + notarization later, only set these environment variables in GitHub Actions:
+//   CSC_LINK, CSC_KEY_PASSWORD (certificate), APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
 const signedMac = !!process.env.CSC_LINK && !!process.env.APPLE_TEAM_ID;
 
-const bluetoothUsage = 'Walkflow verbindet sich per Bluetooth mit deinem Laufband, um es zu steuern und Live-Daten anzuzeigen.';
+// English base text; translations in build/lproj/<lang>.lproj/InfoPlist.strings
+const bluetoothUsage = 'Walkflow connects to your treadmill via Bluetooth to control it and show live data.';
 
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
@@ -15,7 +16,7 @@ module.exports = {
   files: ['dist-desktop/**', 'dist-electron/**', 'package.json'],
   artifactName: '${productName}-${version}-${os}-${arch}.${ext}',
   publish: null,
-  // Härtung des Electron-Binaries
+  // Hardening of the Electron binary
   electronFuses: {
     runAsNode: false,
     enableCookieEncryption: true,
@@ -27,7 +28,7 @@ module.exports = {
   mac: {
     category: 'public.app-category.healthcare-fitness',
     target: [{ target: 'dmg', arch: ['arm64', 'x64'] }],
-    // Apple Silicon startet komplett unsignierte Apps nicht ("beschädigt"), ad-hoc reicht für "Trotzdem öffnen"
+    // Apple Silicon refuses to start completely unsigned apps ("damaged"); ad hoc is enough for "Open Anyway"
     identity: signedMac ? undefined : '-',
     hardenedRuntime: signedMac,
     entitlements: 'build/entitlements.mac.plist',
@@ -37,6 +38,8 @@ module.exports = {
       NSBluetoothAlwaysUsageDescription: bluetoothUsage,
       NSBluetoothPeripheralUsageDescription: bluetoothUsage,
     },
+    // Localized usage texts for the macOS Bluetooth prompt (Contents/Resources/<lang>.lproj/InfoPlist.strings)
+    extraResources: [{ from: 'build/lproj', to: '.', filter: ['*.lproj/InfoPlist.strings'] }],
   },
   win: {
     target: [{ target: 'nsis', arch: ['x64'] }],

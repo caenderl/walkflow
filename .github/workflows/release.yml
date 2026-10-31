@@ -1,7 +1,7 @@
 name: Release
 
-# Auslösen: Version in package.json erhöhen, committen, Tag "v<version>" pushen.
-# Ergebnis ist ein Release-Entwurf (Draft); veröffentlicht wird er von Hand.
+# Trigger: bump the version in package.json, commit, push the tag "v<version>".
+# The result is a draft release; it is published by hand.
 on:
   push:
     tags: ['v*']
@@ -25,14 +25,14 @@ jobs:
       - run: npm ci
       - run: npm test
 
-      - name: Tag passt zur Version in package.json?
+      - name: Tag matches the version in package.json?
         shell: bash
         run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
 
-      - name: Desktop-App bauen
+      - name: Build the desktop app
         run: npm run dist
         env:
-          # Vorerst unsigniert (macOS ad-hoc). Für Signierung/Notarisierung siehe electron-builder.config.cjs.
+          # Unsigned for now (macOS ad hoc). For signing/notarization see electron-builder.config.cjs.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
       - uses: actions/upload-artifact@v7
@@ -55,9 +55,9 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-      - name: Prüfsummen
+      - name: Checksums
         run: cd artifacts && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
-      - name: Release-Entwurf anlegen
+      - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

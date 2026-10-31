@@ -1,0 +1,3 @@
+/* Text of the macOS Bluetooth permission prompt */
+"NSBluetoothAlwaysUsageDescription" = "Walkflow verbindet sich per Bluetooth mit deinem Laufband, um es zu steuern und Live-Daten anzuzeigen.";
+"NSBluetoothPeripheralUsageDescription" = "Walkflow verbindet sich per Bluetooth mit deinem Laufband, um es zu steuern und Live-Daten anzuzeigen.";

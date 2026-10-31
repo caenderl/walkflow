@@ -1,4 +1,4 @@
-// Preload (sandboxed): stellt der Web-App eine kleine, feste API bereit. Kein Node-Zugriff im Renderer.
+// Preload (sandboxed): gives the web app a small, fixed API. No Node access in the renderer.
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('walkflowDesktop', {
@@ -18,4 +18,5 @@ contextBridge.exposeInMainWorld('walkflowDesktop', {
   respondPairing: (r: { confirmed: boolean; pin?: string }) => ipcRenderer.send('bt:pairing-response', r),
   checkForUpdate: (): Promise<{ version: string; url: string } | null> => ipcRenderer.invoke('app:check-update'),
   openExternal: (url: string) => ipcRenderer.invoke('app:open-external', String(url)),
+  setLanguage: (lang: string) => ipcRenderer.send('app:language', String(lang)),
 });

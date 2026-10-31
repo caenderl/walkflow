@@ -1,14 +1,15 @@
-// Speed-Verlauf der letzten 5 Minuten auf einem Canvas.
+// Speed over the last 5 minutes on a canvas.
 
 import type { Sample } from './export';
+import { t } from './i18n';
 
 export const CHART_WINDOW_MS = 5 * 60 * 1000;
 
 export interface ChartOptions {
   now: number;
-  /** aktives Limit, bestimmt die y-Achse (mindestens 6) */
+  /** active limit, sets the y axis (at least 6) */
   limit: number;
-  /** aktuelles Ziel, gestrichelt; 0/NaN = keine Linie */
+  /** current target, dashed; 0/NaN = no line */
   target: number;
 }
 
@@ -29,8 +30,10 @@ export function drawChart(c: HTMLCanvasElement, samples: readonly Sample[], opts
     g.beginPath(); g.moveTo(L, py(y)); g.lineTo(W - R, py(y)); g.stroke();
     g.fillText(String(y), 6, py(y) + 4);
   }
-  g.fillText('−5 min', L, H - 3);
-  g.fillText('jetzt', W - 34, H - 3);
+  g.fillText(t.chart.start, L, H - 3);
+  g.textAlign = 'right';
+  g.fillText(t.chart.now, W - R, H - 3);
+  g.textAlign = 'left';
 
   if (opts.target) {
     g.strokeStyle = '#60a5fa'; g.setLineDash([5, 4]);

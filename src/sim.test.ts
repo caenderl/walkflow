@@ -24,7 +24,7 @@ describe('Simulator + TreadmillClient', () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.useRealTimers(); });
 
-  it('verbindet sich wie ein echtes FTMS-Band', async () => {
+  it('connects like a real FTMS treadmill', async () => {
     const { client, logs } = setup();
     const p = client.connect();
     await vi.advanceTimersByTimeAsync(500);
@@ -33,18 +33,18 @@ describe('Simulator + TreadmillClient', () => {
     expect(info.inclRange).toEqual({ min: 0, max: 10, step: 1 });
     expect(info.features?.targetNames).toEqual(['Speed', 'Inclination']);
     expect(info.hasHeartRate).toBe(false);
-    expect(logs).toContain('Hersteller: Walkflow');
+    expect(logs).toContain('Manufacturer: Walkflow');
   });
 
-  it('ohne Request Control: keine Berechtigung', async () => {
+  it('without Request Control: not permitted', async () => {
     const { client, logs } = setup();
     const p = client.connect(); await vi.advanceTimersByTimeAsync(500); await p;
     void client.send(cmdStart());
     await vi.advanceTimersByTimeAsync(100);
-    expect(logs).toContain('← Start/Resume: keine Berechtigung');
+    expect(logs).toContain('← Start/Resume: not permitted');
   });
 
-  it('Start → Countdown → Mindest-Speed, dann Set Speed, Stop', async () => {
+  it('start → countdown → minimum speed, then Set Speed, stop', async () => {
     const { client, sim, last, machine, logs } = setup();
     const p = client.connect(); await vi.advanceTimersByTimeAsync(500); await p;
     void client.send(cmdRequestControl());
@@ -65,18 +65,18 @@ describe('Simulator + TreadmillClient', () => {
     expect(machine).toEqual(['started', 'target-speed', 'stopped']);
   });
 
-  it('Set Speed außerhalb der Range → ungültiger Parameter', async () => {
+  it('Set Speed outside the range → invalid parameter', async () => {
     const { client, logs } = setup();
     const p = client.connect(); await vi.advanceTimersByTimeAsync(500); await p;
     void client.send(cmdRequestControl());
     void client.send(cmdSetSpeed(9));
     void client.send(cmdSetInclination(3));
     await vi.advanceTimersByTimeAsync(200);
-    expect(logs).toContain('← Set Speed: ungültiger Parameter');
+    expect(logs).toContain('← Set Speed: invalid parameter');
     expect(logs).toContain('← Set Inclination: OK');
   });
 
-  it('Pause behält Distanz, Stop setzt beim nächsten Start zurück', async () => {
+  it('pause keeps the distance, stop resets it on the next start', async () => {
     const { client, sim } = setup();
     const p = client.connect(); await vi.advanceTimersByTimeAsync(500); await p;
     void client.send(cmdRequestControl());
@@ -96,7 +96,7 @@ describe('Simulator + TreadmillClient', () => {
     expect(sim.belt.dist).toBe(0);
   });
 
-  it('Verbindungsabbruch: das simulierte Band läuft weiter', async () => {
+  it('connection loss: the simulated belt keeps running', async () => {
     const { client, sim, ev } = setup();
     const p = client.connect(); await vi.advanceTimersByTimeAsync(500); await p;
     void client.send(cmdRequestControl());
@@ -112,7 +112,7 @@ describe('Simulator + TreadmillClient', () => {
     sim.dispose();
   });
 
-  it('Sicherheitsschlüssel: Band steht sofort, Machine Status meldet es', async () => {
+  it('safety key: the belt stops at once, Machine Status reports it', async () => {
     const { client, sim, machine } = setup();
     const p = client.connect(); await vi.advanceTimersByTimeAsync(500); await p;
     void client.send(cmdRequestControl());
@@ -123,7 +123,7 @@ describe('Simulator + TreadmillClient', () => {
     expect(machine.at(-1)).toBe('safety-key');
   });
 
-  it('optional mit Puls-Service', async () => {
+  it('optionally with a heart rate service', async () => {
     const { client, ev } = setup({ heartRate: true });
     const p = client.connect(); await vi.advanceTimersByTimeAsync(500);
     expect((await p).hasHeartRate).toBe(true);

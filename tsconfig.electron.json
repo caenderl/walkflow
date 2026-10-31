@@ -12,5 +12,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["electron", "src/version.ts"]
+  "include": ["electron", "src/version.ts", "src/i18n.ts", "src/locales"]
 }

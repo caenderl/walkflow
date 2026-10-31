@@ -26,13 +26,13 @@ class FakeDevice implements BleDevice {
     const key = `${s.toString(16)}/${c.toString(16)}`;
     this.calls.push(`read ${key}`);
     const v = this.readable.get(key);
-    if (!v) throw new Error('nicht da');
+    if (!v) throw new Error('not there');
     return dataView(v);
   }
   async subscribe(s: Uuid, c: Uuid, cb: (dv: DataView) => void) {
     const key = `${s.toString(16)}/${c.toString(16)}`;
     this.calls.push(`sub ${key}`);
-    if (!this.subscribable.has(key)) throw new Error('nicht da');
+    if (!this.subscribable.has(key)) throw new Error('not there');
     this.subs.set(key, cb);
   }
   async write(_s: Uuid, _c: Uuid, data: Uint8Array) {
@@ -52,7 +52,7 @@ function setup(dev = new FakeDevice()) {
 }
 
 describe('TreadmillClient.connect', () => {
-  it('fragt die drei Services an und hält die Reihenfolge des Prototyps ein', async () => {
+  it('requests the three services and keeps the prototype’s order', async () => {
     const { dev, adapter, client, logs } = setup();
     dev.subscribable = new Set(['1826/2ad9', '1826/2acd', '1826/2ada', '180d/2a37']);
     dev.readable.set('180a/2a29', [...new TextEncoder().encode('FITHOME')]);
@@ -67,28 +67,28 @@ describe('TreadmillClient.connect', () => {
     ]);
     expect(info).toMatchObject({ deviceName: 'FAKE', speedRange: { min: 1, max: 6, step: 0.1 }, hasHeartRate: true });
     expect(info.inclRange).toBeUndefined();
-    expect(logs).toContain('Hersteller: FITHOME');
-    expect(logs).toContain('(Status 0x2ad3 nicht abonnierbar)');
-    expect(logs).toContain('Inclination-Range nicht lesbar (Fallback 0–15 %)');
+    expect(logs).toContain('Manufacturer: FITHOME');
+    expect(logs).toContain('(Status 0x2ad3 not subscribable)');
+    expect(logs).toContain('Inclination range not readable (fallback 0–15 %)');
   });
 
-  it('ohne Control Point schlägt connect fehl und trennt wieder', async () => {
+  it('without Control Point, connect fails and disconnects again', async () => {
     const { dev, client } = setup();
     await expect(client.connect()).rejects.toThrow();
     expect(dev.connected).toBe(false);
   });
 
-  it('leitet Notifications geparst weiter und loggt CP-Antworten lesbar', async () => {
+  it('forwards parsed notifications and logs CP responses readably', async () => {
     const { dev, client, ev, logs } = setup();
     dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
     await client.connect();
     dev.subs.get('1826/2acd')!(dataView([0, 0, 0x2c, 0x01]));
     expect(ev.data).toHaveBeenCalledWith({ speed: 3 });
     dev.subs.get('1826/2ad9')!(dataView([0x80, 0x03, 0x02]));
-    expect(logs).toContain('← Set Inclination: nicht unterstützt');
+    expect(logs).toContain('← Set Inclination: not supported');
   });
 
-  it('meldet Disconnect', async () => {
+  it('reports the disconnect', async () => {
     const { dev, client, ev } = setup();
     dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
     await client.connect();
@@ -99,7 +99,7 @@ describe('TreadmillClient.connect', () => {
 });
 
 describe('TreadmillClient.send', () => {
-  it('schreibt nie parallel, auch wenn schnell hintereinander gesendet wird', async () => {
+  it('never writes in parallel, even when sending in quick succession', async () => {
     const { dev, client } = setup();
     dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
     await client.connect();
@@ -119,7 +119,7 @@ describe('TreadmillClient.send', () => {
     await expect(b).resolves.toBe(true);
   });
 
-  it('ein Schreibfehler wird geloggt und hält die Queue nicht an', async () => {
+  it('a write error is logged and does not stall the queue', async () => {
     const { dev, client, logs } = setup();
     dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
     await client.connect();
@@ -128,18 +128,18 @@ describe('TreadmillClient.send', () => {
     const b = client.send(new Uint8Array([0x07]));
     await expect(a).resolves.toBe(false);
     await expect(b).resolves.toBe(true);
-    expect(logs).toContain('❌ Schreibfehler: GATT busy');
+    expect(logs).toContain('❌ Write error: GATT busy');
   });
 
-  it('ohne Verbindung: Fehler statt Write', async () => {
+  it('without a connection: error instead of a write', async () => {
     const { client, logs } = setup();
     await expect(client.send(new Uint8Array([0x07]))).resolves.toBe(false);
-    expect(logs).toContain('❌ Schreibfehler: nicht verbunden');
+    expect(logs).toContain('❌ Write error: not connected');
   });
 });
 
 describe('SerialQueue', () => {
-  it('reicht Ergebnisse und Fehler durch', async () => {
+  it('passes results and errors through', async () => {
     const q = new SerialQueue();
     await expect(q.run(async () => 1)).resolves.toBe(1);
     await expect(q.run(async () => { throw new Error('x'); })).rejects.toThrow('x');
@@ -147,8 +147,8 @@ describe('SerialQueue', () => {
   });
 });
 
-describe('Vorrang für Stop/Pause', () => {
-  it('SerialQueue.runUrgent verwirft Wartendes, wartet aber den laufenden Task ab', async () => {
+describe('priority for stop/pause', () => {
+  it('SerialQueue.runUrgent drops waiting tasks but awaits the running one', async () => {
     const q = new SerialQueue();
     const order: string[] = [];
     const gate = deferred();
@@ -165,7 +165,7 @@ describe('Vorrang für Stop/Pause', () => {
     expect(order).toEqual(['a start', 'a end', 'urgent']);
   });
 
-  it('TreadmillClient: dringender Write verwirft wartende Writes und loggt das', async () => {
+  it('TreadmillClient: an urgent write drops waiting writes and logs it', async () => {
     const { dev, client, logs } = setup();
     dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
     await client.connect();
@@ -176,7 +176,7 @@ describe('Vorrang für Stop/Pause', () => {
     await Promise.resolve();
     const stop = client.send(new Uint8Array([0x08, 0x01]), { urgent: true });
     await expect(s2).resolves.toBe(false);
-    expect(logs).toContain('verworfen: 02 5e 01 (Stop/Pause hat Vorrang)');
+    expect(logs).toContain('dropped: 02 5e 01 (stop/pause takes priority)');
     gate.resolve();
     await expect(s1).resolves.toBe(true);
     await expect(stop).resolves.toBe(true);

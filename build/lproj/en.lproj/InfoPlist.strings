@@ -1,0 +1,3 @@
+/* Text of the macOS Bluetooth permission prompt */
+"NSBluetoothAlwaysUsageDescription" = "Walkflow connects to your treadmill via Bluetooth to control it and show live data.";
+"NSBluetoothPeripheralUsageDescription" = "Walkflow connects to your treadmill via Bluetooth to control it and show live data.";

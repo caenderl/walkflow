@@ -1,12 +1,14 @@
-// Intervall-Programm: Parser und Runner. Der Runner kennt weder DOM noch BLE,
-// sondern spricht über ProgramHost mit der App.
+// Interval program: parser and runner. The runner knows neither DOM nor BLE;
+// it talks to the app through ProgramHost.
+
+import { t, type Text } from './i18n';
 
 export interface ProgramStep {
   sec: number;
   speed: number;
 }
 
-/** Pro Zeile "Minuten km/h", Dezimalpunkt oder -komma. Nicht lesbare Zeilen werden ignoriert. */
+/** One "minutes km/h" per line, decimal point or comma. Unreadable lines are ignored. */
 export function parseProgram(text: string): ProgramStep[] {
   const steps: ProgramStep[] = [];
   for (const line of text.split('\n')) {
@@ -30,21 +32,22 @@ export function fmtTime(s: number): string {
 }
 
 export interface ProgramHost {
-  /** Request Control + Start. false = fehlgeschlagen. */
+  /** Request Control + Start. false = failed. */
   start(): Promise<boolean>;
   stop(): Promise<unknown>;
-  /** Neues Ziel; die App fährt es über die Rampe an und kappt auf das Limit. */
+  /** New target; the app approaches it via the ramp and caps it to the limit. */
   setTarget(kmh: number): void;
-  /** Aktuelles Ziel nach Kappung, für die Anzeige. */
+  /** Current target after capping, for display. */
   currentTarget(): number | null;
-  status(text: string): void;
+  /** Status line. A function, so the app can re-render it after a language change. */
+  status(text: Text): void;
   log?(msg: string): void;
 }
 
 export interface ProgramOptions {
-  /** Wartezeit nach Start wegen des Band-Countdowns (Annahme, nicht gemessen). */
+  /** Wait after start because of the belt's countdown (assumption, not measured). */
   countdownMs?: number;
-  /** Monotone Uhr in ms */
+  /** Monotonic clock in ms */
   now?: () => number;
 }
 
@@ -55,7 +58,7 @@ export type ProgramPhase = 'idle' | 'starting' | 'countdown' | 'running';
 interface RunState {
   steps: ProgramStep[];
   phase: Exclude<ProgramPhase, 'idle'>;
-  /** Programmbeginn nach dem Countdown, null solange der Start noch läuft */
+  /** Program start after the countdown, null while starting */
   t0: number | null;
   index: number;
   timer: ReturnType<typeof setTimeout> | null;
@@ -63,9 +66,9 @@ interface RunState {
 }
 
 /**
- * Fährt ein Programm anhand von Zeitstempeln: Welcher Schritt dran ist, ergibt sich aus der Uhr,
- * nicht aus der Zahl abgelaufener Timer. Gedrosselte Timer (Hintergrund-Tab) verzögern nur die
- * Übergänge. tick() kann zusätzlich von außen kommen (BLE-Notifications, visibilitychange).
+ * Runs a program by timestamps: the clock decides which step is due, not the number of timers that fired.
+ * Throttled timers (background tab) only delay the transitions. tick() can also be called from outside
+ * (BLE notifications, visibilitychange).
  */
 export class ProgramRunner {
   private cur: RunState | null = null;
@@ -81,11 +84,11 @@ export class ProgramRunner {
   get phase(): ProgramPhase { return this.cur?.phase ?? 'idle'; }
   get stepIndex() { return this.cur?.index ?? -1; }
 
-  abort(msg?: string) {
+  abort(msg?: Text) {
     const st = this.cur;
     if (!st) return;
     this.end(st);
-    this.host.status(msg || 'Programm abgebrochen');
+    this.host.status(msg ?? (() => t.program.aborted));
   }
 
   run(steps: ProgramStep[]): Promise<'finished' | 'aborted'> {
@@ -93,10 +96,10 @@ export class ProgramRunner {
     return new Promise(resolve => {
       const st: RunState = { steps, phase: 'starting', t0: null, index: -1, timer: null, resolve };
       this.cur = st;
-      this.host.status('Band startet…');
+      this.host.status(() => t.program.starting);
       void this.host.start().catch(() => false).then(ok => {
         if (this.cur !== st) return;
-        if (!ok) { this.abort('Start fehlgeschlagen, Programm beendet'); return; }
+        if (!ok) { this.abort(() => t.program.startFailed); return; }
         st.t0 = this.now() + this.countdownMs;
         st.phase = 'countdown';
         this.tick();
@@ -108,13 +111,13 @@ export class ProgramRunner {
     const st = this.cur;
     if (!st || st.t0 === null) return;
     if (st.timer !== null) { clearTimeout(st.timer); st.timer = null; }
-    const t = this.now();
-    if (t < st.t0) {
-      st.timer = setTimeout(() => this.tick(), st.t0 - t);
+    const nowMs = this.now();
+    if (nowMs < st.t0) {
+      st.timer = setTimeout(() => this.tick(), st.t0 - nowMs);
       return;
     }
     st.phase = 'running';
-    const elapsed = t - st.t0;
+    const elapsed = nowMs - st.t0;
     let acc = 0, idx = -1, stepEnd = 0;
     for (let i = 0; i < st.steps.length; i++) {
       const end = acc + st.steps[i]!.sec * 1000;
@@ -131,20 +134,21 @@ export class ProgramRunner {
     }
     const remainingMs = stepEnd - elapsed;
     const shown = this.host.currentTarget() ?? step.speed;
-    this.host.status(`Schritt ${idx + 1}/${st.steps.length}: ${shown.toFixed(1)} km/h, noch ${fmtTime(Math.ceil(remainingMs / 1000))}`);
+    const remaining = fmtTime(Math.ceil(remainingMs / 1000));
+    this.host.status(() => t.program.step(idx + 1, st.steps.length, shown, remaining));
     st.timer = setTimeout(() => this.tick(), remainingMs % 1000 || 1000);
   }
 
   private logSkipped(st: RunState, nextIndex: number) {
     const skipped: number[] = [];
     for (let i = st.index + 1; i < nextIndex; i++) if (st.steps[i]!.sec > 0) skipped.push(i + 1);
-    if (skipped.length) this.host.log?.(`⚠ Schritt ${skipped.join(', ')} übersprungen (Timer verzögert, z. B. Tab im Hintergrund)`);
+    if (skipped.length) this.host.log?.(t.program.skipped(skipped));
   }
 
   private finish(st: RunState) {
     st.index = st.steps.length;
     this.end(st, false);
-    this.host.status('Fertig. Band wird gestoppt.');
+    this.host.status(() => t.program.done);
     void this.host.stop().catch(() => undefined).then(() => st.resolve('finished'));
   }
 

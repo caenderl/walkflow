@@ -2,7 +2,7 @@
   "name": "walkflow",
   "productName": "Walkflow",
   "version": "0.1.0",
-  "description": "Open-Source-Steuerung für FTMS-Laufbänder per Web Bluetooth",
+  "description": "Open-source control for FTMS treadmills via Web Bluetooth",
   "license": "MIT",
   "private": true,
   "type": "module",

@@ -1,7 +1,8 @@
-// Sicherheitslogik: Limits, Rampen, Prüfung von Konsolenbefehlen, Zustandsabschätzung.
-// Reine Logik ohne DOM/BLE, vollständig getestet (safety.test.ts). Nicht aufweichen.
+// Safety logic: limits, ramps, checking console commands, estimating the belt state.
+// Pure logic without DOM/BLE, fully tested (safety.test.ts). Do not weaken.
 
 import { decodeSetSpeed, OP } from './ftms';
+import { t } from './i18n';
 
 const EPS = 1e-9;
 
@@ -10,11 +11,11 @@ const EPS = 1e-9;
 export const DEFAULT_SPEED_LIMIT = 6;
 export const LIMIT_MIN = 1;
 export const LIMIT_MAX = 20;
-/** Limits über diesem Wert nur mit zusätzlicher Bestätigung. */
+/** Limits above this value only with an extra confirmation. */
 export const LIMIT_CONFIRM_ABOVE = 6;
 
 export const LIMIT_STORAGE_KEY = 'walkflow.speedLimit';
-/** Schlüssel aus dem Prototyp */
+/** Key used by the prototype */
 export const LEGACY_LIMIT_KEY = 'cap';
 
 export interface SpeedRange {
@@ -26,7 +27,7 @@ export function effectiveMax(deviceMax: number, userLimit: number): number {
   return Math.min(deviceMax, userLimit);
 }
 
-/** Eingabe aus dem Limit-Feld. Ungültig oder ≤ 0 → Standard-Limit. */
+/** Input from the limit field. Invalid or ≤ 0 → default limit. */
 export function parseLimit(raw: string): number {
   const v = parseFloat(raw);
   return Number.isFinite(v) && v > 0 ? v : DEFAULT_SPEED_LIMIT;
@@ -38,10 +39,10 @@ export type LimitDecision =
 
 export function decideLimitChange(raw: string, current: number): LimitDecision {
   const v = parseFloat(raw.replace(',', '.'));
-  if (!Number.isFinite(v)) return { ok: false, reason: 'Keine Zahl' };
+  if (!Number.isFinite(v)) return { ok: false, reason: t.limit.notANumber };
   const value = Math.round(v * 10) / 10;
   if (value < LIMIT_MIN || value > LIMIT_MAX) {
-    return { ok: false, reason: `Limit muss zwischen ${LIMIT_MIN} und ${LIMIT_MAX} km/h liegen` };
+    return { ok: false, reason: t.limit.outOfRange(LIMIT_MIN, LIMIT_MAX) };
   }
   return { ok: true, value, needsConfirmation: value > LIMIT_CONFIRM_ABOVE && value > current };
 }
@@ -55,8 +56,8 @@ function validStoredLimit(v: unknown): v is number {
 }
 
 /**
- * Lädt das gespeicherte Limit. Werte über 6 km/h gelten nur, wenn sie bestätigt gespeichert wurden.
- * Der Prototyp-Wert ("cap") wurde nie bestätigt und wird deshalb nur bis 6 km/h übernommen.
+ * Loads the stored limit. Values above 6 km/h only count if they were stored as confirmed.
+ * The prototype value ("cap") was never confirmed and is therefore only adopted up to 6 km/h.
  */
 export function loadLimit(stored: string | null, legacyCap: string | null): { value: number; note?: string } {
   if (stored !== null) {
@@ -64,14 +65,14 @@ export function loadLimit(stored: string | null, legacyCap: string | null): { va
       const o = JSON.parse(stored) as { value?: unknown; confirmedAbove6?: unknown };
       if (validStoredLimit(o.value)) {
         if (o.value <= LIMIT_CONFIRM_ABOVE || o.confirmedAbove6 === true) return { value: o.value };
-        return { value: DEFAULT_SPEED_LIMIT, note: `Gespeichertes Limit ${o.value} km/h ohne Bestätigung, zurück auf ${DEFAULT_SPEED_LIMIT}` };
+        return { value: DEFAULT_SPEED_LIMIT, note: t.limit.storedUnconfirmed(o.value, DEFAULT_SPEED_LIMIT) };
       }
-    } catch { /* kaputt → weiter unten */ }
+    } catch { /* broken → fall through */ }
   } else if (legacyCap !== null) {
     const v = parseFloat(legacyCap);
     if (validStoredLimit(v)) {
       if (v <= LIMIT_CONFIRM_ABOVE) return { value: v };
-      return { value: DEFAULT_SPEED_LIMIT, note: `Limit ${v} km/h aus dem Prototyp nicht übernommen (über ${LIMIT_CONFIRM_ABOVE} km/h braucht eine Bestätigung)` };
+      return { value: DEFAULT_SPEED_LIMIT, note: t.limit.legacyNotAdopted(v, LIMIT_CONFIRM_ABOVE) };
     }
   }
   return { value: DEFAULT_SPEED_LIMIT };
@@ -83,9 +84,9 @@ const floor01 = (x: number) => Math.floor(x * 10 + EPS) / 10;
 const ceil01 = (x: number) => Math.ceil(x * 10 - EPS) / 10;
 
 /**
- * Kappt auf [min, max] und rundet auf 0,1 km/h, ohne dabei die Grenzen zu verlassen.
- * Gibt es keinen erlaubten Wert (z. B. Limit unter Geräte-Minimum), kommt null zurück,
- * statt still das Minimum zu senden.
+ * Clamps to [min, max] and rounds to 0.1 km/h without leaving the bounds.
+ * If there is no allowed value (e.g. limit below the device minimum), returns null
+ * instead of silently sending the minimum.
  */
 export function clampSpeed(kmh: number, range: SpeedRange): number | null {
   if (!Number.isFinite(kmh) || range.max < range.min) return null;
@@ -95,12 +96,12 @@ export function clampSpeed(kmh: number, range: SpeedRange): number | null {
   return v > range.max + EPS || v < range.min - EPS ? null : v;
 }
 
-// ---------- Rampe ----------
+// ---------- Ramp ----------
 
 export const DEFAULT_MAX_STEP = 0.5;
 export const MAX_STEP_MIN = 0.1;
 export const MAX_STEP_MAX = 1;
-/** Mindestabstand zwischen zwei Speed-Befehlen */
+/** Minimum interval between two speed commands */
 export const RAMP_INTERVAL_MS = 1500;
 export const MAX_STEP_STORAGE_KEY = 'walkflow.maxStep';
 
@@ -111,9 +112,9 @@ export function parseMaxStep(raw: string): number | null {
 }
 
 /**
- * Zwischenziele von `from` nach `to`. Jede Stufe ändert höchstens `maxStep`, alle Werte liegen in der Range.
- * Einzige Ausnahme vom maxStep: Liegt `from` außerhalb der Range (z. B. 0 = Band steht, oder über einem
- * gerade gesenkten Limit), geht die erste Stufe direkt an die Range-Grenze. Über dem Limit wird nie kommandiert.
+ * Intermediate targets from `from` to `to`. Each step changes by at most `maxStep`, all values are within the range.
+ * Only exception to maxStep: if `from` is outside the range (e.g. 0 = belt stopped, or above a limit that was
+ * just lowered), the first step goes straight to the range boundary. Nothing is ever commanded above the limit.
  */
 export function planRamp(from: number, to: number, maxStep: number, range: SpeedRange): number[] {
   const target = clampSpeed(to, range);
@@ -135,25 +136,25 @@ export function planRamp(from: number, to: number, maxStep: number, range: Speed
 }
 
 export interface GovernorDeps {
-  /** Sendet Set Speed. false = Schreibfehler. */
+  /** Sends Set Speed. false = write error. */
   send(kmh: number): Promise<boolean>;
   now(): number;
   log?(msg: string): void;
-  /** Ziel, letzter Befehl oder Rampenstatus haben sich geändert. */
+  /** Target, last command or ramp state changed. */
   onChange?(): void;
 }
 
 export interface GovernorOptions {
   intervalMs: number;
-  /** So lange nach einem Befehl gilt der Befehl als Basis, nicht der Messwert. */
+  /** For this long after a command, the command is the base, not the measured value. */
   settleMs: number;
-  /** So lange gilt ein Messwert als aktuell. */
+  /** For this long a measured value counts as current. */
   freshMs: number;
 }
 
 /**
- * Einzige Stelle, die Speed-Befehle erzeugt. Fährt jedes Ziel in Stufen von höchstens maxStep an,
- * mit mindestens intervalMs zwischen zwei Befehlen, und nie über die Range.
+ * The only place that creates speed commands. Approaches every target in steps of at most maxStep,
+ * with at least intervalMs between two commands, and never beyond the range.
  */
 export class SpeedGovernor {
   maxStep = DEFAULT_MAX_STEP;
@@ -170,7 +171,7 @@ export class SpeedGovernor {
     this.opts = { intervalMs: RAMP_INTERVAL_MS, settleMs: 5000, freshMs: 3000, ...opts };
   }
 
-  /** Gewünschtes Ziel (nach Kappung), null = keins */
+  /** Requested target (after clamping), null = none */
   get target() { return this._target; }
   get lastCommand() { return this.last ? { ...this.last } : null; }
   get ramping() { return this.timer !== null || this.sending; }
@@ -184,13 +185,13 @@ export class SpeedGovernor {
     this.measured = { kmh, at };
   }
 
-  /** Von außen gesendeter Speed-Befehl (Konsole): beendet die Rampe und zählt für den Mindestabstand. */
+  /** Speed command sent from outside (console): ends the ramp and counts for the minimum interval. */
   noteExternalCommand(kmh: number) {
     this.cancel();
     this.last = { kmh, at: this.deps.now() };
   }
 
-  /** Von hier aus wird geplant: letzter Befehl, solange das Band nachregelt, sonst der Messwert. */
+  /** Planning starts here: the last command while the belt is still settling, otherwise the measured value. */
   base(): number {
     const now = this.deps.now();
     const m = this.measured && now - this.measured.at < this.opts.freshMs ? this.measured.kmh : undefined;
@@ -207,24 +208,24 @@ export class SpeedGovernor {
       this._target = clampSpeed(this._target, range);
       if (this._target === null) { this.cancel(); return; }
     }
-    // Läuft das Band über einem gerade gesenkten Limit, aktiv auf das Limit regeln
+    // If the belt runs above a limit that was just lowered, actively regulate down to the limit
     if ((this.last || this.measured) && this.base() > range.max + EPS) this.request(range.max);
     else this.pump();
   }
 
   request(kmh: number): number | null {
-    const t = clampSpeed(kmh, this.range);
-    if (t === null) {
-      this.deps.log?.(`❌ Kein erlaubter Speed: Limit ${this.range.max} liegt unter dem Geräte-Minimum ${this.range.min}`);
+    const clamped = clampSpeed(kmh, this.range);
+    if (clamped === null) {
+      this.deps.log?.(t.limit.noAllowedSpeed(this.range.max, this.range.min));
       return null;
     }
-    this._target = t;
+    this._target = clamped;
     this.pump();
     this.deps.onChange?.();
-    return t;
+    return clamped;
   }
 
-  /** Rampe sofort beenden (Stop, Pause, Disconnect). */
+  /** End the ramp immediately (stop, pause, disconnect). */
   cancel() {
     this.gen++;
     if (this.timer !== null) clearTimeout(this.timer);
@@ -233,7 +234,7 @@ export class SpeedGovernor {
     this.deps.onChange?.();
   }
 
-  /** Zusätzlich letzten Befehl und Messwert vergessen (nach Stop, Start, Disconnect). */
+  /** Additionally forget the last command and measured value (after stop, start, disconnect). */
   reset() {
     this.cancel();
     this.last = null;
@@ -252,7 +253,7 @@ export class SpeedGovernor {
     let plan = planRamp(this.base(), target, this.maxStep, this.range);
     if (!plan.length) {
       if (this.last?.kmh === target) { this.deps.onChange?.(); return; }
-      plan = [target]; // Basis ist schon das Ziel, Gerät bekommt es trotzdem explizit
+      plan = [target]; // base is already the target; the device still gets it explicitly
     }
     const next = plan[0]!;
     const gen = this.gen;
@@ -263,7 +264,7 @@ export class SpeedGovernor {
       this.sending = false;
       if (gen === this.gen && !ok) {
         this._target = null;
-        this.deps.log?.('❌ Rampe abgebrochen (Schreibfehler)');
+        this.deps.log?.(t.limit.rampAborted);
         this.deps.onChange?.();
         return;
       }
@@ -273,9 +274,9 @@ export class SpeedGovernor {
   }
 }
 
-// ---------- Konsole ----------
+// ---------- Console ----------
 
-/** Hex-Bytes strikt: 1–2 Hex-Ziffern pro Byte, getrennt durch Leerzeichen oder Kommas. */
+/** Strict hex bytes: 1–2 hex digits per byte, separated by spaces or commas. */
 export function parseHexBytes(text: string): number[] | null {
   const parts = text.trim().split(/[\s,]+/).filter(Boolean);
   if (!parts.length || parts.some(p => !/^[0-9a-f]{1,2}$/i.test(p))) return null;
@@ -285,7 +286,7 @@ export function parseHexBytes(text: string): number[] | null {
 export interface ConsoleContext {
   maxKmh: number;
   maxStep: number;
-  /** Basis der Rampe (letzter Befehl oder Messwert) */
+  /** Base of the ramp (last command or measured value) */
   baseKmh: number;
   msSinceLastSpeedCommand: number;
 }
@@ -301,33 +302,33 @@ export function checkConsoleCommand(bytes: number[], ctx: ConsoleContext): Conso
   const op = bytes[0];
   if (op === OP.SET_SPEED) {
     const kmh = decodeSetSpeed(bytes);
-    if (kmh === null || bytes.length !== 3) return { action: 'block', reason: 'Set Speed braucht genau 3 Bytes (02 LSB MSB), blockiert' };
-    if (kmh > ctx.maxKmh + EPS) return { action: 'block', reason: `${kmh} km/h liegt über dem Limit (${ctx.maxKmh}), blockiert` };
+    if (kmh === null || bytes.length !== 3) return { action: 'block', reason: t.console.setSpeedLength };
+    if (kmh > ctx.maxKmh + EPS) return { action: 'block', reason: t.console.overLimit(kmh, ctx.maxKmh) };
     if (Math.abs(kmh - ctx.baseKmh) > ctx.maxStep + EPS) {
-      return { action: 'block', reason: `Sprung von ${ctx.baseKmh} auf ${kmh} km/h ist größer als ${ctx.maxStep} km/h, blockiert (Slider/Presets fahren Rampen)` };
+      return { action: 'block', reason: t.console.jump(ctx.baseKmh, kmh, ctx.maxStep) };
     }
     if (ctx.msSinceLastSpeedCommand < RAMP_INTERVAL_MS) {
-      return { action: 'block', reason: `Letzter Speed-Befehl vor weniger als ${RAMP_INTERVAL_MS / 1000} s, blockiert` };
+      return { action: 'block', reason: t.console.tooSoon(RAMP_INTERVAL_MS) };
     }
     return { action: 'send', setSpeed: kmh };
   }
   if (op === OP.START) return { action: 'confirm-start' };
   if (op === OP_SET_TARGET_HEART_RATE) {
-    return { action: 'block', reason: 'Set Target Heart Rate blockiert: das Band würde den Speed selbst regeln, am Limit vorbei' };
+    return { action: 'block', reason: t.console.heartRateBlocked };
   }
   return { action: 'send' };
 }
 
-// ---------- Zustand ----------
+// ---------- State ----------
 
-/** Im Zweifel läuft das Band. */
+/** When in doubt, the belt is running. */
 export function beltMaybeRunning(s: { startedByApp: boolean; lastMeasuredKmh: number | undefined }): boolean {
   return s.startedByApp || (s.lastMeasuredKmh ?? 0) > 0;
 }
 
 /**
- * Erkennt, dass das Band während eines Programms steht (z. B. per Fernbedienung oder Sicherheitsschlüssel
- * gestoppt), damit das Programm keine weiteren Befehle schickt.
+ * Detects that the belt stands still during a program (e.g. stopped with the remote or the safety key),
+ * so the program sends no further commands.
  */
 export class StandstillDetector {
   private armed = false;
@@ -335,7 +336,7 @@ export class StandstillDetector {
 
   constructor(private readonly thresholdMs = 8000) {}
 
-  /** Scharf schalten. Mehrfaches arm() setzt einen laufenden Stillstand nicht zurück. */
+  /** Arm. Calling arm() again does not reset a standstill that is already being counted. */
   arm() {
     if (this.armed) return;
     this.armed = true;
@@ -343,7 +344,7 @@ export class StandstillDetector {
   }
   disarm() { this.armed = false; this.zeroSince = null; }
 
-  /** true genau einmal, wenn seit thresholdMs nur 0 km/h gemeldet wurde. */
+  /** true exactly once, when only 0 km/h has been reported for thresholdMs. */
   feed(kmh: number, now: number): boolean {
     if (!this.armed) return false;
     if (kmh > 0) { this.zeroSince = null; return false; }
@@ -353,7 +354,7 @@ export class StandstillDetector {
   }
 }
 
-// ---------- Erststart ----------
+// ---------- First run ----------
 
 export const DISCLAIMER_VERSION = 1;
 export const DISCLAIMER_STORAGE_KEY = 'walkflow.disclaimerAccepted';

@@ -1,7 +1,7 @@
-// Simuliertes FTMS-Laufband für Demo-Modus und Tests. Implementiert BleAdapter/BleDevice auf GATT-Ebene
-// und spricht echte FTMS-Bytes, damit Parser, Client und Queue genauso laufen wie mit Hardware.
-// Das Verhalten ist plausibel, nicht gemessen. Insbesondere läuft das simulierte Band bei
-// Verbindungsabbruch weiter (die gefährliche Annahme aus der Projektbeschreibung).
+// Simulated FTMS treadmill for demo mode and tests. Implements BleAdapter/BleDevice at GATT level
+// and speaks real FTMS bytes, so parser, client and queue run exactly as with hardware.
+// The behaviour is plausible, not measured. In particular, the simulated belt keeps running when the
+// connection drops (the dangerous assumption from the project brief).
 
 import type { BleAdapter, BleAvailability, BleDevice, Uuid } from './ble';
 import { buildTreadmillData, CH, DEVINFO_CH, DEVINFO_SERVICE, FTMS_SERVICE, HR_SERVICE, OP } from './ftms';
@@ -14,7 +14,7 @@ export interface SimOptions {
   inclRange: [min: number, max: number, step: number];
   heartRate: boolean;
   countdownMs: number;
-  /** Beschleunigung des Bands in km/h pro Sekunde */
+  /** Belt acceleration in km/h per second */
   accel: number;
   tickMs: number;
   notifyMs: number;
@@ -42,10 +42,10 @@ type BeltState = 'stopped' | 'countdown' | 'running' | 'paused';
 const le16 = (v: number) => { const x = Math.round(v) & 0xffff; return [x & 0xff, x >> 8]; };
 const dv = (bytes: number[]) => new DataView(new Uint8Array(bytes).buffer);
 
-/** Das „physische“ Band. Lebt über Verbindungen hinweg weiter. */
+/** The "physical" belt. Lives on across connections. */
 export class SimulatedBelt {
   state: BeltState = 'stopped';
-  /** tatsächliche Geschwindigkeit */
+  /** actual speed */
   speed = 0;
   target = 0;
   incline = 0;
@@ -54,7 +54,7 @@ export class SimulatedBelt {
   kcal = 0;
   private countdownLeft = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
-  /** wird bei Statuswechseln aufgerufen (Machine Status, Training Status) */
+  /** called on state changes (Machine Status, Training Status) */
   onMachineStatus: ((bytes: number[]) => void) | null = null;
   onTrainingStatus: ((bytes: number[]) => void) | null = null;
 
@@ -103,7 +103,7 @@ export class SimulatedBelt {
     this.timer = null;
   }
 
-  /** Physik, dt in Sekunden */
+  /** Physics, dt in seconds */
   step(dt: number) {
     if (this.state === 'countdown') {
       this.countdownLeft -= dt * 1000;
@@ -119,12 +119,12 @@ export class SimulatedBelt {
     if (this.speed < 0.01) this.speed = 0;
     const meters = (this.speed / 3.6) * dt;
     this.dist += meters;
-    this.kcal += meters * 0.05; // grobe Schätzung, nur Demo
+    this.kcal += meters * 0.05; // rough estimate, demo only
     if (this.state === 'running') this.elapsed += dt;
     if (this.state === 'stopped' && this.speed === 0 && !this.keepAlive) this.dispose();
   }
 
-  /** Solange ein Gerät verbunden ist, läuft die Physik weiter (für Notifications). */
+  /** While a device is connected, the physics keep running (for notifications). */
   keepAlive = false;
   touch() { this.ensureTimer(); }
 }
@@ -163,7 +163,7 @@ class SimDevice implements BleDevice {
     this.belt.onMachineStatus = null;
     this.belt.onTrainingStatus = null;
     this.belt.keepAlive = false;
-    this.belt.touch(); // Band läuft weiter, Physik auch
+    this.belt.touch(); // the belt keeps running, and so do the physics
     const cb = this.disconnectCb;
     this.disconnectCb = null;
     cb?.();
@@ -188,7 +188,7 @@ class SimDevice implements BleDevice {
       if (characteristic === CH.speedRange) return dv([...le16(smin * 100), ...le16(smax * 100), ...le16(sstep * 100)]);
       if (characteristic === CH.inclRange) return dv([...le16(imin * 10), ...le16(imax * 10), ...le16(istep * 10)]);
     }
-    throw new Error('Characteristic nicht vorhanden');
+    throw new Error('Characteristic not found');
   }
 
   async subscribe(service: Uuid, characteristic: Uuid, cb: (dv: DataView) => void) {
@@ -196,13 +196,13 @@ class SimDevice implements BleDevice {
     const ok = service === FTMS_SERVICE
       ? ([CH.control, CH.treadmillData, CH.machineStatus, CH.trainingStatus] as number[]).includes(characteristic)
       : service === HR_SERVICE && characteristic === CH.hr && this.opts.heartRate;
-    if (!ok) throw new Error('Characteristic nicht vorhanden');
+    if (!ok) throw new Error('Characteristic not found');
     this.subs.set(`${service}/${characteristic}`, cb);
   }
 
   async write(service: Uuid, characteristic: Uuid, data: Uint8Array) {
     this.assertConnected();
-    if (service !== FTMS_SERVICE || characteristic !== CH.control) throw new Error('nicht beschreibbar');
+    if (service !== FTMS_SERVICE || characteristic !== CH.control) throw new Error('Characteristic not writable');
     await new Promise(r => setTimeout(r, this.opts.writeDelayMs));
     this.assertConnected();
     const bytes = [...data];
@@ -258,7 +258,7 @@ class SimDevice implements BleDevice {
   }
 
   private assertConnected() {
-    if (!this.connected) throw new Error('nicht verbunden');
+    if (!this.connected) throw new Error('GATT server is disconnected');
   }
 }
 
@@ -280,10 +280,10 @@ export class SimulatorAdapter implements BleAdapter {
     return this.device;
   }
 
-  /** Verbindungsabbruch „von außen“ (Funkloch, Band aus Reichweite). Das Band läuft weiter. */
+  /** Connection loss "from outside" (radio gap, treadmill out of range). The belt keeps running. */
   simulateConnectionLoss() { this.device?.disconnect(); }
 
-  /** Sicherheitsschlüssel gezogen: Band steht sofort. */
+  /** Safety key pulled: the belt stops immediately. */
   pullSafetyKey() { this.belt.stop('safety-key'); }
 
   dispose() {

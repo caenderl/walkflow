@@ -1,5 +1,5 @@
-// BLE-Schicht: Adapter-Interface (GATT-Ebene), Web-Bluetooth-Adapter, serielle Write-Queue
-// und der FTMS-Verbindungsablauf. Ein zweiter Adapter (z. B. nativ) implementiert nur BleAdapter/BleDevice.
+// BLE layer: adapter interface (GATT level), Web Bluetooth adapter, serial write queue
+// and the FTMS connection sequence. A second adapter (e.g. native) only implements BleAdapter/BleDevice.
 
 import {
   CH, DEVINFO_CH, DEVINFO_SERVICE, FTMS_SERVICE, HR_SERVICE,
@@ -7,6 +7,7 @@ import {
   parseHeartRate, parseInclinationRange, parseSpeedRange, parseTreadmillData,
   type Features, type Range, type TreadmillData,
 } from './ftms';
+import { t } from './i18n';
 
 export type Uuid = number;
 
@@ -15,10 +16,10 @@ export interface BleDevice {
   readonly connected: boolean;
   connect(): Promise<void>;
   disconnect(): void;
-  /** Wird genau einmal pro Verbindung aufgerufen, auch bei manuellem Trennen. */
+  /** Called exactly once per connection, also when disconnecting manually. */
   onDisconnected(cb: () => void): void;
   read(service: Uuid, characteristic: Uuid): Promise<DataView>;
-  /** Listener wird vor dem Aktivieren der Notifications registriert. */
+  /** The listener is registered before notifications are enabled. */
   subscribe(service: Uuid, characteristic: Uuid, cb: (dv: DataView) => void): Promise<void>;
   /** Write with Response. */
   write(service: Uuid, characteristic: Uuid, data: Uint8Array): Promise<void>;
@@ -31,15 +32,15 @@ export type BleAvailability =
 export interface BleAdapter {
   readonly kind: string;
   availability(): Promise<BleAvailability>;
-  /** Öffnet die Geräteauswahl. */
+  /** Opens the device chooser. */
   requestDevice(optionalServices: Uuid[]): Promise<BleDevice>;
 }
 
-// ---------- Serielle Queue ----------
+// ---------- Serial queue ----------
 
-/** Ein wartender Task wurde von einem dringenden Task verdrängt. */
+/** A waiting task was displaced by an urgent task. */
 export class DroppedError extends Error {
-  constructor() { super('verworfen'); this.name = 'DroppedError'; }
+  constructor() { super('dropped'); this.name = 'DroppedError'; }
 }
 
 interface Job {
@@ -48,7 +49,7 @@ interface Job {
   reject: (e: unknown) => void;
 }
 
-/** Führt Aufgaben strikt nacheinander aus. Ein Fehler bricht die Kette nicht ab. */
+/** Runs tasks strictly one after another. An error does not break the chain. */
 export class SerialQueue {
   private pending: Job[] = [];
   private running = false;
@@ -61,8 +62,8 @@ export class SerialQueue {
   }
 
   /**
-   * Verwirft alle noch nicht gestarteten Tasks (DroppedError) und reiht `task` als nächsten ein.
-   * Ein gerade laufender Task wird abgewartet, es läuft nie etwas parallel.
+   * Rejects all tasks that have not started yet (DroppedError) and queues `task` next.
+   * A task that is already running is awaited; nothing ever runs in parallel.
    */
   runUrgent<T>(task: () => Promise<T>): Promise<T> {
     for (const job of this.pending.splice(0)) job.reject(new DroppedError());
@@ -107,7 +108,7 @@ class WebBluetoothDevice implements BleDevice {
   get connected() { return !!this.dev.gatt?.connected; }
 
   async connect() {
-    if (!this.dev.gatt) throw new Error('Gerät hat keinen GATT-Server');
+    if (!this.dev.gatt) throw new Error(t.ble.noGatt);
     this.dev.addEventListener('gattserverdisconnected', this.handleDisconnect);
     this.server = await this.dev.gatt.connect();
   }
@@ -123,7 +124,7 @@ class WebBluetoothDevice implements BleDevice {
   private service(uuid: Uuid) {
     let s = this.services.get(uuid);
     if (!s) {
-      if (!this.server) return Promise.reject(new Error('nicht verbunden'));
+      if (!this.server) return Promise.reject(new Error(t.ble.notConnected));
       s = this.server.getPrimaryService(uuid);
       s.catch(() => this.services.delete(uuid));
       this.services.set(uuid, s);
@@ -175,19 +176,19 @@ export class WebBluetoothAdapter implements BleAdapter {
         return { ok: false, reason: 'no-adapter' };
       }
     } catch {
-      // getAvailability ist optional, im Zweifel weitermachen
+      // getAvailability is optional; when in doubt, carry on
     }
     return { ok: true };
   }
 
   async requestDevice(optionalServices: Uuid[]): Promise<BleDevice> {
-    // Kein Service-Filter: unklar, ob das Band 0x1826 im Advertising hat.
+    // No service filter: unclear whether the treadmill advertises 0x1826.
     const dev = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices });
     return new WebBluetoothDevice(dev);
   }
 }
 
-// ---------- FTMS-Client ----------
+// ---------- FTMS client ----------
 
 export interface TreadmillEvents {
   log(msg: string): void;
@@ -215,11 +216,11 @@ export class TreadmillClient {
   get adapterKind() { return this.adapter.kind; }
   get connected() { return !!this.device?.connected; }
 
-  /** Ablauf wie im Prototyp, inklusive Reihenfolge der GATT-Zugriffe. */
+  /** Same sequence as the prototype, including the order of GATT accesses. */
   async connect(): Promise<ConnectResult> {
     const { ev } = this;
     const device = await this.adapter.requestDevice([FTMS_SERVICE, HR_SERVICE, DEVINFO_SERVICE]);
-    ev.log(`Gerät: ${device.name ?? '(ohne Namen)'}`);
+    ev.log(t.ble.device(device.name));
     device.onDisconnected(() => {
       if (this.device === device) this.device = null;
       ev.disconnected();
@@ -240,14 +241,14 @@ export class TreadmillClient {
       ];
       for (const [uuid, cb] of statusChars) {
         try { await device.subscribe(FTMS_SERVICE, uuid, cb); }
-        catch { ev.log(`(Status 0x${uuid.toString(16)} nicht abonnierbar)`); }
+        catch { ev.log(t.ble.notSubscribable(uuid.toString(16))); }
       }
 
-      const infoChars: [string, Uuid][] = [
-        ['Hersteller', DEVINFO_CH.manufacturer], ['Modell', DEVINFO_CH.model], ['Firmware', DEVINFO_CH.firmware],
+      const infoChars: [(v: string) => string, Uuid][] = [
+        [t.ble.manufacturer, DEVINFO_CH.manufacturer], [t.ble.model, DEVINFO_CH.model], [t.ble.firmware, DEVINFO_CH.firmware],
       ];
-      for (const [label, uuid] of infoChars) {
-        try { ev.log(`${label}: ${new TextDecoder().decode(await device.read(DEVINFO_SERVICE, uuid))}`); }
+      for (const [line, uuid] of infoChars) {
+        try { ev.log(line(new TextDecoder().decode(await device.read(DEVINFO_SERVICE, uuid)))); }
         catch { /* optional */ }
       }
 
@@ -255,31 +256,31 @@ export class TreadmillClient {
 
       try {
         result.features = parseFeatures(await device.read(FTMS_SERVICE, CH.feature));
-        ev.log(`Features: ${result.features.machineNames.join(', ') || '–'}`);
-        ev.log(`Steuerbar: ${result.features.targetNames.join(', ') || '–'}`);
-      } catch { ev.log('Feature-Flags nicht lesbar'); }
+        ev.log(t.ble.features(result.features.machineNames.join(', ') || '–'));
+        ev.log(t.ble.controllable(result.features.targetNames.join(', ') || '–'));
+      } catch { ev.log(t.ble.featuresUnreadable); }
 
       try {
         const r = parseSpeedRange(await device.read(FTMS_SERVICE, CH.speedRange));
         result.speedRange = r;
-        ev.log(`Speed-Range: ${r.min} – ${r.max} km/h (Step ${r.step})`);
-      } catch { ev.log('Speed-Range nicht lesbar, nehme 1–12 km/h an'); }
+        ev.log(t.ble.speedRange(r.min, r.max, r.step));
+      } catch { ev.log(t.ble.speedRangeUnreadable); }
 
       try {
         const r = parseInclinationRange(await device.read(FTMS_SERVICE, CH.inclRange));
         result.inclRange = r;
-        ev.log(`Inclination-Range: ${r.min} – ${r.max} % (Step ${r.step})`);
-      } catch { ev.log('Inclination-Range nicht lesbar (Fallback 0–15 %)'); }
+        ev.log(t.ble.inclRange(r.min, r.max, r.step));
+      } catch { ev.log(t.ble.inclRangeUnreadable); }
 
       try {
         await device.subscribe(HR_SERVICE, CH.hr, dv => ev.heartRate(parseHeartRate(dv)));
         result.hasHeartRate = true;
-        ev.log('Puls-Service abonniert');
-      } catch { ev.log('(kein Puls-Service)'); }
+        ev.log(t.ble.hrSubscribed);
+      } catch { ev.log(t.ble.noHr); }
 
       return result;
     } catch (e) {
-      try { device.disconnect(); } catch { /* egal */ }
+      try { device.disconnect(); } catch { /* ignore */ }
       throw e;
     }
   }
@@ -289,22 +290,22 @@ export class TreadmillClient {
   }
 
   /**
-   * Schreibt auf den Control Point. Alle Writes laufen seriell durch eine Queue, mit Response.
-   * `urgent` (Stop/Pause): wartende Writes werden verworfen, der laufende wird abgewartet.
-   * Resolved mit false bei Fehler oder Verwerfen (wird geloggt), wirft nie.
+   * Writes to the Control Point. All writes go serially through a queue, with response.
+   * `urgent` (stop/pause): waiting writes are dropped, the running one is awaited.
+   * Resolves to false on error or when dropped (both are logged), never throws.
    */
   send(bytes: Uint8Array, opts: { urgent?: boolean } = {}): Promise<boolean> {
     const task = async () => {
       this.ev.log(`→ ${hex(bytes)}`);
       const d = this.device;
-      if (!d?.connected) throw new Error('nicht verbunden');
+      if (!d?.connected) throw new Error(t.ble.notConnected);
       await d.write(FTMS_SERVICE, CH.control, bytes);
     };
     return (opts.urgent ? this.queue.runUrgent(task) : this.queue.run(task)).then(
       () => true,
       (e: unknown) => {
-        if (e instanceof DroppedError) this.ev.log(`verworfen: ${hex(bytes)} (Stop/Pause hat Vorrang)`);
-        else this.ev.log(`❌ Schreibfehler: ${e instanceof Error ? e.message : String(e)}`);
+        if (e instanceof DroppedError) this.ev.log(t.ble.dropped(hex(bytes)));
+        else this.ev.log(t.ble.writeError(e instanceof Error ? e.message : String(e)));
         return false;
       },
     );

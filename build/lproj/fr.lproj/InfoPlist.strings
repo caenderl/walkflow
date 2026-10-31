@@ -1,0 +1,3 @@
+/* Text of the macOS Bluetooth permission prompt */
+"NSBluetoothAlwaysUsageDescription" = "Walkflow se connecte à votre tapis de course via Bluetooth pour le commander et afficher les données en direct.";
+"NSBluetoothPeripheralUsageDescription" = "Walkflow se connecte à votre tapis de course via Bluetooth pour le commander et afficher les données en direct.";

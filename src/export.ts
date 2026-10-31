@@ -1,7 +1,7 @@
-// Export der aufgezeichneten Samples.
+// Export of the recorded samples.
 
 export interface Sample {
-  /** Unix-Zeit in ms */
+  /** Unix time in ms */
   ts: number;
   speed?: number;
   dist?: number;
@@ -12,7 +12,8 @@ export interface Sample {
 }
 
 export function toCsv(samples: readonly Sample[]): string {
-  const rows = ['zeit_s,speed_kmh,dist_m,incl_pct,puls,kcal'];
+  // Column names are part of the file format: English in every language
+  const rows = ['time_s,speed_kmh,dist_m,incl_pct,hr_bpm,kcal'];
   const t0 = samples[0]?.ts ?? 0;
   for (const s of samples) {
     rows.push([((s.ts - t0) / 1000).toFixed(0), s.speed ?? '', s.dist ?? '', s.incl ?? '', s.hr ?? '', s.kcal ?? ''].join(','));
@@ -21,20 +22,21 @@ export function toCsv(samples: readonly Sample[]): string {
 }
 
 export function exportFilename(date: Date, ext: string): string {
-  return `laufband-${date.toISOString().slice(0, 16).replace(':', '-')}.${ext}`;
+  return `walkflow-${date.toISOString().slice(0, 16).replace(':', '-')}.${ext}`;
 }
 
-// ---------- TCX (Training Center XML, z. B. für Strava oder Garmin Connect) ----------
+// ---------- TCX (Training Center XML, e.g. for Strava or Garmin Connect) ----------
 
 export type TcxSport = 'Running' | 'Other';
 
 const iso = (ts: number) => new Date(ts).toISOString().replace(/\.\d{3}Z$/, 'Z');
 const num = (v: number, decimals: number) => String(Math.round(v * 10 ** decimals) / 10 ** decimals);
+const escapeXml = (s: string) => s.replace(/[<>&"']/g, c => `&#${c.charCodeAt(0)};`);
 
 /**
- * Zähler vom Band (Distanz, kcal) zu einer monotonen Summe ab dem ersten Wert.
- * Fällt der Zähler (Band hat nach Stop neu angefangen), zählt der neue Wert ab 0 weiter.
- * Fehlende Werte werden fortgeschrieben.
+ * Turns counters from the treadmill (distance, kcal) into a monotonic sum from the first value on.
+ * If the counter drops (the treadmill started over after a stop), the new value counts on from 0.
+ * Missing values carry the previous sum forward.
  */
 function accumulate(values: (number | undefined)[]): number[] {
   let sum = 0;
@@ -48,7 +50,7 @@ function accumulate(values: (number | undefined)[]): number[] {
   });
 }
 
-export function buildTcx(all: readonly Sample[], opts: { sport: TcxSport }): string | null {
+export function buildTcx(all: readonly Sample[], opts: { sport: TcxSport; notes: string }): string | null {
   const withSpeed = all.filter(s => s.speed !== undefined);
   const first = withSpeed.findIndex(s => s.speed! > 0);
   if (first === -1) return null;
@@ -60,7 +62,7 @@ export function buildTcx(all: readonly Sample[], opts: { sport: TcxSport }): str
   if (pts.some(p => p.dist !== undefined)) {
     dist = accumulate(pts.map(p => p.dist));
   } else {
-    // Ohne Distanz vom Band: Speed über die Zeit integrieren
+    // No distance from the treadmill: integrate speed over time
     dist = [0];
     for (let i = 1; i < pts.length; i++) {
       const a = pts[i - 1]!, b = pts[i]!;
@@ -107,7 +109,7 @@ ${trackpoints}
         </Track>
         <Extensions><ns3:LX><ns3:AvgSpeed>${num(avgSpeed, 3)}</ns3:AvgSpeed></ns3:LX></Extensions>
       </Lap>
-      <Notes>Laufband, aufgezeichnet mit Walkflow</Notes>
+      <Notes>${escapeXml(opts.notes)}</Notes>
     </Activity>
   </Activities>
 </TrainingCenterDatabase>

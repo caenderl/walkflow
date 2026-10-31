@@ -8,19 +8,22 @@ import { choose, confirmDialog } from './dialogs';
 import { buildTcx, exportFilename, toCsv, type Sample, type TcxSport } from './export';
 import {
   cmdPause, cmdRequestControl, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, describeMachineStatus, hex,
-  OP, parseMachineStatus, parseTrainingStatus, type TreadmillData,
+  OP, parseMachineStatus, parseTrainingStatus, type Range, type TreadmillData,
 } from './ftms';
+import { onLanguageChange, t, type Text } from './i18n';
+import { bindText, initLanguage, languageSelect } from './i18n-dom';
 import { fmtTime, parseProgram, ProgramRunner, totalSeconds } from './program';
 import { setupPwa } from './pwa';
 import {
   beltMaybeRunning, checkConsoleCommand, decideLimitChange, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION,
   effectiveMax as calcEffectiveMax, isDisclaimerAccepted, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE, LIMIT_STORAGE_KEY,
-  loadLimit, MAX_STEP_STORAGE_KEY, parseHexBytes, parseMaxStep, RAMP_INTERVAL_MS, serializeLimit, SpeedGovernor,
-  StandstillDetector,
+  loadLimit, MAX_STEP_MAX, MAX_STEP_MIN, MAX_STEP_STORAGE_KEY, parseHexBytes, parseMaxStep, RAMP_INTERVAL_MS,
+  serializeLimit, SpeedGovernor, StandstillDetector,
 } from './safety';
 import { SimulatorAdapter } from './sim';
-import { DISCLAIMER_POINTS, DISCLAIMER_TITLE, NOT_AFFILIATED, TESTED_FEATURES, TESTED_WITH, UNTESTED_FEATURES } from './texts';
 import { $, $button, $input, download, log, store } from './ui';
+
+initLanguage();
 
 const HIDDEN_MODE_KEY = 'walkflow.hiddenMode';
 const TCX_SPORT_KEY = 'walkflow.tcxSport';
@@ -33,15 +36,17 @@ let client: TreadmillClient | null = null;
 let devMin = 1.0, devMax = 12.0;
 let limit = 6;
 let wakeLock: WakeLockSentinel | null = null;
-/** Per App oder laut Machine Status gestartet und seitdem nicht gestoppt */
+/** Started by the app or according to Machine Status, and not stopped since */
 let beltStarted = false;
 let lastMeasured: number | undefined;
 let controlLost = false;
 let hiddenSince: number | null = null;
 let hiddenWhileRunning: 'warned' | 'paused' | null = null;
 let sliderDragging = false;
-const cur: Omit<Sample, 'ts'> = {};   // letzte Messwerte
-const samples: Sample[] = [];          // Verlauf (1 Hz)
+let inclRange: Range | null = null;
+let inclShown = 0;
+const cur: Omit<Sample, 'ts'> = {};   // latest measured values
+const samples: Sample[] = [];          // history (1 Hz)
 let lastSample = 0;
 
 const connected = () => !!client?.connected;
@@ -61,62 +66,73 @@ const runner = new ProgramRunner({
   stop: () => doStop(),
   setTarget: kmh => { governor.request(kmh); standstill.arm(); },
   currentTarget: () => governor.target,
-  status: t => { $('progStatus').textContent = t; },
+  status: text => bindText($('progStatus'), text),
   log,
 });
 
 const events: TreadmillEvents = {
   log,
   data: onTreadmillData,
-  heartRate: bpm => { if (bpm > 0) { cur.hr = bpm; $('vHr').textContent = String(bpm); } },
+  heartRate: bpm => { if (bpm > 0) { cur.hr = bpm; renderStats(); } },
   machineStatus: onMachineStatus,
   trainingStatus: dv => {
-    const t = parseTrainingStatus(dv);
-    log(`ℹ Training ${hex(dv)}${t ? ` (${t.text})` : ''}`);
+    log(t.machine.training(hex(dv), parseTrainingStatus(dv)?.text ?? null));
   },
   disconnected: onDisconnected,
 };
 
-// ---------- Live-Daten ----------
+// ---------- Live data ----------
 function onTreadmillData(r: TreadmillData) {
-  if (r.speed !== undefined) { cur.speed = r.speed; $('vSpeed').textContent = r.speed.toFixed(1); }
-  if (r.dist !== undefined) { cur.dist = r.dist; $('vDist').textContent = (r.dist / 1000).toFixed(2); }
-  if (r.incl !== undefined) { cur.incl = r.incl; $('vIncl').textContent = r.incl.toFixed(1); }
-  if (r.kcal !== undefined) { cur.kcal = r.kcal; $('vKcal').textContent = String(r.kcal); }
-  if (r.time !== undefined) { cur.time = r.time; $('vTime').textContent = fmtTime(r.time); }
-  if (r.hr !== undefined && r.hr > 0) { cur.hr = r.hr; $('vHr').textContent = String(r.hr); }
+  if (r.speed !== undefined) cur.speed = r.speed;
+  if (r.dist !== undefined) cur.dist = r.dist;
+  if (r.incl !== undefined) cur.incl = r.incl;
+  if (r.kcal !== undefined) cur.kcal = r.kcal;
+  if (r.time !== undefined) cur.time = r.time;
+  if (r.hr !== undefined && r.hr > 0) cur.hr = r.hr;
+  renderStats();
 
   if (r.speed !== undefined) {
     lastMeasured = r.speed;
     governor.noteMeasured(r.speed);
     if (standstill.feed(r.speed, now()) && runner.active) {
-      log('⚠ Band meldet seit 8 s 0 km/h, Programm wird beendet');
-      runner.abort('Band steht, Programm beendet');
+      log(t.program.standstillLog);
+      runner.abort(() => t.program.standstill);
       governor.reset();
     }
   }
-  // Notifications kommen auch in gedrosselten Hintergrund-Tabs an
+  // Notifications also arrive in throttled background tabs
   runner.tick();
 
-  const t = Date.now();
-  if (t - lastSample >= 1000) {
-    lastSample = t;
-    samples.push({ ts: t, ...cur });
+  const ts = Date.now();
+  if (ts - lastSample >= 1000) {
+    lastSample = ts;
+    samples.push({ ts, ...cur });
     if (samples.length > 20000) samples.shift();
     redrawChart();
   }
 }
 
+function renderStats() {
+  const f = (v: number | undefined, digits: number) => (v === undefined ? '–' : t.number(v, digits));
+  // Without a connection the current speed is unknown; do not leave the last value standing
+  $('vSpeed').textContent = connected() ? f(cur.speed, 1) : '–';
+  $('vDist').textContent = f(cur.dist === undefined ? undefined : cur.dist / 1000, 2);
+  $('vIncl').textContent = f(cur.incl, 1);
+  $('vTime').textContent = cur.time === undefined ? '–' : fmtTime(cur.time);
+  $('vHr').textContent = cur.hr === undefined ? '–' : String(cur.hr);
+  $('vKcal').textContent = cur.kcal === undefined ? '–' : String(cur.kcal);
+}
+
 function onMachineStatus(dv: DataView) {
   const e = parseMachineStatus(dv);
-  log(`ℹ Status ${hex(dv)}${e ? ` (${describeMachineStatus(e)})` : ''}`);
+  log(t.machine.status(hex(dv), e ? describeMachineStatus(e) : null));
   if (!e) return;
   switch (e.kind) {
     case 'stopped':
     case 'paused':
     case 'safety-key':
       beltStarted = false;
-      if (runner.active) runner.abort(`Programm beendet: ${describeMachineStatus(e)}`);
+      if (runner.active) runner.abort(() => t.program.endedBy(describeMachineStatus(e)));
       governor.reset();
       standstill.disarm();
       break;
@@ -125,7 +141,7 @@ function onMachineStatus(dv: DataView) {
       break;
     case 'control-lost':
       controlLost = true;
-      log('⚠ Steuerrecht verloren. Stop schickt deshalb vorher Request Control.');
+      log(t.machine.controlLostLog);
       break;
     default:
       break;
@@ -136,7 +152,7 @@ function redrawChart() {
   drawChart($<HTMLCanvasElement>('chart'), samples, { now: Date.now(), limit: effectiveMax(), target: governor.target ?? 0 });
 }
 
-// ---------- Speed & Steigung ----------
+// ---------- Speed & incline ----------
 function effectiveMax() { return calcEffectiveMax(devMax, limit); }
 
 function applyLimits() {
@@ -144,24 +160,26 @@ function applyLimits() {
   sl.min = String(devMin); sl.max = String(effectiveMax());
   if (parseFloat(sl.value) > parseFloat(sl.max)) sl.value = sl.max;
   if (parseFloat(sl.value) < parseFloat(sl.min)) sl.value = sl.min;
-  $('rangeInfo').textContent = `Geräte-Range: ${devMin.toFixed(1)} – ${devMax.toFixed(1)} km/h, aktives Limit: ${effectiveMax().toFixed(1)}. `
-    + `Rampe: höchstens ${governor.maxStep.toFixed(1)} km/h pro Befehl, mindestens ${RAMP_INTERVAL_MS / 1000} s Abstand.`;
+  renderRangeInfo();
   const before = governor.target;
   governor.setRange({ min: devMin, max: effectiveMax() });
-  if (connected() && governor.target !== before && governor.target !== null) log(`Limit gesenkt, regle auf ${governor.target.toFixed(1)} km/h`);
+  if (connected() && governor.target !== before && governor.target !== null) log(t.limit.lowered(governor.target));
   renderSpeed();
+}
+
+function renderRangeInfo() {
+  $('rangeInfo').textContent = t.settings.range(devMin, devMax, effectiveMax(), governor.maxStep, RAMP_INTERVAL_MS);
 }
 
 function renderSpeed() {
   const sl = $input('slider');
-  const t = governor.target;
-  if (t !== null && !sliderDragging) sl.value = String(t);
-  const shown = t ?? parseFloat(sl.value);
-  $('target').textContent = `${shown.toFixed(1)} km/h`;
+  const target = governor.target;
+  if (target !== null && !sliderDragging) sl.value = String(target);
+  $('target').textContent = t.control.speed(target ?? parseFloat(sl.value));
   const lc = governor.lastCommand;
-  $('rampInfo').textContent = governor.ramping && t !== null && lc && lc.kmh !== t
-    ? `Rampe läuft: ${lc.kmh.toFixed(1)} → ${t.toFixed(1)} km/h`
-    : ' ';
+  $('rampInfo').textContent = governor.ramping && target !== null && lc && lc.kmh !== target
+    ? t.control.ramping(lc.kmh, target)
+    : ' ';
 }
 
 function requestSpeed(kmh: number) {
@@ -174,15 +192,21 @@ function stepSpeed(delta: number) {
   requestSpeed((governor.target ?? governor.base()) + delta);
 }
 
+function renderIncline() {
+  $('inclTarget').textContent = t.incline.value(inclShown);
+  $('inclInfo').textContent = inclRange ? t.incline.range(inclRange.min, inclRange.max, inclRange.step) : t.incline.unknown;
+}
+
 function setIncline(pct: number) {
   if (!client) return Promise.resolve(false);
   $input('inclSlider').value = String(pct);
-  $('inclTarget').textContent = `${pct.toFixed(1)} %`;
+  inclShown = pct;
+  renderIncline();
   return client.send(cmdSetInclination(pct));
 }
 
-// ---------- Start / Stop / Programm ----------
-async function doStop(reason = 'Gestoppt'): Promise<boolean> {
+// ---------- Start / stop / program ----------
+async function doStop(reason: Text = () => t.stop.stopped): Promise<boolean> {
   runner.abort(reason);
   governor.reset();
   standstill.disarm();
@@ -199,7 +223,7 @@ async function doStop(reason = 'Gestoppt'): Promise<boolean> {
   return ok;
 }
 
-async function doPause(reason = 'Pausiert, Programm beendet'): Promise<boolean> {
+async function doPause(reason: Text = () => t.stop.paused): Promise<boolean> {
   runner.abort(reason);
   governor.reset();
   standstill.disarm();
@@ -223,60 +247,62 @@ async function doStart(): Promise<boolean> {
 }
 
 function confirmStart(intro?: string): Promise<boolean> {
-  return confirmDialog('Band starten?', [
+  return confirmDialog(t.start.title, [
     ...(intro ? [intro] : []),
-    'Stehst du auf den Seitenflächen und nicht auf dem Band?',
-    'Ist der Sicherheitsschlüssel eingesteckt und an deiner Kleidung befestigt?',
-  ], 'Ja, starten');
+    t.start.sideRails,
+    t.start.safetyKey,
+  ], t.start.confirm);
 }
 
 async function runProgram() {
   const steps = parseProgram($input('progText').value);
-  if (!steps.length) { $('progStatus').textContent = 'Programm leer oder nicht lesbar'; return; }
+  if (!steps.length) { bindText($('progStatus'), () => t.program.empty); return; }
   const max = effectiveMax();
-  const capped = steps.some(s => s.speed > max) ? ` Schritte über ${max.toFixed(1)} km/h werden auf das Limit gekappt.` : '';
-  if (!(await confirmStart(`Programm mit ${steps.length} Schritten (${fmtTime(totalSeconds(steps))} min) starten?${capped}`))) return;
+  const intro = t.program.confirm(steps.length, fmtTime(totalSeconds(steps)))
+    + (steps.some(s => s.speed > max) ? ` ${t.program.capped(max)}` : '');
+  if (!(await confirmStart(intro))) return;
   if (!connected()) return;
   await runner.run(steps);
   standstill.disarm();
 }
 
-// ---------- CSV ----------
+// ---------- Export ----------
 function exportCsv() {
-  if (!samples.length) { log('Keine Daten zum Exportieren'); return; }
+  if (!samples.length) { log(t.settings.noData); return; }
   download(toCsv(samples), 'text/csv', exportFilename(new Date(), 'csv'));
 }
 
 function exportTcx() {
   const sport = $<HTMLSelectElement>('tcxSport').value as TcxSport;
-  const xml = buildTcx(samples, { sport });
-  if (!xml) { log('Keine Bewegung im Verlauf, nichts zu exportieren'); return; }
+  const xml = buildTcx(samples, { sport, notes: t.settings.tcxNotes });
+  if (!xml) { log(t.settings.noMovement); return; }
   const firstMoving = samples.find(s => (s.speed ?? 0) > 0);
   download(xml, 'application/vnd.garmin.tcx+xml', exportFilename(new Date(firstMoving?.ts ?? Date.now()), 'tcx'));
 }
 
-// ---------- Erststart ----------
+// ---------- First run ----------
 async function ensureDisclaimer(): Promise<boolean> {
   if (isDisclaimerAccepted(store.get(DISCLAIMER_STORAGE_KEY))) return true;
-  const r = await choose({
-    title: DISCLAIMER_TITLE,
-    list: DISCLAIMER_POINTS,
-    requireCheckbox: 'Gelesen. Ich nutze die App auf eigene Gefahr.',
-    buttons: [{ id: 'ok', label: 'Verstanden', kind: 'primary' }, { id: 'later', label: 'Später' }],
+  const r = await choose(() => ({
+    title: t.disclaimer.title,
+    list: t.disclaimer.points,
+    requireCheckbox: t.disclaimer.checkbox,
+    buttons: [{ id: 'ok', label: t.disclaimer.accept, kind: 'primary' }, { id: 'later', label: t.disclaimer.later }],
     cancelId: 'later',
-  });
+    languagePicker: true,
+  }));
   if (r !== 'ok') return false;
   store.set(DISCLAIMER_STORAGE_KEY, String(DISCLAIMER_VERSION));
   return true;
 }
 
-// ---------- Verbinden ----------
+// ---------- Connect ----------
 async function connect(kind: 'ble' | 'demo') {
   if (connected() || !(await ensureDisclaimer())) return;
   $button('connect').disabled = true;
   $button('demo').disabled = true;
   try {
-    $('status').textContent = kind === 'demo' ? 'Demo verbindet…' : 'Suche…';
+    bindText($('status'), () => kind === 'demo' ? t.connection.demoConnecting : t.connection.searching);
     let adapter: BleAdapter = webAdapter;
     if (kind === 'demo') adapter = sim ??= new SimulatorAdapter({ version: APP_VERSION });
     const c = new TreadmillClient(adapter, events);
@@ -290,8 +316,9 @@ async function connect(kind: 'ble' | 'demo') {
       const { min: mn, max: mx, step: st } = info.inclRange;
       const sl = $input('inclSlider');
       sl.min = String(mn); sl.max = String(mx); sl.step = String(st || 0.5); sl.value = String(Math.max(mn, 0));
-      $('inclTarget').textContent = `${parseFloat(sl.value).toFixed(1)} %`;
-      $('inclInfo').textContent = `Range: ${mn} – ${mx} % (Step ${st})`;
+      inclRange = info.inclRange;
+      inclShown = parseFloat(sl.value);
+      renderIncline();
     }
 
     beltStarted = false; lastMeasured = undefined; controlLost = false;
@@ -301,14 +328,18 @@ async function connect(kind: 'ble' | 'demo') {
     setUi(true);
     $('alarm').hidden = true;
     $('demoBanner').hidden = kind !== 'demo';
-    $('status').textContent = `${kind === 'demo' ? 'Demo verbunden' : 'Verbunden'}: ${info.deviceName ?? 'Laufband'}`;
+    const name = info.deviceName;
+    bindText($('status'), () => {
+      const shown = name ?? t.connection.defaultDeviceName;
+      return kind === 'demo' ? t.connection.demoConnected(shown) : t.connection.connected(shown);
+    });
     desktop?.connectionChanged(true);
     await c.send(cmdRequestControl());
   } catch (e) {
     log(`❌ ${e instanceof Error ? e.message : String(e)}`);
     if (!connected()) {
       client = null;
-      $('status').textContent = 'Nicht verbunden';
+      bindText($('status'), () => t.connection.notConnected);
       setUi(false);
     }
   }
@@ -317,28 +348,29 @@ async function connect(kind: 'ble' | 'demo') {
 function resetIncline() {
   const sl = $input('inclSlider');
   sl.min = '0'; sl.max = '15'; sl.step = '1'; sl.value = '0';
-  $('inclTarget').textContent = '0.0 %';
-  $('inclInfo').textContent = 'Range: unbekannt. Ob das Band die Steigung per FTMS annimmt, sagt dir das Log (Set Inclination: OK oder nicht unterstützt).';
+  inclRange = null;
+  inclShown = 0;
+  renderIncline();
 }
 
 function onDisconnected() {
   const wasRunning = maybeRunning();
-  log('Verbindung getrennt');
-  runner.abort('Verbindung getrennt, Programm beendet');
+  log(t.disconnect.log);
+  runner.abort(() => t.disconnect.programEnded);
   governor.reset();
   standstill.disarm();
   releaseWakeLock();
   desktop?.connectionChanged(false);
   client = null;
   beltStarted = false; lastMeasured = undefined; controlLost = false;
-  $('status').textContent = 'Nicht verbunden';
-  $('vSpeed').textContent = '–'; // unbekannt, nicht den letzten Wert stehen lassen
+  bindText($('status'), () => t.connection.notConnected);
+  renderStats();
   $('demoBanner').hidden = true;
   setUi(false);
   if (wasRunning) {
     $('alarm').hidden = false;
     $('alarm').scrollIntoView({ block: 'start' });
-    log('⚠ Verbindung verloren, während das Band (vermutlich) lief. Die App kann es nicht mehr stoppen.');
+    log(t.disconnect.lostWhileRunning);
   }
 }
 
@@ -346,22 +378,20 @@ async function disconnectClicked() {
   if (!client) return;
   if (maybeRunning()) {
     const choice = await choose({
-      title: 'Das Band läuft noch',
-      paragraphs: ['Nach dem Trennen kann die App das Band nicht mehr stoppen.'],
+      title: t.disconnect.runningTitle,
+      paragraphs: [t.disconnect.runningText],
       buttons: [
-        { id: 'stop', label: 'Erst stoppen, dann trennen', kind: 'primary' },
-        { id: 'force', label: 'Trotzdem trennen' },
-        { id: 'cancel', label: 'Abbrechen' },
+        { id: 'stop', label: t.disconnect.stopFirst, kind: 'primary' },
+        { id: 'force', label: t.disconnect.force },
+        { id: 'cancel', label: t.common.cancel },
       ],
       cancelId: 'cancel',
     });
     if (choice === 'cancel') return;
     if (choice === 'stop') {
-      const ok = await doStop('Gestoppt (vor dem Trennen)');
+      const ok = await doStop(() => t.stop.beforeDisconnect);
       if (!(ok && await waitUntil(() => !maybeRunning(), 10_000))) {
-        const force = await confirmDialog('Band meldet noch Bewegung', [
-          `Letzter Messwert: ${lastMeasured?.toFixed(1) ?? '?'} km/h. Nach dem Trennen kann die App das Band nicht mehr stoppen.`,
-        ], 'Trotzdem trennen');
+        const force = await confirmDialog(t.disconnect.stillMovingTitle, [t.disconnect.stillMovingText(lastMeasured)], t.disconnect.force);
         if (!force) return;
       }
     }
@@ -388,14 +418,14 @@ function setUi(isConnected: boolean) {
   document.querySelectorAll<HTMLButtonElement | HTMLInputElement>('.needs-conn').forEach(el => { el.disabled = !isConnected; });
 }
 
-// ---------- Wake Lock & Hintergrund ----------
+// ---------- Wake lock & background ----------
 async function acquireWakeLock() {
   if (wakeLock && !wakeLock.released) return;
   try { wakeLock = (await navigator.wakeLock?.request('screen')) ?? null; } catch { wakeLock = null; }
 }
 
 function releaseWakeLock() {
-  try { void wakeLock?.release(); } catch { /* egal */ }
+  try { void wakeLock?.release(); } catch { /* ignore */ }
   wakeLock = null;
 }
 
@@ -403,25 +433,24 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (!connected() || !maybeRunning()) return;
     hiddenSince = Date.now();
-    document.title = `⚠ Band läuft – ${APP_NAME}`;
+    document.title = t.hidden.title;
     if ($<HTMLSelectElement>('hiddenMode').value === 'pause') {
       hiddenWhileRunning = 'paused';
-      log('Tab im Hintergrund: Band wird pausiert');
-      void doPause('Tab im Hintergrund: Band pausiert, Programm beendet');
+      log(t.hidden.pausingLog);
+      void doPause(() => t.hidden.pausedReason);
     } else {
       hiddenWhileRunning = 'warned';
-      log('⚠ Tab im Hintergrund, das Band läuft weiter');
+      log(t.hidden.warnLog);
     }
     return;
   }
   document.title = APP_NAME;
   runner.tick();
-  if (connected()) void acquireWakeLock(); // der Browser gibt den Wake Lock beim Verstecken frei
+  if (connected()) void acquireWakeLock(); // the browser releases the wake lock when the tab is hidden
   if (hiddenSince !== null && hiddenWhileRunning) {
     const s = Math.round((Date.now() - hiddenSince) / 1000);
-    $('hiddenText').textContent = hiddenWhileRunning === 'paused'
-      ? `Der Tab war ${s} s im Hintergrund, das Band wurde deshalb pausiert.`
-      : `Der Tab war ${s} s im Hintergrund, das Band lief weiter. Browser drosseln Timer in Hintergrund-Tabs, Programmwechsel können sich verzögert haben.`;
+    const how = hiddenWhileRunning;
+    bindText($('hiddenText'), () => how === 'paused' ? t.hidden.paused(s) : t.hidden.warned(s));
     $('hiddenBanner').hidden = false;
   }
   hiddenSince = null;
@@ -432,12 +461,12 @@ window.addEventListener('beforeunload', e => {
   if (connected() && maybeRunning()) e.preventDefault();
 });
 
-// ---------- Konsole ----------
+// ---------- Console ----------
 async function rawSend() {
   const c = client;
   if (!c) return;
   const bytes = parseHexBytes($input('raw').value);
-  if (!bytes) { log('❌ Ungültige Hex-Bytes'); return; }
+  if (!bytes) { log(t.console.invalidHex); return; }
   const check = checkConsoleCommand(bytes, {
     maxKmh: effectiveMax(),
     maxStep: governor.maxStep,
@@ -453,7 +482,7 @@ async function rawSend() {
     return;
   }
   if (bytes[0] === OP.STOP_PAUSE && (bytes[1] === 0x01 || bytes[1] === 0x02)) {
-    runner.abort('Gestoppt (Konsole)');
+    runner.abort(() => t.console.stopped);
     governor.reset();
     standstill.disarm();
     if (await c.send(data, { urgent: true })) beltStarted = false;
@@ -463,7 +492,7 @@ async function rawSend() {
   void c.send(data);
 }
 
-// ---------- Einstellungen ----------
+// ---------- Settings ----------
 function loadSettings() {
   const l = loadLimit(store.get(LIMIT_STORAGE_KEY), store.get(LEGACY_LIMIT_KEY));
   limit = l.value;
@@ -483,10 +512,10 @@ async function limitChanged() {
   const d = decideLimitChange(input.value, limit);
   if (!d.ok) { log(`❌ ${d.reason}`); input.value = String(limit); return; }
   if (d.needsConfirmation) {
-    const ok = await confirmDialog(`Limit auf ${d.value} km/h erhöhen?`, [
-      `Über ${LIMIT_CONFIRM_ABOVE} km/h steigt das Risiko zu stolpern oder zu stürzen.`,
-      'Erhöhe das Limit nur, wenn du bei dieser Geschwindigkeit sicher auf dem Band läufst.',
-    ], `Ja, ${d.value} km/h erlauben`);
+    const ok = await confirmDialog(t.limit.confirmTitle(d.value), [
+      t.limit.risk(LIMIT_CONFIRM_ABOVE),
+      t.limit.onlyIf,
+    ], t.limit.allow(d.value));
     if (!ok) { input.value = String(limit); return; }
   }
   limit = d.value;
@@ -499,7 +528,7 @@ async function limitChanged() {
 function maxStepChanged() {
   const input = $input('maxStep');
   const v = parseMaxStep(input.value);
-  if (v === null) { log('❌ Maximale Änderung muss zwischen 0,1 und 1,0 km/h liegen'); input.value = String(governor.maxStep); return; }
+  if (v === null) { log(t.limit.maxStepRange(MAX_STEP_MIN, MAX_STEP_MAX)); input.value = String(governor.maxStep); return; }
   governor.maxStep = v;
   input.value = String(v);
   store.set(MAX_STEP_STORAGE_KEY, String(v));
@@ -508,26 +537,24 @@ function maxStepChanged() {
 
 // ---------- Info ----------
 function renderInfo() {
-  $('infoDisclaimerTitle').textContent = 'Sicherheit und Haftung';
   const ul = $('infoDisclaimer');
-  for (const t of DISCLAIMER_POINTS) {
+  ul.replaceChildren(...t.disclaimer.points.map(text => {
     const li = document.createElement('li');
-    li.textContent = t;
-    ul.append(li);
-  }
-  $('infoTested').textContent = `${TESTED_WITH}. Ausprobiert: ${TESTED_FEATURES}. Noch nicht einzeln getestet: ${UNTESTED_FEATURES}.`;
-  $('infoAffiliation').textContent = NOT_AFFILIATED;
-  $('footerVersion').textContent = `${APP_NAME} ${APP_VERSION} · MIT-Lizenz · unabhängiges Projekt, nicht mit dem Hersteller verbunden`;
+    li.textContent = text;
+    return li;
+  }));
+  $('infoTested').textContent = t.info.tested(t.info.testedDevice, t.info.testedFeatures, t.info.untestedFeatures);
+  $('infoAffiliation').textContent = t.info.notAffiliated;
+  $('footerVersion').textContent = t.info.footer(APP_VERSION);
 
   const source = GITHUB_REPO ? `https://github.com/${GITHUB_REPO}` : '';
-  if (source) $('infoSource').append('Quellcode: ', link(source, source.replace('https://', '')));
+  $('infoSource').replaceChildren(...(source ? [t.info.source, link(source, source.replace('https://', ''))] : []));
   const links: HTMLElement[] = [];
-  if (BUILD_TARGET === 'web') links.push(link('impressum.html', 'Impressum'), link('datenschutz.html', 'Datenschutz'));
-  if (source) links.push(link(source, 'Quellcode'));
-  // Nur im Web-Build und nur, wenn konfiguriert. Keine Gegenleistung, kein Feature hängt daran.
-  if (BUILD_TARGET === 'web' && DONATION_URL) links.push(link(DONATION_URL, 'Freiwillige Unterstützung (keine Gegenleistung)'));
-  const footer = $('footerLinks');
-  links.forEach((a, i) => footer.append(...(i ? [' · ', a] : [a])));
+  if (BUILD_TARGET === 'web') links.push(link(t.info.imprintHref, t.info.imprint), link(t.info.privacyHref, t.info.privacyLink));
+  if (source) links.push(link(source, t.info.sourceLink));
+  // Web build only, and only if configured. Nothing in return, no feature depends on it.
+  if (BUILD_TARGET === 'web' && DONATION_URL) links.push(link(DONATION_URL, t.info.donation));
+  $('footerLinks').replaceChildren(...links.flatMap((a, i) => (i ? [' · ', a] : [a])));
 }
 
 function link(href: string, text: string) {
@@ -539,6 +566,8 @@ function link(href: string, text: string) {
 }
 
 // ---------- Events ----------
+$('langSlot').append(languageSelect());
+
 $button('connect').onclick = () => void connect('ble');
 $button('demo').onclick = () => void connect('demo');
 $button('disconnect').onclick = () => void disconnectClicked();
@@ -557,7 +586,7 @@ $button('stop').onclick = () => void doStop();
 const slider = $input('slider');
 slider.addEventListener('pointerdown', () => { sliderDragging = true; });
 window.addEventListener('pointerup', () => { sliderDragging = false; });
-slider.oninput = () => { $('target').textContent = `${parseFloat(slider.value).toFixed(1)} km/h`; };
+slider.oninput = () => { $('target').textContent = t.control.speed(parseFloat(slider.value)); };
 slider.onchange = () => { sliderDragging = false; requestSpeed(parseFloat(slider.value)); };
 $button('minus').onclick = () => stepSpeed(-0.5);
 $button('plus').onclick = () => stepSpeed(0.5);
@@ -568,7 +597,7 @@ $input('cap').onchange = () => void limitChanged();
 $input('maxStep').onchange = maxStepChanged;
 $<HTMLSelectElement>('hiddenMode').onchange = e => store.set(HIDDEN_MODE_KEY, (e.target as HTMLSelectElement).value);
 
-$input('inclSlider').oninput = e => { $('inclTarget').textContent = `${parseFloat((e.target as HTMLInputElement).value).toFixed(1)} %`; };
+$input('inclSlider').oninput = e => { $('inclTarget').textContent = t.incline.value(parseFloat((e.target as HTMLInputElement).value)); };
 $input('inclSlider').onchange = e => void setIncline(parseFloat((e.target as HTMLInputElement).value));
 
 $button('progStart').onclick = () => void runProgram();
@@ -577,16 +606,16 @@ $button('progStop').onclick = () => void doStop();
 $button('csv').onclick = exportCsv;
 $button('tcx').onclick = exportTcx;
 $<HTMLSelectElement>('tcxSport').onchange = e => store.set(TCX_SPORT_KEY, (e.target as HTMLSelectElement).value);
-$button('clear').onclick = () => { samples.length = 0; redrawChart(); log('Verlauf gelöscht'); };
+$button('clear').onclick = () => { samples.length = 0; redrawChart(); log(t.settings.cleared); };
 
 $button('rawSend').onclick = () => void rawSend();
 $input('raw').addEventListener('keydown', e => { if (e.key === 'Enter') $button('rawSend').click(); });
 
 document.addEventListener('keydown', e => {
   if (!connected()) return;
-  const t = e.target as HTMLElement;
-  const tag = t.tagName;
-  const isText = tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && (t as HTMLInputElement).type !== 'range');
+  const el = e.target as HTMLElement;
+  const tag = el.tagName;
+  const isText = tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && (el as HTMLInputElement).type !== 'range');
   if (isText) return;
   if (e.code === 'Space' || e.key === 'Escape') {
     e.preventDefault();
@@ -599,31 +628,42 @@ document.addEventListener('keydown', e => {
   }
 });
 
+onLanguageChange(() => {
+  renderInfo();
+  renderRangeInfo();
+  renderSpeed();
+  renderIncline();
+  renderStats();
+  redrawChart();
+  if (document.hidden && hiddenSince !== null) document.title = t.hidden.title;
+});
+
 // ---------- Init ----------
+bindText($('status'), () => t.connection.notConnected);
+bindText($('progStatus'), () => t.program.idle);
 loadSettings();
 renderInfo();
+renderIncline();
 applyLimits();
 redrawChart();
 setInterval(redrawChart, 1000);
 
-const hint = bluetoothSupportHint({
-  ua: navigator.userAgent, hasApi: !!navigator.bluetooth, secure: isSecureContext, touchPoints: navigator.maxTouchPoints,
-});
-if (hint) {
-  $('unsupportedTitle').textContent = hint.title;
-  $('unsupportedText').textContent = hint.text;
+const env = { ua: navigator.userAgent, hasApi: !!navigator.bluetooth, secure: isSecureContext, touchPoints: navigator.maxTouchPoints };
+if (bluetoothSupportHint(env)) {
+  bindText($('unsupportedTitle'), () => bluetoothSupportHint(env)?.title ?? '');
+  bindText($('unsupportedText'), () => bluetoothSupportHint(env)?.text ?? '');
   $('unsupported').hidden = false;
-  $('status').textContent = 'Web Bluetooth nicht verfügbar';
+  bindText($('status'), () => t.connection.noWebBluetooth);
 } else if (!desktop) {
-  // Nicht in der Desktop-App: dort würde das schon beim Start den macOS-Bluetooth-Dialog auslösen
+  // Not in the desktop app: there, this would already trigger the macOS Bluetooth prompt at launch
   void webAdapter.availability().then(a => {
-    if (!a.ok && a.reason === 'no-adapter') $('status').textContent = 'Bluetooth scheint ausgeschaltet zu sein oder es gibt keinen Adapter.';
+    if (!a.ok && a.reason === 'no-adapter') bindText($('status'), () => t.connection.adapterOff);
   });
 }
 setUi(false);
 setupPwa(connected);
 setupDesktop({
-  onGlobalStop: () => { if (connected()) { log('Globales Stop-Kürzel'); void doStop('Gestoppt (globales Kürzel)'); } },
+  onGlobalStop: () => { if (connected()) { log(t.stop.globalShortcutLog); void doStop(() => t.stop.globalShortcut); } },
   log,
 });
 

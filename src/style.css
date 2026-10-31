@@ -30,6 +30,10 @@ textarea { font-family: ui-monospace, monospace; font-size:13px; height:100px; r
 canvas { width:100%; height:auto; display:block; }
 [hidden] { display:none !important; }
 .top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.lang-slot { margin-left:auto; }
+select.lang { padding:6px 8px; }
+.dlg-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.dlg-head h2 { margin:0 0 10px; }
 .logo { display:block; }
 .center { text-align:center; }
 h3 { margin:14px 0 6px; font-size:.95rem; }
@@ -64,3 +68,6 @@ footer a, details a { color:var(--blue); }
   .stats { grid-template-columns:repeat(2,1fr); }
   .big { font-size:1.9rem; }
 }
+/* Hidden until the texts of the chosen language are in place; shown anyway after 1.5 s if the script fails */
+html:not(.i18n-ready) body { visibility:hidden; animation:i18n-reveal 0s 1.5s forwards; }
+@keyframes i18n-reveal { to { visibility:visible; } }

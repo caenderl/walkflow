@@ -1,8 +1,8 @@
 name: Pages
 
 on:
-  # Vorerst nur von Hand (Actions → Pages → Run workflow). Wenn Impressum und
-  # Datenschutz ausgefüllt sind, für Deploy bei jedem Push wieder einkommentieren:
+  # Manual for now (Actions → Pages → Run workflow). Once the legal notice and privacy
+  # pages are filled in, uncomment this to deploy on every push:
   # push:
   #   branches: [main]
   workflow_dispatch:
@@ -28,10 +28,10 @@ jobs:
       - run: npm ci
       - run: npm test
 
-      - name: Impressum und Datenschutz ausgefüllt?
+      - name: Legal pages filled in?
         run: |
-          if grep -l "TODO" public/impressum.html public/datenschutz.html; then
-            echo "::error::Impressum/Datenschutz enthalten noch TODO-Platzhalter. Erst ausfüllen, dann deployen."
+          if grep -rl "TODO" public/legal; then
+            echo "::error::The legal pages (public/legal) still contain TODO placeholders. Fill them in first, then deploy."
             exit 1
           fi
 
@@ -41,7 +41,7 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: ${{ steps.pages.outputs.base_path }}/
-          # Optional, als Repository-Variable setzen (Settings → Secrets and variables → Actions → Variables)
+          # Optional, set as a repository variable (Settings → Secrets and variables → Actions → Variables)
           VITE_DONATION_URL: ${{ vars.DONATION_URL }}
 
       - uses: actions/upload-pages-artifact@v5

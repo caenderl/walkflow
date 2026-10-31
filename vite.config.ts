@@ -5,11 +5,11 @@ import { defineConfig } from 'vitest/config';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
-// In GitHub Actions gesetzt (z. B. "user/walkflow"), lokal leer
+// Set in GitHub Actions (e.g. "user/walkflow"), empty locally
 const githubRepo = process.env.GITHUB_REPOSITORY ?? '';
 const desktop = process.env.VITE_TARGET === 'desktop';
 
-/** Strikte CSP nur im Build: der Dev-Server injiziert Styles, die sie verbieten würde. */
+/** Strict CSP only in the build: the dev server injects styles it would forbid. */
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",
@@ -42,7 +42,7 @@ export default defineConfig({
   plugins: [
     csp(),
     VitePWA({
-      // In der Desktop-App gibt es keinen Service Worker; die virtuellen Module bleiben als No-op erhalten
+      // The desktop app has no service worker; the virtual modules remain as no-ops
       disable: desktop,
       registerType: 'prompt',
       injectRegister: false,
@@ -50,8 +50,9 @@ export default defineConfig({
       manifest: {
         name: 'Walkflow',
         short_name: 'Walkflow',
-        description: 'Open-Source-Steuerung für FTMS-Laufbänder per Web Bluetooth',
-        lang: 'de',
+        // One manifest for all languages; the app itself switches languages at runtime
+        description: 'Open-source control for FTMS treadmills via Web Bluetooth',
+        lang: 'en',
         start_url: '.',
         scope: '.',
         display: 'standalone',

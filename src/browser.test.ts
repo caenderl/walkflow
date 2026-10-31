@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bluetoothSupportHint } from './browser';
+import { setLanguage } from './i18n';
 
 const UA = {
   chromeMac: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
@@ -11,11 +12,11 @@ const UA = {
 };
 
 describe('bluetoothSupportHint', () => {
-  it('kein Hinweis, wenn Web Bluetooth da ist', () => {
+  it('no hint if Web Bluetooth is available', () => {
     expect(bluetoothSupportHint({ ua: UA.chromeMac, hasApi: true, secure: true })).toBeNull();
   });
 
-  it('iOS: in keinem Browser, Umweg Bluefy', () => {
+  it('iOS: in no browser, Bluefy as a workaround', () => {
     for (const ua of [UA.iphoneChrome, UA.ipadSafari]) {
       const h = bluetoothSupportHint({ ua, hasApi: false, secure: true })!;
       expect(h.title).toMatch(/iPhone|iPad/);
@@ -23,21 +24,27 @@ describe('bluetoothSupportHint', () => {
     }
   });
 
-  it('iPad im Desktop-Modus (Mac-UA mit Touch) wird als iOS erkannt', () => {
+  it('iPad in desktop mode (Mac UA with touch) is detected as iOS', () => {
     const h = bluetoothSupportHint({ ua: UA.safariMac, hasApi: false, secure: true, touchPoints: 5 })!;
     expect(h.title).toMatch(/iPad/);
   });
 
-  it('Safari und Firefox: freundlich auf Chrome/Edge/Opera verweisen', () => {
-    expect(bluetoothSupportHint({ ua: UA.safariMac, hasApi: false, secure: true })!.text).toMatch(/Chrome, Edge oder Opera/);
+  it('Safari and Firefox: point kindly to Chrome/Edge/Opera', () => {
+    expect(bluetoothSupportHint({ ua: UA.safariMac, hasApi: false, secure: true })!.text).toMatch(/Chrome, Edge or Opera/);
     expect(bluetoothSupportHint({ ua: UA.firefox, hasApi: false, secure: true })!.title).toMatch(/Firefox/);
   });
 
-  it('Linux-Chrome: Flag-Hinweis', () => {
+  it('Linux Chrome: flag hint', () => {
     expect(bluetoothSupportHint({ ua: UA.linuxChrome, hasApi: false, secure: true })!.text).toMatch(/chrome:\/\/flags/);
   });
 
-  it('ohne HTTPS', () => {
+  it('without HTTPS', () => {
     expect(bluetoothSupportHint({ ua: UA.chromeMac, hasApi: false, secure: false })!.title).toMatch(/HTTPS/);
+  });
+
+  it('in the current language', () => {
+    setLanguage('fr');
+    expect(bluetoothSupportHint({ ua: UA.firefox, hasApi: false, secure: true })!.title).toBe('Firefox ne prend pas en charge Web Bluetooth');
+    setLanguage('en');
   });
 });

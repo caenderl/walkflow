@@ -1,5 +1,7 @@
-// FTMS-Protokoll (Fitness Machine Service, 0x1826) als reine Funktionen.
-// Keine DOM- und keine BLE-Abhängigkeit, damit alles ohne Hardware testbar ist.
+// FTMS protocol (Fitness Machine Service, 0x1826) as pure functions.
+// No DOM and no BLE dependency, so everything can be tested without hardware.
+
+import { t } from './i18n';
 
 export const FTMS_SERVICE = 0x1826;
 export const HR_SERVICE = 0x180d;
@@ -39,18 +41,24 @@ export const OP_NAMES: Record<number, string> = {
   0x08: 'Stop/Pause',
 };
 
-export const RESULTS: Record<number, string> = {
-  1: 'OK',
-  2: 'nicht unterstützt',
-  3: 'ungültiger Parameter',
-  4: 'fehlgeschlagen',
-  5: 'keine Berechtigung',
+/** Result codes of Control Point responses → key in the locale files */
+const RESULT_KEYS: Record<number, keyof typeof t.ftmsResult> = {
+  1: 'ok',
+  2: 'notSupported',
+  3: 'invalidParameter',
+  4: 'failed',
+  5: 'notPermitted',
 };
+
+export function resultText(code: number): string | undefined {
+  const k = RESULT_KEYS[code];
+  return k ? t.ftmsResult[k] : undefined;
+}
 
 export const FEAT_MACHINE = ['Avg Speed', 'Cadence', 'Total Distance', 'Inclination', 'Elevation Gain', 'Pace', 'Step Count', 'Resistance', 'Stride Count', 'Expended Energy', 'Heart Rate', 'MET', 'Elapsed Time', 'Remaining Time', 'Power', 'Force on Belt', 'User Data'];
 export const FEAT_TARGET = ['Speed', 'Inclination', 'Resistance', 'Power', 'Heart Rate', 'Energy', 'Steps', 'Strides', 'Distance', 'Training Time', 'Time 2 HR zones', 'Time 3 HR zones', 'Time 5 HR zones', 'Bike Sim', 'Wheel Circ.', 'Spin Down', 'Cadence'];
 
-// ---------- Hilfsfunktionen ----------
+// ---------- Helpers ----------
 
 export function toBytes(data: DataView | Uint8Array | ArrayLike<number>): number[] {
   if (data instanceof DataView) return [...new Uint8Array(data.buffer, data.byteOffset, data.byteLength)];
@@ -76,34 +84,34 @@ export interface TreadmillData {
   speed?: number;
   /** km/h */
   avgSpeed?: number;
-  /** Meter */
+  /** metres */
   dist?: number;
   /** % */
   incl?: number;
-  /** Grad */
+  /** degrees */
   rampAngle?: number;
-  /** Meter */
+  /** metres */
   elevationGainPos?: number;
-  /** Meter */
+  /** metres */
   elevationGainNeg?: number;
-  /** km/min (FTMS-Einheit, 0,1) */
+  /** km/min (FTMS unit, 0.1) */
   pace?: number;
   avgPace?: number;
-  /** kcal gesamt */
+  /** total kcal */
   kcal?: number;
   kcalPerHour?: number;
   kcalPerMin?: number;
-  /** bpm, 0 = kein Wert */
+  /** bpm, 0 = no value */
   hr?: number;
   met?: number;
-  /** Sekunden */
+  /** seconds */
   time?: number;
 }
 
 /**
- * Parst ein Treadmill-Data-Paket. Felder stehen nur drin, wenn ihr Flag-Bit gesetzt ist.
- * Bit 0 ist invertiert (0 = Instantaneous Speed vorhanden).
- * Bei abgeschnittenen Paketen bleiben die bis dahin gelesenen Felder erhalten.
+ * Parses a Treadmill Data packet. Fields are present only if their flag bit is set.
+ * Bit 0 is inverted (0 = Instantaneous Speed present).
+ * For truncated packets, the fields read up to that point are kept.
  */
 export function parseTreadmillData(dv: DataView): TreadmillData {
   const r: TreadmillData = {};
@@ -138,7 +146,7 @@ export function parseTreadmillData(dv: DataView): TreadmillData {
     if (flags & 0x0200) { r.met = dv.getUint8(o) / 10; o += 1; }
     if (flags & 0x0400) { r.time = dv.getUint16(o, true); o += 2; }
   } catch {
-    // unvollständiges Paket: bisher gelesene Felder behalten
+    // incomplete packet: keep the fields read so far
   }
   return r;
 }
@@ -170,17 +178,17 @@ export interface Range {
   step: number;
 }
 
-/** Supported Speed Range (0x2AD4): uint16 min, max, step in 0,01 km/h */
+/** Supported Speed Range (0x2AD4): uint16 min, max, step in 0.01 km/h */
 export function parseSpeedRange(dv: DataView): Range {
   return { min: dv.getUint16(0, true) / 100, max: dv.getUint16(2, true) / 100, step: dv.getUint16(4, true) / 100 };
 }
 
-/** Supported Inclination Range (0x2AD5): sint16 min, sint16 max, uint16 step in 0,1 % */
+/** Supported Inclination Range (0x2AD5): sint16 min, sint16 max, uint16 step in 0.1 % */
 export function parseInclinationRange(dv: DataView): Range {
   return { min: dv.getInt16(0, true) / 10, max: dv.getInt16(2, true) / 10, step: dv.getUint16(4, true) / 10 };
 }
 
-// ---------- Control Point (0x2AD9): Befehle ----------
+// ---------- Control Point (0x2AD9): commands ----------
 
 export function cmdRequestControl(): Uint8Array {
   return new Uint8Array([OP.REQUEST_CONTROL]);
@@ -198,30 +206,30 @@ export function cmdPause(): Uint8Array {
   return new Uint8Array([OP.STOP_PAUSE, 0x02]);
 }
 
-/** Zielgeschwindigkeit, uint16 LE in 0,01 km/h */
+/** Target speed, uint16 LE in 0.01 km/h */
 export function cmdSetSpeed(kmh: number): Uint8Array {
   const v = Math.round(kmh * 100);
-  if (!Number.isFinite(v) || v < 0 || v > 0xffff) throw new RangeError(`Speed außerhalb uint16: ${kmh}`);
+  if (!Number.isFinite(v) || v < 0 || v > 0xffff) throw new RangeError(`Speed outside uint16: ${kmh}`);
   return new Uint8Array([OP.SET_SPEED, v & 0xff, (v >> 8) & 0xff]);
 }
 
-/** Zielsteigung, sint16 LE in 0,1 % */
+/** Target incline, sint16 LE in 0.1 % */
 export function cmdSetInclination(pct: number): Uint8Array {
   const v = Math.round(pct * 10);
-  if (!Number.isFinite(v) || v < -0x8000 || v > 0x7fff) throw new RangeError(`Steigung außerhalb sint16: ${pct}`);
+  if (!Number.isFinite(v) || v < -0x8000 || v > 0x7fff) throw new RangeError(`Incline outside sint16: ${pct}`);
   const dv = new DataView(new ArrayBuffer(3));
   dv.setUint8(0, OP.SET_INCL);
   dv.setInt16(1, v, true);
   return new Uint8Array(dv.buffer);
 }
 
-/** Liest die Zielgeschwindigkeit aus einem rohen Set-Speed-Befehl, sonst null. */
+/** Reads the target speed from a raw Set Speed command, otherwise null. */
 export function decodeSetSpeed(bytes: ArrayLike<number>): number | null {
   if (bytes.length < 3 || bytes[0] !== OP.SET_SPEED) return null;
   return ((bytes[1] ?? 0) | ((bytes[2] ?? 0) << 8)) / 100;
 }
 
-// ---------- Control Point: Antworten ----------
+// ---------- Control Point: responses ----------
 
 export interface ControlPointResponse {
   requestOp: number;
@@ -234,7 +242,8 @@ export function parseControlPointResponse(dv: DataView): ControlPointResponse | 
 }
 
 export function describeControlPointResponse(r: ControlPointResponse): string {
-  return `${OP_NAMES[r.requestOp] ?? '0x' + r.requestOp.toString(16)}: ${RESULTS[r.result] ?? r.result}`;
+  // Op names stay English in every language: they are the FTMS terms
+  return `${OP_NAMES[r.requestOp] ?? '0x' + r.requestOp.toString(16)}: ${resultText(r.result) ?? r.result}`;
 }
 
 // ---------- Machine Status (0x2ADA) ----------
@@ -255,7 +264,7 @@ export function parseMachineStatus(dv: DataView): MachineEvent | null {
   const op = dv.getUint8(0);
   switch (op) {
     case 0x01: return { kind: 'reset' };
-    // Parameter 0x02 = Pause, alles andere (auch fehlend) im Zweifel als Stop werten
+    // Parameter 0x02 = pause; anything else (including none) counts as stop, to be safe
     case 0x02: return dv.byteLength >= 2 && dv.getUint8(1) === 0x02 ? { kind: 'paused' } : { kind: 'stopped' };
     case 0x03: return { kind: 'safety-key' };
     case 0x04: return { kind: 'started' };
@@ -268,14 +277,14 @@ export function parseMachineStatus(dv: DataView): MachineEvent | null {
 
 export function describeMachineStatus(e: MachineEvent): string {
   switch (e.kind) {
-    case 'reset': return 'Band zurückgesetzt';
-    case 'stopped': return 'Band gestoppt (am Gerät oder per App)';
-    case 'paused': return 'Band pausiert (am Gerät oder per App)';
-    case 'safety-key': return 'Band per Sicherheitsschlüssel gestoppt';
-    case 'started': return 'Band gestartet';
-    case 'target-speed': return `Ziel-Speed am Band: ${e.kmh} km/h`;
-    case 'target-incline': return `Ziel-Steigung am Band: ${e.pct} %`;
-    case 'control-lost': return 'Steuerrecht verloren (Request Control nötig)';
+    case 'reset': return t.machine.reset;
+    case 'stopped': return t.machine.stopped;
+    case 'paused': return t.machine.paused;
+    case 'safety-key': return t.machine.safetyKey;
+    case 'started': return t.machine.started;
+    case 'target-speed': return t.machine.targetSpeed(e.kmh);
+    case 'target-incline': return t.machine.targetIncline(e.pct);
+    case 'control-lost': return t.machine.controlLost;
     case 'other': return `Machine Status 0x${e.op.toString(16).padStart(2, '0')}`;
   }
 }
@@ -295,7 +304,7 @@ export function parseTrainingStatus(dv: DataView): { status: number; text: strin
   return { status, text: TRAINING_STATUS[status] ?? `0x${status.toString(16)}` };
 }
 
-// ---------- Treadmill Data bauen (Simulator, Tests) ----------
+// ---------- Building Treadmill Data (simulator, tests) ----------
 
 export function buildTreadmillData(d: TreadmillData): Uint8Array {
   const out: number[] = [];

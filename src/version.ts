@@ -1,4 +1,4 @@
-// Versionsvergleich für den Update-Hinweis der Desktop-App (wird auch vom Main-Prozess genutzt).
+// Version comparison for the desktop app's update notice (also used by the main process).
 
 export function parseVersion(v: string): { parts: [number, number, number]; pre: boolean } | null {
   const m = /^v?(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?$/.exec(v.trim());

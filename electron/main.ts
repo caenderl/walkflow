@@ -1,10 +1,11 @@
-// Electron-Main-Prozess. Lädt ausschließlich die lokal gebündelte Web-App über das eigene Schema app://walkflow/.
+// Electron main process. Loads only the locally bundled web app via its own scheme app://walkflow/.
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import {
   app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, powerSaveBlocker, protocol, session, shell,
   type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions,
 } from 'electron';
+import { detectLanguage, isLang, setLanguage, t } from '../src/i18n';
 import { isNewerVersion } from '../src/version';
 
 declare const __GITHUB_REPO__: string;
@@ -13,7 +14,7 @@ const SCHEME = 'app';
 const HOST = 'walkflow';
 const ORIGIN = `${SCHEME}://${HOST}`;
 const RENDERER_DIR = join(__dirname, '..', 'dist-desktop');
-/** Globales Stop-Kürzel, nur registriert solange verbunden */
+/** Global stop shortcut, registered only while connected */
 const STOP_ACCELERATOR = 'CommandOrControl+Shift+Space';
 
 const CSP = [
@@ -26,14 +27,14 @@ const MIME: Record<string, string> = {
   '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.webmanifest': 'application/manifest+json',
 };
 
-/** Erlaubte Permission-Anfragen. Alles andere (Kamera, Mikrofon, Standort, Benachrichtigungen …) wird abgelehnt. */
+/** Allowed permission requests. Everything else (camera, microphone, location, notifications …) is denied. */
 const ALLOWED_PERMISSIONS = new Set(['screen-wake-lock', 'fullscreen']);
 
 protocol.registerSchemesAsPrivileged([
   { scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } },
 ]);
 
-// Unter Linux ist Web Bluetooth in Chromium hinter diesem Schalter (nicht getestet)
+// On Linux, Web Bluetooth in Chromium is behind this switch (not tested)
 if (process.platform === 'linux') app.commandLine.appendSwitch('enable-experimental-web-platform-features');
 
 let win: BrowserWindow | null = null;
@@ -66,15 +67,37 @@ async function serve(request: Request): Promise<Response> {
 }
 
 function setMenu() {
-  // Bewusst ohne „Neu laden“: ein Reload kappt die Bluetooth-Verbindung, das Band liefe ohne App weiter.
+  // Deliberately without "Reload": a reload cuts the Bluetooth connection and the belt would keep running without the app.
+  // Electron's role labels are English only, so every item gets its label from the locale files.
+  const m = t.electron;
+  const app = 'Walkflow';
+  const mac = process.platform === 'darwin';
   const template: MenuItemConstructorOptions[] = [
-    ...(process.platform === 'darwin' ? [{ role: 'appMenu' as const }] : []),
-    { label: 'Bearbeiten', submenu: [{ role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
+    ...(mac ? [{
+      label: app,
+      submenu: [
+        { role: 'about', label: m.about(app) }, { type: 'separator' },
+        { role: 'hide', label: m.hide(app) }, { role: 'hideOthers', label: m.hideOthers }, { role: 'unhide', label: m.showAll },
+        { type: 'separator' }, { role: 'quit', label: m.quit(app) },
+      ],
+    } satisfies MenuItemConstructorOptions] : []),
+    { label: m.menuEdit, submenu: [{ role: 'copy', label: m.copy }, { role: 'paste', label: m.paste }, { role: 'selectAll', label: m.selectAll }] },
     {
-      label: 'Ansicht',
-      submenu: [{ role: 'toggleDevTools' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { role: 'togglefullscreen' }],
+      label: m.menuView,
+      submenu: [
+        { role: 'toggleDevTools', label: m.devTools }, { type: 'separator' },
+        { role: 'resetZoom', label: m.actualSize }, { role: 'zoomIn', label: m.zoomIn }, { role: 'zoomOut', label: m.zoomOut },
+        { role: 'togglefullscreen', label: m.fullScreen },
+      ],
     },
-    { role: 'windowMenu' },
+    {
+      role: 'windowMenu',
+      label: m.menuWindow,
+      submenu: [
+        { role: 'minimize', label: m.minimize }, ...(mac ? [{ role: 'zoom', label: m.zoom } satisfies MenuItemConstructorOptions] : []),
+        { role: 'close', label: m.closeWindow },
+      ],
+    },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
@@ -105,15 +128,15 @@ function createWindow() {
   });
   const wc = win.webContents;
 
-  // Geräteauswahl für navigator.bluetooth.requestDevice(). Ohne diesen Handler gibt es keinen Chooser.
-  // Das Event kommt mehrfach, während die Liste wächst; der jeweils letzte Callback zählt.
+  // Device selection for navigator.bluetooth.requestDevice(). Without this handler there is no chooser.
+  // The event fires several times while the list grows; the latest callback counts.
   wc.on('select-bluetooth-device', (event, devices, callback) => {
     event.preventDefault();
     btCallback = callback;
     wc.send('bt:devices', devices.map(d => ({ id: d.deviceId, name: d.deviceName })));
   });
 
-  // Pairing mit PIN o. Ä. (nur Windows/Linux, macOS koppelt selbst)
+  // Pairing with a PIN or similar (Windows/Linux only, macOS pairs by itself)
   if (process.platform !== 'darwin') {
     wc.session.setBluetoothPairingHandler((details, callback) => {
       pairingCallback = callback;
@@ -121,16 +144,16 @@ function createWindow() {
     });
   }
 
-  // Schließen, während das Band (vermutlich) läuft: Renderer blockiert per beforeunload, hier fragen wir nach
+  // Closing while the belt is (probably) running: the renderer blocks via beforeunload, here we ask
   wc.on('will-prevent-unload', event => {
     const choice = dialog.showMessageBoxSync(win!, {
       type: 'warning',
-      buttons: ['Abbrechen', 'Trotzdem schließen'],
+      buttons: [t.electron.closeCancel, t.electron.closeAnyway],
       defaultId: 0,
       cancelId: 0,
-      title: 'Das Band läuft noch',
-      message: 'Das Band läuft noch.',
-      detail: 'Nach dem Schließen kann die App es nicht mehr stoppen. Stoppe es besser vorher.',
+      title: t.electron.closeTitle,
+      message: t.electron.closeMessage,
+      detail: t.electron.closeDetail,
     });
     if (choice === 1) event.preventDefault();
   });
@@ -168,10 +191,16 @@ ipcMain.on('app:connection', (e, connected: unknown) => {
   }
 });
 
+ipcMain.on('app:language', (e, lang: unknown) => {
+  if (!fromWindow(e) || !isLang(lang)) return;
+  setLanguage(lang);
+  setMenu();
+});
+
 ipcMain.handle('app:check-update', async e => {
   if (!fromWindow(e) || !__GITHUB_REPO__) return null;
   try {
-    // Eigene Session: der Request-Blocker der Default-Session gilt nur für den Renderer
+    // Separate session: the request blocker of the default session is meant for the renderer only
     const res = await session.fromPartition('walkflow-updates').fetch(`https://api.github.com/repos/${__GITHUB_REPO__}/releases/latest`, {
       headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Walkflow' },
     });
@@ -189,7 +218,7 @@ ipcMain.handle('app:open-external', (e, url: unknown) => {
   if (fromWindow(e) && typeof url === 'string' && isAllowedExternal(url)) void shell.openExternal(url);
 });
 
-// ---------- Härtung ----------
+// ---------- Hardening ----------
 app.on('web-contents-created', (_e, contents) => {
   const block = (e: Electron.Event, url: string) => { if (!url.startsWith(`${ORIGIN}/`)) e.preventDefault(); };
   contents.on('will-navigate', block);
@@ -212,15 +241,17 @@ if (!app.requestSingleInstanceLock()) {
     protocol.handle(SCHEME, serve);
     session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
       const ok = ALLOWED_PERMISSIONS.has(permission);
-      if (!ok) console.log(`Berechtigung abgelehnt: ${permission}`);
+      if (!ok) console.log(`Permission denied: ${permission}`);
       callback(ok);
     });
-    // Keine Anfragen an Remote-Hosts aus dem Renderer
+    // No requests to remote hosts from the renderer
     session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
       const ok = [`${ORIGIN}/`, 'devtools://', 'data:', 'blob:'].some(p => details.url.startsWith(p));
-      if (!ok) console.log(`Blockiert: ${details.url}`);
+      if (!ok) console.log(`Blocked: ${details.url}`);
       callback({ cancel: !ok });
     });
+    // Until the renderer reports its language: the system languages
+    setLanguage(detectLanguage({ preferred: app.getPreferredSystemLanguages() }));
     setMenu();
     createWindow();
   });
