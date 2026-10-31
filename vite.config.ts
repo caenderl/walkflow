@@ -72,5 +72,7 @@ export default defineConfig({
   ],
   test: {
     include: ['src/**/*.test.ts'],
+    // theme.test.ts reads style.css (?raw); without this Vitest replaces CSS with an empty string
+    css: true,
   },
 });

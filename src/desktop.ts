@@ -3,6 +3,7 @@
 import { choose } from './dialogs';
 import { lang, onLanguageChange, t } from './i18n';
 import { bindText } from './i18n-dom';
+import { currentTheme, onThemeChange } from './theme';
 import { $, $button, $input, store } from './ui';
 
 interface BtDevice { id: string; name: string }
@@ -20,6 +21,8 @@ export interface WalkflowDesktop {
   openExternal(url: string): Promise<void>;
   /** Language for menus and dialogs of the main process */
   setLanguage(lang: string): void;
+  /** 'system' | 'dark' | 'light' for native dialogs, title bar and window background */
+  setTheme(theme: string): void;
 }
 
 declare global {
@@ -39,6 +42,8 @@ export function setupDesktop(opts: { onGlobalStop: () => void; log: (m: string) 
 
   d.setLanguage(lang);
   onLanguageChange(l => d.setLanguage(l));
+  d.setTheme(currentTheme());
+  onThemeChange(c => d.setTheme(c));
 
   d.onGlobalStop(opts.onGlobalStop);
   d.onShortcutStatus(s => {

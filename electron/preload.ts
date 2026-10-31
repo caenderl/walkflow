@@ -19,4 +19,5 @@ contextBridge.exposeInMainWorld('walkflowDesktop', {
   checkForUpdate: (): Promise<{ version: string; url: string } | null> => ipcRenderer.invoke('app:check-update'),
   openExternal: (url: string) => ipcRenderer.invoke('app:open-external', String(url)),
   setLanguage: (lang: string) => ipcRenderer.send('app:language', String(lang)),
+  setTheme: (theme: string) => ipcRenderer.send('app:theme', String(theme)),
 });

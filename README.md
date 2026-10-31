@@ -31,6 +31,7 @@ Other FTMS treadmills may work but are not tested.
 - Demo mode with a simulated treadmill, no hardware needed
 - Works offline and can be installed (PWA)
 - English, German and French; picked from the browser languages, switchable at the top right, or via `?lang=de|en|fr` in the URL
+- Dark and light theme, or following the system (default); switchable at the top right
 
 ### Safety features
 
@@ -93,6 +94,7 @@ Without a treadmill: click “Demo (no treadmill)”. The simulator speaks real 
 | `src/sim.ts` | Simulated FTMS treadmill (demo mode, tests) |
 | `src/export.ts` | CSV and TCX |
 | `src/i18n.ts`, `src/i18n-dom.ts`, `src/locales/` | Language selection, texts per language, binding to the HTML |
+| `src/theme.ts`, `src/style.css` | Theme choice; all colours are tokens in `style.css` |
 | `src/main.ts`, `ui.ts`, `chart.ts`, `dialogs.ts` | Thin UI layer, vanilla TS |
 | `src/desktop.ts` | Renderer side of the Electron integration |
 | `electron/` | Main process and preload |
@@ -107,6 +109,10 @@ All texts live in `src/locales/en.ts`, `de.ts` and `fr.ts`. `en.ts` defines the 
 Adding a language: copy `src/locales/en.ts`, translate it, register it in `src/i18n.ts` (`LANGS`, `MESSAGES`), add legal pages under `public/legal/<lang>/` and, for the macOS Bluetooth prompt, `build/lproj/<lang>.lproj/InfoPlist.strings`.
 
 The FTMS terms in the log (`Set Speed`, `Request Control` …) stay English in every language. CSV column names are English too, as they are part of the file format.
+
+### Themes
+
+Every colour is a token at the top of `src/style.css`, defined once as `light-dark(light, dark)`. The theme only sets `color-scheme` (`data-theme` on `<html>`; none = follow the system), so form controls and scrollbars follow too. The chart reads the same tokens; the legal pages use a copy in `public/legal/legal.css`. `src/theme.test.ts` checks that every token used is defined and that the main text and control colours reach WCAG contrast (4.5:1 for text, 3:1 for controls) in both themes. Alarm and stop stay strong red in both. A third theme (e.g. high contrast) would override the tokens under `:root[data-theme="…"]`.
 
 ## Publishing
 

@@ -11,6 +11,12 @@ export const de: Messages = {
   meta: {
     description: 'Open-Source-Steuerung für FTMS-Laufbänder per Web Bluetooth',
   },
+  theme: {
+    label: 'Farbschema',
+    system: 'Automatisch',
+    dark: 'Dunkel',
+    light: 'Hell',
+  },
   header: {
     tagline: 'Laufband-Steuerung per Bluetooth',
   },
@@ -297,7 +303,7 @@ export const de: Messages = {
     untestedFeatures: 'Steigung, Puls, Übergänge im Intervall-Programm, Wiederverbinden, Verhalten des Bands bei Verbindungsabbruch',
     notAffiliated: 'Walkflow ist ein unabhängiges Projekt und nicht mit dem Hersteller des Laufbands oder des Bluetooth-Moduls verbunden.',
     privacyTitle: 'Datenschutz',
-    privacy: 'Keine Konten, kein Server, kein Tracking, keine externen Skripte oder Schriften. Einstellungen (Limit, Rampe, Sprache, bestätigter Hinweis) liegen nur lokal in diesem Browser. Aufzeichnungen bleiben im Speicher, bis du sie exportierst oder die Seite schließt.',
+    privacy: 'Keine Konten, kein Server, kein Tracking, keine externen Skripte oder Schriften. Einstellungen (Limit, Rampe, Sprache, Farbschema, bestätigter Hinweis) liegen nur lokal in diesem Browser. Aufzeichnungen bleiben im Speicher, bis du sie exportierst oder die Seite schließt.',
     desktopPrivacy: 'Die Desktop-App fragt beim Start bei GitHub nach, ob es eine neuere Version gibt. Das kannst du hier abschalten:',
     updateCheck: 'nach Updates suchen',
     licenseTitle: 'Lizenz',

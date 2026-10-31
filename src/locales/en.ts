@@ -12,6 +12,12 @@ export const en = {
   meta: {
     description: 'Open-source control for FTMS treadmills via Web Bluetooth',
   },
+  theme: {
+    label: 'Theme',
+    system: 'Auto',
+    dark: 'Dark',
+    light: 'Light',
+  },
   header: {
     tagline: 'Treadmill control via Bluetooth',
   },
@@ -298,7 +304,7 @@ export const en = {
     untestedFeatures: 'incline, heart rate, transitions in the interval program, reconnecting, behaviour of the belt on connection loss',
     notAffiliated: 'Walkflow is an independent project and is not affiliated with the manufacturer of the treadmill or of the Bluetooth module.',
     privacyTitle: 'Privacy',
-    privacy: 'No accounts, no server, no tracking, no external scripts or fonts. Settings (limit, ramp, language, accepted notice) are stored only locally in this browser. Recordings stay in memory until you export them or close the page.',
+    privacy: 'No accounts, no server, no tracking, no external scripts or fonts. Settings (limit, ramp, language, theme, accepted notice) are stored only locally in this browser. Recordings stay in memory until you export them or close the page.',
     desktopPrivacy: 'On startup, the desktop app asks GitHub whether there is a newer version. You can turn this off here:',
     updateCheck: 'check for updates',
     licenseTitle: 'License',

@@ -11,6 +11,12 @@ export const fr: Messages = {
   meta: {
     description: 'Commande open source pour tapis de course FTMS via Web Bluetooth',
   },
+  theme: {
+    label: 'Thème',
+    system: 'Auto',
+    dark: 'Sombre',
+    light: 'Clair',
+  },
   header: {
     tagline: 'Commande de tapis de course via Bluetooth',
   },
@@ -298,7 +304,7 @@ export const fr: Messages = {
     untestedFeatures: 'inclinaison, pouls, transitions du programme par intervalles, reconnexion, comportement du tapis en cas de perte de connexion',
     notAffiliated: 'Walkflow est un projet indépendant, sans lien avec le fabricant du tapis ou du module Bluetooth.',
     privacyTitle: 'Confidentialité',
-    privacy: 'Pas de compte, pas de serveur, pas de suivi, pas de scripts ni de polices externes. Les réglages (limite, rampe, langue, avertissement accepté) sont enregistrés uniquement dans ce navigateur. Les enregistrements restent en mémoire jusqu’à ce que vous les exportiez ou fermiez la page.',
+    privacy: 'Pas de compte, pas de serveur, pas de suivi, pas de scripts ni de polices externes. Les réglages (limite, rampe, langue, thème, avertissement accepté) sont enregistrés uniquement dans ce navigateur. Les enregistrements restent en mémoire jusqu’à ce que vous les exportiez ou fermiez la page.',
     desktopPrivacy: 'Au démarrage, l’application de bureau demande à GitHub s’il existe une version plus récente. Vous pouvez désactiver cela ici :',
     updateCheck: 'rechercher des mises à jour',
     licenseTitle: 'Licence',

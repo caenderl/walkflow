@@ -2,7 +2,7 @@
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import {
-  app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, powerSaveBlocker, protocol, session, shell,
+  app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeTheme, powerSaveBlocker, protocol, session, shell,
   type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions,
 } from 'electron';
 import { detectLanguage, isLang, setLanguage, t } from '../src/i18n';
@@ -16,6 +16,9 @@ const ORIGIN = `${SCHEME}://${HOST}`;
 const RENDERER_DIR = join(__dirname, '..', 'dist-desktop');
 /** Global stop shortcut, registered only while connected */
 const STOP_ACCELERATOR = 'CommandOrControl+Shift+Space';
+/** Page background (--bg in src/style.css), shown before the page has painted */
+const BACKGROUND = { dark: '#12141a', light: '#f3f4f7' };
+const background = () => (nativeTheme.shouldUseDarkColors ? BACKGROUND.dark : BACKGROUND.light);
 
 const CSP = [
   "default-src 'self'", "script-src 'self'", "style-src 'self'", "img-src 'self' data:", "font-src 'self'",
@@ -113,7 +116,7 @@ function createWindow() {
     width: 720,
     height: 1000,
     minWidth: 360,
-    backgroundColor: '#12141a',
+    backgroundColor: background(),
     title: 'Walkflow',
     show: false,
     webPreferences: {
@@ -195,6 +198,13 @@ ipcMain.on('app:language', (e, lang: unknown) => {
   if (!fromWindow(e) || !isLang(lang)) return;
   setLanguage(lang);
   setMenu();
+});
+
+// The app's theme also drives native dialogs, the title bar and prefers-color-scheme in the renderer
+ipcMain.on('app:theme', (e, theme: unknown) => {
+  if (!fromWindow(e) || (theme !== 'system' && theme !== 'dark' && theme !== 'light')) return;
+  nativeTheme.themeSource = theme;
+  win?.setBackgroundColor(background());
 });
 
 ipcMain.handle('app:check-update', async e => {

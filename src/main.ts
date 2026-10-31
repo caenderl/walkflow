@@ -21,8 +21,10 @@ import {
   serializeLimit, SpeedGovernor, StandstillDetector,
 } from './safety';
 import { SimulatorAdapter } from './sim';
+import { initTheme, onThemeChange, themeSelect } from './theme';
 import { $, $button, $input, download, log, store } from './ui';
 
+initTheme();
 initLanguage();
 
 const HIDDEN_MODE_KEY = 'walkflow.hiddenMode';
@@ -566,7 +568,8 @@ function link(href: string, text: string) {
 }
 
 // ---------- Events ----------
-$('langSlot').append(languageSelect());
+$('prefs').append(languageSelect(), themeSelect());
+onThemeChange(redrawChart);
 
 $button('connect').onclick = () => void connect('ble');
 $button('demo').onclick = () => void connect('demo');
