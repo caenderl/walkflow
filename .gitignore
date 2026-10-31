@@ -1,8 +1,9 @@
-node_modules/
-dist/
-dist-electron/
-release/
-coverage/
-.DS_Store
 *.log
+.DS_Store
 .vite/
+coverage/
+dist-desktop/
+dist-electron/
+dist/
+node_modules/
+release/

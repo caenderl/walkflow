@@ -1,0 +1,69 @@
+name: Release
+
+# Auslösen: Version in package.json erhöhen, committen, Tag "v<version>" pushen.
+# Ergebnis ist ein Release-Entwurf (Draft); veröffentlicht wird er von Hand.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+      - name: Tag passt zur Version in package.json?
+        shell: bash
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+
+      - name: Desktop-App bauen
+        run: npm run dist
+        env:
+          # Vorerst unsigniert (macOS ad-hoc). Für Signierung/Notarisierung siehe electron-builder.config.cjs.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: walkflow-${{ matrix.os }}
+          path: |
+            release/*.dmg
+            release/*.exe
+            release/*.AppImage
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Prüfsummen
+        run: cd artifacts && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Release-Entwurf anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" artifacts/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --title "Walkflow $GITHUB_REF_NAME" \
+            --notes-file .github/release-notes.md \
+            --generate-notes

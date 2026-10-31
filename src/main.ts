@@ -3,6 +3,7 @@ import { TreadmillClient, WebBluetoothAdapter, type BleAdapter, type TreadmillEv
 import { bluetoothSupportHint } from './browser';
 import { drawChart } from './chart';
 import { APP_NAME, APP_VERSION, BUILD_TARGET, DONATION_URL, GITHUB_REPO } from './config';
+import { desktop, setupDesktop } from './desktop';
 import { choose, confirmDialog } from './dialogs';
 import { exportFilename, toCsv, type Sample } from './export';
 import {
@@ -292,6 +293,7 @@ async function connect(kind: 'ble' | 'demo') {
     $('alarm').hidden = true;
     $('demoBanner').hidden = kind !== 'demo';
     $('status').textContent = `${kind === 'demo' ? 'Demo verbunden' : 'Verbunden'}: ${info.deviceName ?? 'Laufband'}`;
+    desktop?.connectionChanged(true);
     await c.send(cmdRequestControl());
   } catch (e) {
     log(`❌ ${e instanceof Error ? e.message : String(e)}`);
@@ -317,6 +319,7 @@ function onDisconnected() {
   governor.reset();
   standstill.disarm();
   releaseWakeLock();
+  desktop?.connectionChanged(false);
   client = null;
   beltStarted = false; lastMeasured = undefined; controlLost = false;
   $('status').textContent = 'Nicht verbunden';
@@ -598,12 +601,17 @@ if (hint) {
   $('unsupportedText').textContent = hint.text;
   $('unsupported').hidden = false;
   $('status').textContent = 'Web Bluetooth nicht verfügbar';
-} else {
+} else if (!desktop) {
+  // Nicht in der Desktop-App: dort würde das schon beim Start den macOS-Bluetooth-Dialog auslösen
   void webAdapter.availability().then(a => {
     if (!a.ok && a.reason === 'no-adapter') $('status').textContent = 'Bluetooth scheint ausgeschaltet zu sein oder es gibt keinen Adapter.';
   });
 }
 setUi(false);
 setupPwa(connected);
+setupDesktop({
+  onGlobalStop: () => { if (connected()) { log('Globales Stop-Kürzel'); void doStop('Gestoppt (globales Kürzel)'); } },
+  log,
+});
 
 if (!isDisclaimerAccepted(store.get(DISCLAIMER_STORAGE_KEY))) void ensureDisclaimer();
