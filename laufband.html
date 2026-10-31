@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laufband Control</title>
+<style>
+  :root { --bg:#12141a; --card:#1c1f28; --fg:#e8eaf0; --mute:#8a90a2; --acc:#4ade80; --warn:#f87171; --blue:#60a5fa; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--fg); padding:24px; }
+  .wrap { max-width:620px; margin:0 auto; display:grid; gap:16px; }
+  h1 { margin:0; font-size:1.4rem; }
+  h2 { margin:0 0 10px; font-size:1rem; color:var(--mute); font-weight:600; }
+  .card { background:var(--card); border-radius:14px; padding:18px; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .stat .v { font-size:1.7rem; font-variant-numeric:tabular-nums; }
+  .stat .l { color:var(--mute); font-size:.78rem; }
+  button { font:inherit; border:0; border-radius:10px; padding:10px 14px; cursor:pointer; background:#2a2f3c; color:var(--fg); }
+  button:hover:not(:disabled) { background:#363c4d; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button.primary { background:var(--acc); color:#06210f; font-weight:600; }
+  button.stop { background:var(--warn); color:#2b0707; font-weight:700; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .row > * { flex:1; }
+  .grid { display:grid; gap:14px; }
+  input[type=range] { width:100%; accent-color:var(--acc); }
+  input[type=number], input[type=text], textarea {
+    font:inherit; padding:8px; border-radius:8px; border:1px solid #333; background:#12141a; color:var(--fg); width:100%;
+  }
+  input[type=number] { width:90px; }
+  textarea { font-family: ui-monospace, monospace; font-size:13px; height:100px; resize:vertical; }
+  .big { font-size:2.2rem; text-align:center; font-variant-numeric:tabular-nums; }
+  .mid { font-size:1.3rem; text-align:center; font-variant-numeric:tabular-nums; }
+  #log { font:12px ui-monospace, monospace; color:var(--mute); height:200px; overflow:auto; white-space:pre-wrap; }
+  .hint { color:var(--mute); font-size:.85rem; }
+  canvas { width:100%; height:auto; display:block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏃 Laufband Control</h1>
+
+  <div class="card row">
+    <button id="connect" class="primary">Verbinden</button>
+    <button id="disconnect" disabled>Trennen</button>
+    <span id="status" class="hint" style="flex:2">Nicht verbunden</span>
+  </div>
+
+  <div class="card stats">
+    <div class="stat"><div class="v" id="vSpeed">–</div><div class="l">km/h (Ist)</div></div>
+    <div class="stat"><div class="v" id="vDist">–</div><div class="l">km</div></div>
+    <div class="stat"><div class="v" id="vTime">–</div><div class="l">Zeit</div></div>
+    <div class="stat"><div class="v" id="vIncl">–</div><div class="l">Steigung %</div></div>
+    <div class="stat"><div class="v" id="vHr">–</div><div class="l">Puls (bpm)</div></div>
+    <div class="stat"><div class="v" id="vKcal">–</div><div class="l">kcal</div></div>
+  </div>
+
+  <div class="card grid">
+    <h2>Steuerung</h2>
+    <div class="row">
+      <button id="start" class="primary needs-conn" disabled>▶ Start</button>
+      <button id="pause" class="needs-conn" disabled>⏸ Pause</button>
+      <button id="stop" class="stop needs-conn" disabled>⏹ Stop</button>
+    </div>
+    <div class="hint">Tastatur: <b>Leertaste</b> oder <b>Esc</b> = Stop, <b>↑ / ↓</b> = Speed ±0,5 (nicht im Slider/Textfeld).</div>
+
+    <div class="big" id="target">3.0 km/h</div>
+    <input type="range" id="slider" class="needs-conn" min="1" max="6" step="0.1" value="3" disabled>
+    <div class="row">
+      <button id="minus" class="needs-conn" disabled>− 0,5</button>
+      <button id="plus" class="needs-conn" disabled>+ 0,5</button>
+    </div>
+    <div class="row">
+      <button class="preset needs-conn" data-speed="2" disabled>2</button>
+      <button class="preset needs-conn" data-speed="3" disabled>3</button>
+      <button class="preset needs-conn" data-speed="4" disabled>4</button>
+      <button class="preset needs-conn" data-speed="5" disabled>5</button>
+    </div>
+  </div>
+
+  <div class="card grid">
+    <h2>Steigung (Test)</h2>
+    <div class="mid" id="inclTarget">0.0 %</div>
+    <input type="range" id="inclSlider" class="needs-conn" min="0" max="15" step="1" value="0" disabled>
+    <div class="hint" id="inclInfo">Range: unbekannt. Ob das Band die Steigung per FTMS annimmt, sagt dir das Log (Set Inclination: OK oder nicht unterstützt).</div>
+  </div>
+
+  <div class="card grid">
+    <h2>Intervall-Programm</h2>
+    <textarea id="progText" spellcheck="false">2 2.0
+3 3.5
+1 5.0
+3 3.5
+2 2.0</textarea>
+    <div class="hint">Pro Zeile: <b>Minuten km/h</b> (Dezimalzahlen gehen). Speed wird aufs Limit gekappt. Nach dem Start wartet das Programm ca. 4,5 s wegen des Band-Countdowns.</div>
+    <div class="row">
+      <button id="progStart" class="primary needs-conn" disabled>▶ Programm starten</button>
+      <button id="progStop" class="needs-conn" disabled>Abbrechen &amp; Stop</button>
+    </div>
+    <div class="hint" id="progStatus">Kein Programm aktiv</div>
+  </div>
+
+  <div class="card">
+    <h2>Geschwindigkeit der letzten 5 Minuten</h2>
+    <canvas id="chart" width="560" height="150"></canvas>
+  </div>
+
+  <div class="card grid">
+    <h2>Limit &amp; Daten</h2>
+    <label class="hint">Eigenes Speed-Limit (km/h):
+      <input type="number" id="cap" min="1" max="20" step="0.5" value="6">
+    </label>
+    <div class="hint" id="rangeInfo">Geräte-Range: unbekannt</div>
+    <div class="row">
+      <button id="csv">CSV exportieren</button>
+      <button id="clear">Verlauf löschen</button>
+    </div>
+  </div>
+
+  <div class="card grid">
+    <h2>Experimentier-Konsole (Control Point 0x2AD9)</h2>
+    <input type="text" id="raw" class="needs-conn" placeholder="Hex-Bytes, z. B. 02 2C 01" disabled>
+    <button id="rawSend" class="needs-conn" disabled>Senden</button>
+    <div class="hint">Set-Speed-Befehle (<code>02 …</code>) über dem Limit werden hier trotzdem blockiert. Alles andere geht roh raus.</div>
+  </div>
+
+  <div class="card"><div id="log"></div></div>
+
+  <div class="hint">
+    Sportstech Live App vorher schließen (meist nur eine Verbindung gleichzeitig).
+    Beim Start stehst du auf den Seitenflächen, nicht auf dem Band. 😉
+  </div>
+</div>
+
+<script>
+// ---------- Konstanten ----------
+const FTMS_SERVICE = 0x1826, HR_SERVICE = 0x180d, DEVINFO_SERVICE = 0x180a;
+const CH = {
+  feature: 0x2acc, treadmillData: 0x2acd, trainingStatus: 0x2ad3, speedRange: 0x2ad4,
+  inclRange: 0x2ad5, control: 0x2ad9, machineStatus: 0x2ada, hr: 0x2a37,
+};
+const OP = { REQUEST_CONTROL: 0x00, SET_SPEED: 0x02, SET_INCL: 0x03, START: 0x07, STOP_PAUSE: 0x08 };
+const OP_NAMES = { 0x00: 'Request Control', 0x02: 'Set Speed', 0x03: 'Set Inclination', 0x07: 'Start/Resume', 0x08: 'Stop/Pause' };
+const RESULTS = { 1: 'OK', 2: 'nicht unterstützt', 3: 'ungültiger Parameter', 4: 'fehlgeschlagen', 5: 'keine Berechtigung' };
+const FEAT_MACHINE = ['Avg Speed','Cadence','Total Distance','Inclination','Elevation Gain','Pace','Step Count','Resistance','Stride Count','Expended Energy','Heart Rate','MET','Elapsed Time','Remaining Time','Power','Force on Belt','User Data'];
+const FEAT_TARGET = ['Speed','Inclination','Resistance','Power','Heart Rate','Energy','Steps','Strides','Distance','Training Time','Time 2 HR zones','Time 3 HR zones','Time 5 HR zones','Bike Sim','Wheel Circ.','Spin Down','Cadence'];
+
+// ---------- State ----------
+let device = null, cp = null, wakeLock = null;
+let devMin = 1.0, devMax = 12.0;
+let queue = Promise.resolve();
+let progActive = 0, progCounter = 0;
+const cur = {};          // letzte Messwerte
+const samples = [];      // Verlauf (1 Hz)
+let lastSample = 0;
+
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmtTime = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+const hex = dv => [...new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength)].map(b => b.toString(16).padStart(2, '0')).join(' ');
+const bitNames = (v, names) => names.filter((_, i) => v & (1 << i));
+
+function log(msg) {
+  const el = $('log');
+  el.textContent += `[${new Date().toLocaleTimeString('de-DE')}] ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// ---------- BLE-Schreibzugriffe seriell ----------
+function sendControl(bytes) {
+  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  queue = queue.then(async () => {
+    log(`→ ${[...data].map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+    if (cp.writeValueWithResponse) await cp.writeValueWithResponse(data);
+    else await cp.writeValue(data);
+  }).catch(e => log(`❌ Schreibfehler: ${e.message}`));
+  return queue;
+}
+
+// ---------- Notification-Handler ----------
+function onControlPoint(ev) {
+  const dv = ev.target.value;
+  if (dv.getUint8(0) === 0x80) {
+    const op = dv.getUint8(1), res = dv.getUint8(2);
+    log(`← ${OP_NAMES[op] ?? '0x' + op.toString(16)}: ${RESULTS[res] ?? res}`);
+  } else log(`← CP ${hex(dv)}`);
+}
+
+function parseTreadmill(dv) {
+  const r = {};
+  try {
+    let o = 0;
+    const flags = dv.getUint16(o, true); o += 2;
+    if (!(flags & 1))  { r.speed = dv.getUint16(o, true) / 100; o += 2; }
+    if (flags & 2)     { o += 2; }
+    if (flags & 4)     { r.dist = dv.getUint8(o) | (dv.getUint8(o + 1) << 8) | (dv.getUint8(o + 2) << 16); o += 3; }
+    if (flags & 8)     { r.incl = dv.getInt16(o, true) / 10; o += 4; }
+    if (flags & 16)    { o += 4; }
+    if (flags & 32)    { o += 1; }
+    if (flags & 64)    { o += 1; }
+    if (flags & 128)   { const k = dv.getUint16(o, true); if (k !== 0xffff) r.kcal = k; o += 5; }
+    if (flags & 256)   { r.hr = dv.getUint8(o); o += 1; }
+    if (flags & 512)   { o += 1; }
+    if (flags & 1024)  { r.time = dv.getUint16(o, true); o += 2; }
+  } catch (e) { /* unvollständiges Paket */ }
+  return r;
+}
+
+function onTreadmillData(ev) {
+  const r = parseTreadmill(ev.target.value);
+  if (r.speed !== undefined) { cur.speed = r.speed; $('vSpeed').textContent = r.speed.toFixed(1); }
+  if (r.dist  !== undefined) { cur.dist = r.dist;   $('vDist').textContent = (r.dist / 1000).toFixed(2); }
+  if (r.incl  !== undefined) { cur.incl = r.incl;   $('vIncl').textContent = r.incl.toFixed(1); }
+  if (r.kcal  !== undefined) { cur.kcal = r.kcal;   $('vKcal').textContent = r.kcal; }
+  if (r.time  !== undefined) { cur.time = r.time;   $('vTime').textContent = fmtTime(r.time); }
+  if (r.hr > 0) { cur.hr = r.hr; $('vHr').textContent = r.hr; }
+
+  const now = Date.now();
+  if (now - lastSample >= 1000) {
+    lastSample = now;
+    samples.push({ ts: now, ...cur });
+    if (samples.length > 20000) samples.shift();
+    drawChart();
+  }
+}
+
+function onHeartRate(ev) {
+  const dv = ev.target.value;
+  const bpm = (dv.getUint8(0) & 1) ? dv.getUint16(1, true) : dv.getUint8(1);
+  if (bpm > 0) { cur.hr = bpm; $('vHr').textContent = bpm; }
+}
+
+// ---------- Speed & Steigung ----------
+function effectiveMax() { return Math.min(devMax, parseFloat($('cap').value) || 6); }
+
+function applyLimits() {
+  const sl = $('slider');
+  sl.min = devMin; sl.max = effectiveMax();
+  if (parseFloat(sl.value) > sl.max) sl.value = sl.max;
+  if (parseFloat(sl.value) < sl.min) sl.value = sl.min;
+  $('target').textContent = `${parseFloat(sl.value).toFixed(1)} km/h`;
+  $('rangeInfo').textContent = `Geräte-Range: ${devMin.toFixed(1)} – ${devMax.toFixed(1)} km/h, aktives Limit: ${effectiveMax().toFixed(1)}`;
+  try { localStorage.setItem('cap', $('cap').value); } catch {}
+}
+
+function setSpeed(kmh) {
+  kmh = Math.round(Math.max(devMin, Math.min(effectiveMax(), kmh)) * 10) / 10;
+  $('slider').value = kmh;
+  $('target').textContent = `${kmh.toFixed(1)} km/h`;
+  const v = Math.round(kmh * 100);
+  return sendControl([OP.SET_SPEED, v & 0xff, (v >> 8) & 0xff]);
+}
+
+function setIncline(pct) {
+  $('inclSlider').value = pct;
+  $('inclTarget').textContent = `${parseFloat(pct).toFixed(1)} %`;
+  const b = new DataView(new ArrayBuffer(3));
+  b.setUint8(0, OP.SET_INCL);
+  b.setInt16(1, Math.round(pct * 10), true);
+  return sendControl(new Uint8Array(b.buffer));
+}
+
+// ---------- Start / Stop / Programm ----------
+function doStop() {
+  abortProgram('Gestoppt');
+  return sendControl([OP.STOP_PAUSE, 0x01]);
+}
+
+async function doStart() {
+  await sendControl([OP.REQUEST_CONTROL]);
+  await sendControl([OP.START]);
+}
+
+function parseProgram(text) {
+  const steps = [];
+  for (const line of text.split('\n')) {
+    const m = line.trim().match(/^(\d+(?:[.,]\d+)?)\s+(\d+(?:[.,]\d+)?)/);
+    if (m) steps.push({
+      sec: Math.round(parseFloat(m[1].replace(',', '.')) * 60),
+      speed: parseFloat(m[2].replace(',', '.')),
+    });
+  }
+  return steps;
+}
+
+function abortProgram(msg) {
+  if (progActive) { progActive = 0; $('progStatus').textContent = msg || 'Programm abgebrochen'; }
+}
+
+async function runProgram() {
+  const steps = parseProgram($('progText').value);
+  if (!steps.length) { $('progStatus').textContent = 'Programm leer oder nicht lesbar'; return; }
+  const total = steps.reduce((a, s) => a + s.sec, 0);
+  if (!confirm(`Programm mit ${steps.length} Schritten (${fmtTime(total)} min) starten?\nStehst du auf den Seitenflächen?`)) return;
+
+  const id = ++progCounter;
+  progActive = id;
+  $('progStatus').textContent = 'Band startet…';
+  await doStart();
+  await sleep(4500);
+
+  for (let i = 0; i < steps.length; i++) {
+    if (progActive !== id) return;
+    await setSpeed(steps[i].speed);
+    for (let r = steps[i].sec; r > 0; r--) {
+      if (progActive !== id) return;
+      $('progStatus').textContent = `Schritt ${i + 1}/${steps.length}: ${parseFloat($('slider').value).toFixed(1)} km/h, noch ${fmtTime(r)}`;
+      await sleep(1000);
+    }
+  }
+  if (progActive === id) {
+    progActive = 0;
+    $('progStatus').textContent = 'Fertig. Band wird gestoppt.';
+    await sendControl([OP.STOP_PAUSE, 0x01]);
+  }
+}
+
+// ---------- Chart ----------
+function drawChart() {
+  const c = $('chart'), g = c.getContext('2d'), W = c.width, H = c.height;
+  const L = 30, B = 16, T = 8, R = 6;
+  g.clearRect(0, 0, W, H);
+  const now = Date.now(), win = 5 * 60 * 1000;
+  const ymax = Math.max(6, Math.ceil(effectiveMax()));
+  const px = ts => L + (1 - (now - ts) / win) * (W - L - R);
+  const py = v => H - B - (v / ymax) * (H - B - T);
+
+  g.font = '11px system-ui'; g.fillStyle = '#8a90a2'; g.strokeStyle = '#2a2f3c'; g.lineWidth = 1;
+  const stepY = Math.max(1, Math.round(ymax / 4));
+  for (let y = 0; y <= ymax; y += stepY) {
+    g.beginPath(); g.moveTo(L, py(y)); g.lineTo(W - R, py(y)); g.stroke();
+    g.fillText(y, 6, py(y) + 4);
+  }
+  g.fillText('−5 min', L, H - 3);
+  g.fillText('jetzt', W - 34, H - 3);
+
+  const slv = parseFloat($('slider').value);
+  if (slv) {
+    g.strokeStyle = '#60a5fa'; g.setLineDash([5, 4]);
+    g.beginPath(); g.moveTo(L, py(slv)); g.lineTo(W - R, py(slv)); g.stroke();
+    g.setLineDash([]);
+  }
+
+  const pts = samples.filter(s => s.ts >= now - win && s.speed !== undefined);
+  if (pts.length > 1) {
+    g.strokeStyle = '#4ade80'; g.lineWidth = 2; g.beginPath();
+    pts.forEach((s, i) => i ? g.lineTo(px(s.ts), py(s.speed)) : g.moveTo(px(s.ts), py(s.speed)));
+    g.stroke();
+  }
+}
+
+// ---------- CSV ----------
+function exportCsv() {
+  if (!samples.length) { log('Keine Daten zum Exportieren'); return; }
+  const rows = ['zeit_s,speed_kmh,dist_m,incl_pct,puls,kcal'];
+  for (const s of samples) {
+    rows.push([((s.ts - samples[0].ts) / 1000).toFixed(0), s.speed ?? '', s.dist ?? '', s.incl ?? '', s.hr ?? '', s.kcal ?? ''].join(','));
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' }));
+  a.download = `laufband-${new Date().toISOString().slice(0, 16).replace(':', '-')}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// ---------- Verbinden ----------
+async function connect() {
+  try {
+    $('status').textContent = 'Suche…';
+    device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [FTMS_SERVICE, HR_SERVICE, DEVINFO_SERVICE],
+    });
+    device.addEventListener('gattserverdisconnected', onDisconnected);
+    log(`Gerät: ${device.name ?? '(ohne Namen)'}`);
+
+    const server = await device.gatt.connect();
+    const svc = await server.getPrimaryService(FTMS_SERVICE);
+
+    cp = await svc.getCharacteristic(CH.control);
+    await cp.startNotifications();
+    cp.addEventListener('characteristicvaluechanged', onControlPoint);
+
+    const td = await svc.getCharacteristic(CH.treadmillData);
+    await td.startNotifications();
+    td.addEventListener('characteristicvaluechanged', onTreadmillData);
+
+    for (const uuid of [CH.machineStatus, CH.trainingStatus]) {
+      try {
+        const c = await svc.getCharacteristic(uuid);
+        await c.startNotifications();
+        c.addEventListener('characteristicvaluechanged', e => log(`ℹ Status ${hex(e.target.value)}`));
+      } catch { log(`(Status 0x${uuid.toString(16)} nicht abonnierbar)`); }
+    }
+
+    // Geräteinfos
+    try {
+      const di = await server.getPrimaryService(DEVINFO_SERVICE);
+      for (const [n, u] of [['Hersteller', 0x2a29], ['Modell', 0x2a24], ['Firmware', 0x2a26]]) {
+        try { log(`${n}: ${new TextDecoder().decode(await (await di.getCharacteristic(u)).readValue())}`); } catch {}
+      }
+    } catch {}
+
+    // Features
+    try {
+      const dv = await (await svc.getCharacteristic(CH.feature)).readValue();
+      log(`Features: ${bitNames(dv.getUint32(0, true), FEAT_MACHINE).join(', ') || '–'}`);
+      log(`Steuerbar: ${bitNames(dv.getUint32(4, true), FEAT_TARGET).join(', ') || '–'}`);
+    } catch { log('Feature-Flags nicht lesbar'); }
+
+    // Speed-Range
+    try {
+      const dv = await (await svc.getCharacteristic(CH.speedRange)).readValue();
+      devMin = dv.getUint16(0, true) / 100; devMax = dv.getUint16(2, true) / 100;
+      log(`Speed-Range: ${devMin} – ${devMax} km/h (Step ${dv.getUint16(4, true) / 100})`);
+    } catch { log('Speed-Range nicht lesbar, nehme 1–12 km/h an'); }
+
+    // Inclination-Range
+    try {
+      const dv = await (await svc.getCharacteristic(CH.inclRange)).readValue();
+      const mn = dv.getInt16(0, true) / 10, mx = dv.getInt16(2, true) / 10, st = dv.getUint16(4, true) / 10;
+      const sl = $('inclSlider');
+      sl.min = mn; sl.max = mx; sl.step = st || 0.5; sl.value = Math.max(mn, 0);
+      $('inclTarget').textContent = `${parseFloat(sl.value).toFixed(1)} %`;
+      $('inclInfo').textContent = `Range: ${mn} – ${mx} % (Step ${st})`;
+      log(`Inclination-Range: ${mn} – ${mx} % (Step ${st})`);
+    } catch { log('Inclination-Range nicht lesbar (Fallback 0–15 %)'); }
+
+    // Pulsservice (optional)
+    try {
+      const hrSvc = await server.getPrimaryService(HR_SERVICE);
+      const hc = await hrSvc.getCharacteristic(CH.hr);
+      await hc.startNotifications();
+      hc.addEventListener('characteristicvaluechanged', onHeartRate);
+      log('Puls-Service abonniert');
+    } catch { log('(kein Puls-Service)'); }
+
+    try { wakeLock = await navigator.wakeLock?.request('screen'); } catch {}
+
+    applyLimits();
+    setUi(true);
+    $('status').textContent = `Verbunden: ${device.name ?? 'Laufband'}`;
+    await sendControl([OP.REQUEST_CONTROL]);
+  } catch (e) {
+    log(`❌ ${e.message}`);
+    $('status').textContent = 'Nicht verbunden';
+  }
+}
+
+function onDisconnected() {
+  log('Verbindung getrennt');
+  abortProgram('Verbindung getrennt, Programm beendet');
+  try { wakeLock?.release(); } catch {}
+  wakeLock = null;
+  $('status').textContent = 'Nicht verbunden';
+  setUi(false);
+}
+
+function setUi(connected) {
+  $('connect').disabled = connected;
+  $('disconnect').disabled = !connected;
+  document.querySelectorAll('.needs-conn').forEach(el => el.disabled = !connected);
+}
+
+// ---------- Events ----------
+$('connect').onclick = connect;
+$('disconnect').onclick = () => device?.gatt?.disconnect();
+
+$('start').onclick = async () => {
+  if (!confirm('Stehst du auf den Seitenflächen und nicht auf dem Band?')) return;
+  await doStart();
+};
+$('pause').onclick = () => { abortProgram('Pausiert, Programm beendet'); sendControl([OP.STOP_PAUSE, 0x02]); };
+$('stop').onclick = doStop;
+
+$('slider').oninput = e => { $('target').textContent = `${parseFloat(e.target.value).toFixed(1)} km/h`; };
+$('slider').onchange = e => setSpeed(parseFloat(e.target.value));
+$('minus').onclick = () => setSpeed(parseFloat($('slider').value) - 0.5);
+$('plus').onclick = () => setSpeed(parseFloat($('slider').value) + 0.5);
+document.querySelectorAll('.preset').forEach(b => b.onclick = () => setSpeed(parseFloat(b.dataset.speed)));
+$('cap').onchange = () => { applyLimits(); drawChart(); };
+
+$('inclSlider').oninput = e => { $('inclTarget').textContent = `${parseFloat(e.target.value).toFixed(1)} %`; };
+$('inclSlider').onchange = e => setIncline(parseFloat(e.target.value));
+
+$('progStart').onclick = runProgram;
+$('progStop').onclick = doStop;
+
+$('csv').onclick = exportCsv;
+$('clear').onclick = () => { samples.length = 0; drawChart(); log('Verlauf gelöscht'); };
+
+$('rawSend').onclick = () => {
+  const parts = $('raw').value.trim().split(/[\s,]+/).filter(Boolean);
+  const bytes = parts.map(h => parseInt(h, 16));
+  if (!bytes.length || bytes.some(b => Number.isNaN(b) || b < 0 || b > 255)) { log('❌ Ungültige Hex-Bytes'); return; }
+  if (bytes[0] === OP.SET_SPEED && bytes.length >= 3) {
+    const kmh = (bytes[1] | (bytes[2] << 8)) / 100;
+    if (kmh > effectiveMax()) { log(`❌ ${kmh} km/h liegt über dem Limit (${effectiveMax()}), blockiert`); return; }
+  }
+  sendControl(bytes);
+};
+$('raw').addEventListener('keydown', e => { if (e.key === 'Enter') $('rawSend').click(); });
+
+document.addEventListener('keydown', e => {
+  if (!cp || !device?.gatt?.connected) return;
+  const tag = e.target.tagName;
+  const isText = tag === 'TEXTAREA' || (tag === 'INPUT' && e.target.type !== 'range');
+  if (isText) return;
+  if (e.code === 'Space' || e.key === 'Escape') {
+    e.preventDefault();
+    document.activeElement?.blur?.();
+    doStop();
+  } else if (tag !== 'INPUT' && e.key === 'ArrowUp') {
+    e.preventDefault(); setSpeed(parseFloat($('slider').value) + 0.5);
+  } else if (tag !== 'INPUT' && e.key === 'ArrowDown') {
+    e.preventDefault(); setSpeed(parseFloat($('slider').value) - 0.5);
+  }
+});
+
+try { const c = localStorage.getItem('cap'); if (c) $('cap').value = c; } catch {}
+applyLimits();
+drawChart();
+setInterval(drawChart, 1000);
+
+if (!navigator.bluetooth) {
+  $('status').textContent = 'Web Bluetooth fehlt, bitte Chrome nutzen';
+  $('connect').disabled = true;
+}
+</script>
+</body>
+</html>
