@@ -1,38 +1,40 @@
-# Hardware-Tests
+# Hardware tests
 
-Dinge, die nur am echten Band geprüft werden können. Ergebnisse hier eintragen (Datum, Firmware, was im Log stand).
-Immer: Sicherheitsschlüssel eingesteckt, niedriges Tempo, Start auf den Seitenflächen.
+Things that can only be checked on the real treadmill. Record the results here (date, firmware, what the log said).
+Always: safety key inserted, low speed, start while standing on the side rails.
 
-## Gegenüber dem Prototyp geändert, bitte gegenprüfen
+Log lines below are quoted in English. Either switch the app to English (language picker at the top right) to compare them word for word, or compare the hex bytes, which are the same in every language.
 
-- [ ] **Verbinden.** Ablauf wie im Prototyp, nur wird der Notification-Listener jetzt *vor* `startNotifications` registriert. Erwartet im Log: `Gerät: …`, `Hersteller: …`, `Speed-Range: …`, `→ 00`, `← Request Control: OK`, danach laufen Live-Werte ein.
-- [ ] **Rampe.** Bei 2 km/h auf Preset 5 drücken. Erwartet: `→ 02 fa 00` (2,5), `02 2c 01` (3,0), `02 5e 01` (3,5), `02 90 01` (4,0), `02 c2 01` (4,5), `02 f4 01` (5,0), jeweils mindestens 1,5 s auseinander und mit `← Set Speed: OK`. Auffällig wäre: fehlende Antworten, `fehlgeschlagen`, oder das Band ruckelt bei jeder Stufe.
-- [ ] **Stop hat Vorrang.** Während einer Rampe Leertaste drücken. Erwartet: `→ 08 01` kommt direkt nach dem gerade laufenden Write, ggf. mit `verworfen: 02 …`. Band stoppt.
-- [ ] **Limit senken während das Band läuft.** Bei 5 km/h das Limit auf 4 setzen. Erwartet: `Limit gesenkt, regle auf 4.0 km/h` und `→ 02 90 01`.
+## Changed compared with the prototype, please double-check
 
-## Machine Status (steuert Programm-Abbruch)
+- [ ] **Connecting.** Same sequence as the prototype, except that the notification listener is now registered *before* `startNotifications`. Expected in the log: `Device: …`, `Manufacturer: …`, `Speed range: …`, `→ 00`, `← Request Control: OK`, then live values come in.
+- [ ] **Ramp.** At 2 km/h press preset 5. Expected: `→ 02 fa 00` (2.5), `02 2c 01` (3.0), `02 5e 01` (3.5), `02 90 01` (4.0), `02 c2 01` (4.5), `02 f4 01` (5.0), each at least 1.5 s apart and with `← Set Speed: OK`. Suspicious would be: missing responses, `failed`, or the belt jerking at every step.
+- [ ] **Stop takes priority.** Press Space during a ramp. Expected: `→ 08 01` comes right after the write in progress, possibly with `dropped: 02 …`. The belt stops.
+- [ ] **Lowering the limit while the belt runs.** At 5 km/h set the limit to 4. Expected: `Limit lowered, regulating to 4.0 km/h` and `→ 02 90 01`.
 
-- [ ] Stopp-Taste am Gerät/Fernbedienung, während das Band läuft. Welche `ℹ Status`-Zeile kommt? Laut FTMS `02 01` (gestoppt) bzw. `02 02` (pausiert).
-- [ ] Sicherheitsschlüssel ziehen. Laut FTMS `03`.
-- [ ] Speed an der Fernbedienung ändern. Laut FTMS `05 <LSB> <MSB>`.
-- [ ] Kommt irgendwann `ff` (Steuerrecht verloren)?
+## Machine Status (controls program abort)
 
-Wenn das Band andere oder gar keine Status-Bytes schickt, bitte die Hex-Werte notieren. Davon hängt ab, ob ein Programm sofort endet; sonst greift erst die Stillstandserkennung nach 8 s.
+- [ ] Stop button on the device/remote while the belt is running. Which `ℹ Status` line comes? According to FTMS `02 01` (stopped) or `02 02` (paused).
+- [ ] Pull the safety key. According to FTMS `03`.
+- [ ] Change the speed on the remote. According to FTMS `05 <LSB> <MSB>`.
+- [ ] Does `ff` (control lost) ever come?
 
-## Bisher ungetestet
+If the treadmill sends different status bytes or none at all, please note the hex values. They decide whether a program ends immediately; otherwise only the standstill detection after 8 s kicks in.
 
-- [ ] **Steigung.** Slider bewegen. `← Set Inclination: OK` oder `nicht unterstützt`? Was steht bei `Inclination-Range` beim Verbinden?
-- [ ] **Puls.** Steht `Puls-Service abonniert` im Log? Kommen Werte?
-- [ ] **Countdown.** Wie lange zählt das Band nach Start herunter? Das Programm wartet 4,5 s, bevor es den ersten Speed setzt.
-- [ ] **Programm-Übergänge.** Programm `0.5 2` / `0.5 3` / `0.5 2`. Wechsel zur richtigen Zeit? Ein Programm mit Stopp am Gerät abbrechen: endet es (Status-Zeile oder `Band steht, Programm beendet`)?
-- [ ] **Wiederverbinden.** Trennen, erneut verbinden: wieder `← Request Control: OK` und Live-Werte?
-- [ ] **Verbindungsabbruch** (die gefährliche Annahme). Bei 2 km/h, auf den Seitenflächen stehend, Bluetooth am Rechner ausschalten. Läuft das Band weiter, stoppt es, nach welcher Zeit? Ergebnis hier und in der Projektbeschreibung eintragen. Die App zeigt in jedem Fall den Warnhinweis.
+## Not yet tested
 
-Ergebnis Verbindungsabbruch: *(noch offen)*
+- [ ] **Incline.** Move the slider. `← Set Inclination: OK` or `not supported`? What does `Inclination range` say when connecting?
+- [ ] **Heart rate.** Does the log say `Heart rate service subscribed`? Do values come in?
+- [ ] **Countdown.** How long does the treadmill count down after start? The program waits 4.5 s before setting the first speed.
+- [ ] **Program transitions.** Program `0.5 2` / `0.5 3` / `0.5 2`. Changes at the right time? Cancel a program with the stop button on the device: does it end (status line or `Belt stopped, program ended`)?
+- [ ] **Reconnecting.** Disconnect, connect again: `← Request Control: OK` and live values again?
+- [ ] **Connection loss** (the dangerous assumption). At 2 km/h, standing on the side rails, turn off Bluetooth on the computer. Does the belt keep running, does it stop, after how long? Record the result here and in the project description. The app shows the warning in any case.
 
-## Desktop-App
+Result connection loss: *(still open)*
 
-- [ ] macOS: Beim ersten „Verbinden“ fragt macOS nach Bluetooth. Erscheint danach der Chooser mit dem Band?
-- [ ] Zweites Verbinden mit Haken „automatisch verbinden“: wird das Band ohne Chooser gewählt? Log: `Zuletzt verbundenes Gerät automatisch gewählt`.
-- [ ] Globales Kürzel: Andere App im Vordergrund, Cmd+Umschalt+Leertaste. Log: `Globales Stop-Kürzel`, `→ 08 01`. (Die Registrierung klappt auf macOS ohne Zusatzrechte, das Auslösen selbst ist noch ungetestet.)
-- [ ] Windows: Chooser und, falls das Band koppeln will, PIN-Dialog.
+## Desktop app
+
+- [ ] macOS: on the first “Connect”, macOS asks for Bluetooth. Does the chooser with the treadmill appear afterwards? Is the prompt text in the system language?
+- [ ] Second connect with “connect automatically” ticked: is the treadmill selected without the chooser? Log: `Automatically selected the last connected device`.
+- [ ] Global shortcut: another app in the foreground, Cmd+Shift+Space. Log: `Global stop shortcut`, `→ 08 01`. (Registering works on macOS without extra permissions; triggering it is still untested.)
+- [ ] Windows: chooser and, if the treadmill wants to pair, the PIN dialog.

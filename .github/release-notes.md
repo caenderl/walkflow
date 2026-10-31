@@ -1,18 +1,20 @@
-> **Sicherheitshinweis:** Nutzung auf eigene Gefahr, ohne Gewährleistung (MIT-Lizenz). Sicherheitsschlüssel einstecken, auf den Seitenflächen starten. Bricht die Bluetooth-Verbindung ab, kann die App das Band nicht stoppen.
+> **Safety notice:** use at your own risk, without warranty (MIT license). Insert the safety key, start while standing on the side rails. If the Bluetooth connection drops, the app cannot stop the belt.
 
 ### Download
 
-| System | Datei |
+| System | File |
 | --- | --- |
 | macOS (Apple Silicon) | `Walkflow-…-mac-arm64.dmg` |
 | macOS (Intel) | `Walkflow-…-mac-x64.dmg` |
 | Windows | `Walkflow-…-win-x64.exe` |
 | Linux | `Walkflow-…-linux-x86_64.AppImage` |
 
-Prüfsummen: `SHA256SUMS.txt`
+Checksums: `SHA256SUMS.txt`
 
-Die App ist **nicht signiert**. Beim ersten Öffnen warnt das System:
+The app is **not signed**. The system warns when you open it for the first time:
 
-- **macOS:** App in „Programme“ ziehen und öffnen. Bei der Warnung „Fertig“ wählen, dann *Systemeinstellungen → Datenschutz & Sicherheit* öffnen, nach unten scrollen und bei Walkflow auf **„Trotzdem öffnen“** klicken.
-- **Windows:** Bei „Der Computer wurde durch Windows geschützt“ auf *Weitere Informationen → Trotzdem ausführen*.
-- **Linux:** `chmod +x Walkflow-*.AppImage`, dann starten. Web Bluetooth unter Linux ist ungetestet.
+- **macOS:** drag the app to “Applications” and open it. Choose “Done” at the warning, then open *System Settings → Privacy & Security*, scroll down and click **“Open Anyway”** next to Walkflow.
+- **Windows:** at “Windows protected your PC”, click *More info → Run anyway*.
+- **Linux:** `chmod +x Walkflow-*.AppImage`, then start it. Web Bluetooth on Linux is untested.
+
+The app is available in English, German and French.
