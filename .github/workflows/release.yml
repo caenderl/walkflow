@@ -1,13 +1,23 @@
 name: Release
 
-# Trigger: bump the version in package.json, commit, push the tag "v<version>".
-# The result is a draft release; it is published by hand.
+# Builds the desktop app for a release tag and attaches it to a draft release, which is published by hand.
+# Normally called by release-please.yml after a release pull request was merged (the draft already exists).
+# Still works by hand: bump the version in package.json, commit, push the tag "v<version>".
 on:
   push:
     tags: ['v*']
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag, e.g. v0.2.0
+        required: true
+        type: string
 
 permissions:
   contents: read
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   build:
@@ -18,6 +28,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -27,7 +39,7 @@ jobs:
 
       - name: Tag matches the version in package.json?
         shell: bash
-        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+        run: test "v$(node -p "require('./package.json').version")" = "$TAG"
 
       - name: Build the desktop app
         run: npm run dist
@@ -51,19 +63,29 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
       - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
       - name: Checksums
         run: cd artifacts && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
-      - name: Create draft release
+      - name: Attach to the draft release (create it for a tag pushed by hand)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" artifacts/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --draft \
-            --title "Walkflow $GITHUB_REF_NAME" \
-            --notes-file .github/release-notes.md \
-            --generate-notes
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            # From release-please: its notes (changelog) first, then download and install notes
+            gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > notes.md
+            if ! grep -q '^### Download' notes.md; then printf '\n\n' >> notes.md; cat .github/release-notes.md >> notes.md; fi
+            gh release upload "$TAG" artifacts/* --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "Walkflow $TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" artifacts/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --draft \
+              --title "Walkflow $TAG" \
+              --notes-file .github/release-notes.md \
+              --generate-notes
+          fi

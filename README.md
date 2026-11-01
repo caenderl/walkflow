@@ -131,11 +131,31 @@ Every colour is a token at the top of `src/style.css`, defined once as `light-da
 3. Optional: set the repository variable `DONATION_URL` (see below).
 4. Deploy by hand: *Actions → Pages → Run workflow*. To deploy on every push to `main`, re-enable the commented-out `push` trigger in `.github/workflows/pages.yml`.
 
-### Desktop release
+### Versions and releases
 
-1. Bump the version in `package.json` and commit.
-2. Push the tag `v<version>`, e.g. `git tag v0.1.0 && git push origin v0.1.0`.
-3. The release workflow builds macOS (arm64, x64), Windows and Linux and creates a **draft release** with checksums. Publish it by hand.
+Versions follow [Semantic Versioning](https://semver.org/). Before 1.0, new features raise the minor version and fixes the patch version; changes that old versions cannot handle (e.g. a backup format they cannot read) also raise only the minor version until 1.0, the major version after that.
+
+Commit titles follow [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): summary`, e.g. `feat(history): weekly totals` or `fix(ble): retry Request Control`.
+
+| Type | Use | Changelog | Version |
+| --- | --- | --- | --- |
+| `safety` | Changes to safety behaviour (limit, ramp, stop, warnings) | “Safety”, at the top | patch |
+| `feat` | New feature | “Features” | minor |
+| `fix` | Bug fix | “Fixes” | patch |
+| `perf`, `revert` | Performance, reverted change | own section | patch |
+| `docs`, `refactor`, `test`, `build`, `ci`, `style`, `chore` | Everything else | not listed | none on their own |
+
+A breaking change is marked with `!` (`feat!: …`) or a `BREAKING CHANGE:` footer.
+
+Releasing ([release-please](https://github.com/googleapis/release-please), config in `release-please-config.json`, last released version in `.release-please-manifest.json`):
+
+1. On every push to `main`, release-please keeps a pull request “chore: release x.y.z” up to date with the next version (in `package.json`) and `CHANGELOG.md`. It is created with the workflow token, so no CI run shows on it; CI runs on `main` after merging.
+2. Merging it creates the tag `vx.y.z` and a **draft release** with the changelog. The desktop app for macOS (arm64, x64), Windows and Linux is built and attached with checksums.
+3. Check the changed areas on the treadmill (`HARDWARE-TESTS.md`), then publish the draft by hand. Only published releases reach the update notice of the desktop app.
+
+One-time setup: *Settings → Actions → General → Workflow permissions →* “Allow GitHub Actions to create and approve pull requests”. Without it, release-please cannot open its pull request.
+
+The first `feat` or `fix` after setting this up leads to version 0.1.0. A release by hand still works: set the version in `package.json` and `.release-please-manifest.json`, commit, push the tag `v<version>`.
 
 ### Signing and notarization (later)
 
