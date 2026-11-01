@@ -43,6 +43,7 @@
       <li>A service worker stores the app files in the browser cache for offline use.</li>
       <li>The current recording for the chart and the CSV/TCX export stays only in memory until the page is closed.</li>
       <li>Runs are stored in the browser’s IndexedDB on this device (desktop app: in the app’s data folder): time, speed, distance, incline, kcal and heart rate (only if the treadmill reports one), about once per second. They leave the device only when the person downloads a backup or an export themselves. Saving can be turned off; runs can be deleted one by one or all at once.</li>
+      <li>Saved workouts and the week plan are kept in the same IndexedDB on this device. They leave it only when the person downloads a backup.</li>
       <li>After the first saved run, the web app asks the browser via <code>navigator.storage.persist()</code> not to delete the data when space runs low.</li>
       <li>The desktop app (not this website) asks api.github.com for a newer version on startup; can be turned off.</li>
     </ul>

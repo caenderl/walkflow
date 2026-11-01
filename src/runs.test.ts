@@ -317,7 +317,7 @@ describe('backup file', () => {
   it('round trip: runs come back with the same summaries', () => {
     const text = serializeBackup([runA, runB], new Date(T0));
     const r = parseBackup(text);
-    expect(r).toEqual({ ok: true, runs: [runA, runB], invalid: 0 });
+    expect(r).toEqual({ ok: true, runs: [runA, runB], invalid: 0, workouts: [], invalidWorkouts: 0, plan: null });
   });
 
   it('is a readable JSON file with format and version', () => {
@@ -350,6 +350,36 @@ describe('backup file', () => {
     ];
     const tampered = { ...good, summary: { dist: 99999 } };
     const r = parseBackup(JSON.stringify({ format: 'walkflow-backup', version: 1, runs: [...broken, tampered] }));
-    expect(r).toEqual({ ok: true, runs: [runA], invalid: broken.length });
+    expect(r).toEqual({ ok: true, runs: [runA], invalid: broken.length, workouts: [], invalidWorkouts: 0, plan: null });
+  });
+
+  describe('workouts and week plan in the same file', () => {
+    const workout = { id: 'w1', name: 'Easy', steps: [{ sec: 120, speed: 2 }, { meters: 400, speed: 3 }], updated: 5 };
+    const plan = { minutes: [30, 0, 30, 0, 30, 0, 0] };
+
+    it('round trip', () => {
+      const r = parseBackup(serializeBackup([runA], new Date(T0), { workouts: [workout], plan }));
+      expect(r).toEqual({ ok: true, runs: [runA], invalid: 0, workouts: [workout], invalidWorkouts: 0, plan });
+    });
+
+    it('a file without them (made before) still reads', () => {
+      const data = JSON.parse(serializeBackup([runA], new Date(T0)));
+      expect(data.workouts).toBeUndefined();
+      expect(data.plan).toBeUndefined();
+    });
+
+    it('only workouts and a plan, without runs', () => {
+      const r = parseBackup(serializeBackup([], new Date(T0), { workouts: [workout] }));
+      expect(r).toMatchObject({ ok: true, runs: [], workouts: [workout] });
+    });
+
+    it('broken workouts are counted, a broken plan is ignored', () => {
+      const text = JSON.stringify({
+        format: 'walkflow-backup', version: 1, runs: [],
+        workouts: [workout, { ...workout, id: 'w2', steps: [{ sec: -1, speed: 3 }] }, 'x'],
+        plan: { minutes: [1, 2, 3] },
+      });
+      expect(parseBackup(text)).toEqual({ ok: true, runs: [], invalid: 0, workouts: [workout], invalidWorkouts: 2, plan: null });
+    });
   });
 });

@@ -2,6 +2,7 @@
 // object stores, so the list never loads all samples. Without IndexedDB (e.g. blocked site data) the runs
 // stay in memory until the page is closed, and the history says so.
 
+import { complete, openDb, request, RUNS, TRACKS } from './db';
 import type { Run, RunSummary, Track } from './runs';
 
 export interface RunStore {
@@ -32,46 +33,13 @@ export class MemoryRunStore implements RunStore {
   async all() { return [...this.runs.values()].sort((a, b) => a.summary.start - b.summary.start); }
 }
 
-const DB_NAME = 'walkflow';
-const DB_VERSION = 1;
-const RUNS = 'runs';
-const TRACKS = 'tracks';
-
-function request<T>(r: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    r.onsuccess = () => resolve(r.result);
-    r.onerror = () => reject(r.error);
-  });
-}
-
-function complete(tx: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted'));
-  });
-}
-
 export class IdbRunStore implements RunStore {
   readonly persistent = true;
 
-  private constructor(private readonly db: IDBDatabase) {
-    // Another tab with a newer version wants to upgrade: let it
-    db.onversionchange = () => db.close();
-  }
+  private constructor(private readonly db: IDBDatabase) {}
 
   static async open(timeoutMs = 5000): Promise<IdbRunStore> {
-    const r = indexedDB.open(DB_NAME, DB_VERSION);
-    r.onupgradeneeded = () => {
-      const db = r.result;
-      if (!db.objectStoreNames.contains(RUNS)) db.createObjectStore(RUNS, { keyPath: 'id' });
-      if (!db.objectStoreNames.contains(TRACKS)) db.createObjectStore(TRACKS);
-    };
-    const db = await Promise.race([
-      request(r),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('IndexedDB did not open')), timeoutMs)),
-    ]);
-    return new IdbRunStore(db);
+    return new IdbRunStore(await openDb(timeoutMs));
   }
 
   async list() {
@@ -120,10 +88,10 @@ export class IdbRunStore implements RunStore {
   }
 }
 
-export async function openRunStore(): Promise<RunStore> {
-  try {
-    return await IdbRunStore.open();
-  } catch {
-    return new MemoryRunStore();
-  }
+let shared: Promise<RunStore> | null = null;
+
+/** One store for the app (recorder, history and week plan share it; the memory fallback must be the same one too) */
+export function getRunStore(): Promise<RunStore> {
+  shared ??= IdbRunStore.open().catch((): RunStore => new MemoryRunStore());
+  return shared;
 }

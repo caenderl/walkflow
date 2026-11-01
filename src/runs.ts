@@ -3,6 +3,7 @@
 // control path: it never throws, and saving runs asynchronously, so it cannot delay a stop.
 
 import { accumulate, distanceSeries, type Sample } from './export';
+import { readPlan, readWorkouts, type WeekPlan, type Workout } from './workouts';
 
 export type RunSource = 'ble' | 'demo';
 
@@ -254,18 +255,28 @@ export class RunRecorder {
 export const BACKUP_FORMAT = 'walkflow-backup';
 export const BACKUP_VERSION = 1;
 
-/** Only start, source and samples are written; the summary is computed again when reading. */
-export function serializeBackup(runs: readonly Run[], exported: Date): string {
+export interface BackupExtras {
+  workouts?: readonly Workout[];
+  plan?: WeekPlan | null;
+}
+
+/**
+ * Only start, source and samples are written; the summary is computed again when reading.
+ * Workouts and the week plan are optional additions to version 1: older files simply do not have them.
+ */
+export function serializeBackup(runs: readonly Run[], exported: Date, extras: BackupExtras = {}): string {
   return JSON.stringify({
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exported: exported.toISOString(),
     runs: runs.map(r => ({ start: r.summary.start, source: r.summary.source, track: r.track })),
+    ...(extras.workouts?.length ? { workouts: extras.workouts } : {}),
+    ...(extras.plan ? { plan: extras.plan } : {}),
   });
 }
 
 export type BackupResult =
-  | { ok: true; runs: Run[]; invalid: number }
+  | { ok: true; runs: Run[]; invalid: number; workouts: Workout[]; invalidWorkouts: number; plan: WeekPlan | null }
   | { ok: false; reason: 'unreadable' | 'newer' };
 
 /** Allowed integer range per column, in the stored resolution */
@@ -318,5 +329,6 @@ export function parseBackup(text: string): BackupResult {
     const run = readRun(r);
     if (run) runs.push(run); else invalid++;
   }
-  return { ok: true, runs, invalid };
+  const { workouts, invalid: invalidWorkouts } = readWorkouts(data.workouts);
+  return { ok: true, runs, invalid, workouts, invalidWorkouts, plan: readPlan(data.plan) };
 }

@@ -41,12 +41,14 @@ export function dateFormat(locale: string) {
   const day = f({ day: 'numeric', month: 'short' });
   const dayYear = f({ day: 'numeric', month: 'short', year: 'numeric' });
   const time = f(hm);
+  const weekday = f({ weekday: 'long' });
   const thisYear = (ts: number) => new Date(ts).getFullYear() === new Date().getFullYear();
   return {
     dateTime: (ts: number) => (thisYear(ts) ? dateTime : dateTimeYear).format(ts),
     day: (ts: number) => (thisYear(ts) ? day : dayYear).format(ts),
     /** Short, for chart labels */
     shortDay: (ts: number) => day.format(ts),
+    weekday: (ts: number) => weekday.format(ts),
     time: (ts: number) => time.format(ts),
   };
 }

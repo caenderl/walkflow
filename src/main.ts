@@ -14,7 +14,7 @@ import { setupHistory } from './history';
 import { onLanguageChange, t, type Text } from './i18n';
 import { bindText, initLanguage } from './i18n-dom';
 import { setupMenu, setupPrefsMenu } from './menus';
-import { fmtTime, parseProgram, ProgramRunner, totalSeconds } from './program';
+import { fmtLength, fmtTime, ProgramRunner, programLength } from './program';
 import { setupPwa } from './pwa';
 import type { RunSource } from './runs';
 import {
@@ -27,6 +27,7 @@ import { SimulatorAdapter } from './sim';
 import { initTheme, onThemeChange } from './theme';
 import { $, $button, $input, download, log, store } from './ui';
 import { setupViews, stopPlacement, type View } from './views';
+import { setupWorkouts } from './workout-ui';
 
 initTheme();
 initLanguage();
@@ -59,8 +60,13 @@ let view: View = 'training';
 let uiConnected = false;
 
 // Saved runs. The recorder never throws and saves asynchronously, so it cannot hold up the control path.
-const history = setupHistory({ log, tcxSport: () => $<HTMLSelectElement>('tcxSport').value as TcxSport });
+const history = setupHistory({
+  log,
+  tcxSport: () => $<HTMLSelectElement>('tcxSport').value as TcxSport,
+  onRestored: () => void workouts.reload(),
+});
 const recorder = history.recorder;
+const workouts = setupWorkouts({ maxSpeed: () => effectiveMax() });
 
 const connected = () => !!client?.connected;
 const maybeRunning = () => beltMaybeRunning({ startedByApp: beltStarted, lastMeasuredKmh: lastMeasured });
@@ -79,6 +85,7 @@ const runner = new ProgramRunner({
   stop: () => doStop(),
   setTarget: kmh => { governor.request(kmh); standstill.arm(); },
   currentTarget: () => governor.target,
+  distance: () => cur.dist,
   status: text => bindText($('progStatus'), text),
   log,
 });
@@ -189,6 +196,7 @@ function applyLimits() {
 function renderRangeInfo() {
   $('rangeInfo').textContent = t.settings.range(devMin, devMax, effectiveMax(), governor.maxStep, RAMP_INTERVAL_MS);
   $('deviceInfo').textContent = t.connection.deviceInfo(devMin, devMax, effectiveMax());
+  workouts.refreshLimit();
 }
 
 function renderSpeed() {
@@ -275,10 +283,10 @@ function confirmStart(intro?: string): Promise<boolean> {
 }
 
 async function runProgram() {
-  const steps = parseProgram($input('progText').value);
-  if (!steps.length) { bindText($('progStatus'), () => t.program.empty); return; }
+  const steps = workouts.selectedSteps();
+  if (!steps?.length) { bindText($('progStatus'), () => t.program.empty); return; }
   const max = effectiveMax();
-  const intro = t.program.confirm(steps.length, fmtTime(totalSeconds(steps)))
+  const intro = t.program.confirm(steps.length, fmtLength(programLength(steps)))
     + (steps.some(s => s.speed > max) ? ` ${t.program.capped(max)}` : '');
   if (!(await confirmStart(intro))) return;
   if (!connected()) return;
@@ -693,6 +701,7 @@ setupViews(v => {
   view = v;
   applyStopPlacement();
   history.setVisible(v === 'history');
+  workouts.setVisible(v === 'workouts');
 });
 loadSettings();
 renderInfo();

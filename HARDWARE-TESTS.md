@@ -41,6 +41,17 @@ Saving runs only reads the live values the app already receives; it sends nothin
 - [ ] Stop the belt, then close the app without disconnecting. After reopening, is the run in the history (it is saved every 15 s)?
 - [ ] `⚠ Could not save the run` should never appear. If it does, please note the text after the colon.
 
+## Workouts (distance steps)
+
+Time steps work as before. A distance step ends when the treadmill’s own distance counter has advanced by that amount since the step began; the app sends nothing new to the belt for it (the same speed commands as for a time step). Speed limit, ramp and Stop are unchanged.
+
+- [ ] Make a workout with one distance step of 50 m at about 3 km/h (**Workouts → New workout**, unit `m`), select it, start it from **Training**. Watch the status line: the remaining metres should count down roughly once per second.
+- [ ] When it reaches 0, the belt should stop. Compare the distance on the treadmill’s display with 50 m: how far off is it (at 3 km/h one metre is about 1.2 s)?
+- [ ] Log while it runs: is there a speed command at the start of the step and no further ones? If `Distance not advancing` shows up while the belt is moving, please note the text and whether the treadmill’s distance display moved.
+- [ ] Mixed workout: a time step, then a distance step, then a time step. Does the second time step really last its full time after the distance step ended?
+- [ ] Press Stop (button, Space or Esc) during a distance step: belt stops and the program ends, nothing restarts it.
+- [ ] Reconnect case: does the treadmill reset its distance counter when you start the belt, or only after a stop? (The app handles both: a counter that jumps back adds nothing for that update.)
+
 ## Desktop app
 
 - [ ] macOS: on the first “Connect”, macOS asks for Bluetooth. Does the chooser with the treadmill appear afterwards? Is the prompt text in the system language?

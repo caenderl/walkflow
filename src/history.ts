@@ -7,7 +7,8 @@ import { confirmDialog } from './dialogs';
 import { buildTcx, exportFilename, toCsv, type Sample, type TcxSport } from './export';
 import { lang, onLanguageChange, t } from './i18n';
 import { bindText } from './i18n-dom';
-import { openRunStore } from './run-store';
+import { getRunStore } from './run-store';
+import { getWorkoutStore } from './workout-store';
 import { decodeTrack, parseBackup, RunRecorder, serializeBackup, type RunSummary } from './runs';
 import { countable, overview, records, streaks, weeklyDistance, type WeekTotal } from './stats';
 import { onThemeChange } from './theme';
@@ -20,6 +21,8 @@ const WEEKS = 12;
 export interface HistoryHost {
   log(msg: string): void;
   tcxSport(): TcxSport;
+  /** A backup was restored: workouts and the week plan may have changed */
+  onRestored?(): void;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -34,7 +37,7 @@ function localDate(d: Date) {
 }
 
 export function setupHistory(host: HistoryHost) {
-  const ready = openRunStore();
+  const ready = getRunStore();
   let visible = false;
   let shown = PAGE;
   let runs: RunSummary[] = [];
@@ -271,8 +274,10 @@ export function setupHistory(host: HistoryHost) {
 
   async function backup() {
     const all = await (await ready).all();
-    if (!all.length) { bindText($('histStatus'), () => t.history.noRuns); return; }
-    download(serializeBackup(all, new Date()), 'application/json', `walkflow-backup-${localDate(new Date())}.json`);
+    const w = await getWorkoutStore();
+    const [workouts, plan] = [await w.list(), await w.plan()];
+    if (!all.length && !workouts.length && !plan) { bindText($('histStatus'), () => t.history.noRuns); return; }
+    download(serializeBackup(all, new Date(), { workouts, plan }), 'application/json', `walkflow-backup-${localDate(new Date())}.json`);
   }
 
   async function restore(file: File) {
@@ -292,7 +297,20 @@ export function setupHistory(host: HistoryHost) {
       added++;
     }
     const { invalid } = result, already = result.runs.length - added;
-    bindText($('histStatus'), () => t.history.restored(added, already, invalid));
+    // Like the runs: what is already here stays as it is, only what is missing is added
+    const ws = await getWorkoutStore();
+    const haveWorkouts = new Set((await ws.list()).map(x => x.id));
+    let workoutsAdded = 0;
+    for (const w of result.workouts) {
+      if (haveWorkouts.has(w.id)) continue;
+      await ws.put(w);
+      workoutsAdded++;
+    }
+    const planRestored = !!result.plan && !(await ws.plan());
+    if (result.plan && planRestored) await ws.setPlan(result.plan);
+    const extra = workoutsAdded || planRestored || result.invalidWorkouts;
+    bindText($('histStatus'), () => t.history.restored(added, already, invalid) + (extra ? ` ${t.history.restoredExtra(workoutsAdded, planRestored, result.invalidWorkouts)}` : ''));
+    host.onRestored?.();
     await render();
   }
 

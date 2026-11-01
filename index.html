@@ -46,6 +46,7 @@
     <nav class="views" aria-label="Views" data-i18n-aria="views.label">
       <a href="#" data-view="training" data-i18n="views.training">Training</a>
       <a href="#history" data-view="history" data-i18n="views.history">History</a>
+      <a href="#workouts" data-view="workouts" data-i18n="views.workouts">Workouts</a>
     </nav>
     <!-- Connection menu: opens from the status; connect and demo, or the device and Disconnect -->
     <span class="menu-anchor conn">
@@ -137,18 +138,18 @@
 
       <div class="more">
         <section class="card grid">
-          <h2 data-i18n="program.title">Interval program</h2>
-          <textarea id="progText" spellcheck="false" aria-label="Program" data-i18n-aria="program.textLabel">2 2.0
-3 3.5
-1 5.0
-3 3.5
-2 2.0</textarea>
-          <div class="hint" data-i18n-rich="program.hint">One line per step: minutes km/h (decimals allowed). Speeds are capped to the limit, jumps run as a ramp. After starting, the program waits about 4.5 s for the treadmill’s countdown.</div>
+          <h2 data-i18n="program.title">Workout</h2>
+          <label class="hint field"><span data-i18n="program.choose">Workout</span>
+            <select id="progSelect"></select>
+          </label>
+          <div class="hint" id="progSummary"></div>
+          <div class="hint" data-i18n-rich="program.hint">Speeds are capped to the limit.</div>
           <div class="row">
             <button id="progStart" class="primary needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><span data-i18n="program.start">Start program</span></button>
             <button id="progStop" class="needs-conn" disabled data-i18n="program.stop">Cancel &amp; stop</button>
           </div>
           <div class="hint" id="progStatus">No program running</div>
+          <p class="hint"><a href="#workouts" data-i18n="program.edit">Edit workouts</a></p>
         </section>
 
         <section class="card grid">
@@ -250,6 +251,52 @@
         <input type="file" id="restoreFile" accept=".json,application/json" hidden>
         <p class="hint" data-i18n="history.backupHint">The backup is a JSON file with all runs.</p>
         <p class="hint" id="histStatus" role="status"></p>
+      </section>
+
+      <!-- Workouts view (src/workout-ui.ts): library, editor and week plan. A workout is started from the training view. -->
+      <section class="card grid workouts-part">
+        <div class="head-row">
+          <h2 data-i18n="workouts.mineTitle">My workouts</h2>
+          <button id="wkNew" type="button" data-i18n="workouts.create">New workout</button>
+        </div>
+        <p class="hint" id="wkEmpty" data-i18n="workouts.empty" hidden>No saved workouts yet.</p>
+        <ul id="wkList" class="wk-list"></ul>
+        <p class="hint" id="wkStorage" hidden></p>
+        <h3 data-i18n="workouts.examplesTitle">Examples</h3>
+        <ul id="wkExamples" class="wk-list"></ul>
+      </section>
+
+      <section class="card grid workouts-part" id="wkEditor" hidden>
+        <h2 id="wkEditorTitle"></h2>
+        <label class="hint field"><span data-i18n="workouts.name">Name</span>
+          <input type="text" id="wkName" maxlength="60" autocomplete="off">
+        </label>
+        <div>
+          <h3 data-i18n="workouts.steps">Steps</h3>
+          <ol id="wkSteps" class="wk-steps"></ol>
+        </div>
+        <div class="row"><button id="wkAdd" type="button" data-i18n="workouts.addStep">Add step</button></div>
+        <p class="hint" id="wkTotal"></p>
+        <details>
+          <summary data-i18n="workouts.textTitle">As text</summary>
+          <div class="grid">
+            <textarea id="wkText" spellcheck="false" aria-label="As text" data-i18n-aria="workouts.textTitle"></textarea>
+            <div class="hint" data-i18n-rich="workouts.textHint">One step per line.</div>
+            <div class="row"><button id="wkApplyText" type="button" data-i18n="workouts.applyText">Use this text</button></div>
+          </div>
+        </details>
+        <div class="row">
+          <button id="wkSave" type="button" class="primary" data-i18n="workouts.save">Save</button>
+          <button id="wkCancel" type="button" data-i18n="workouts.cancel">Cancel</button>
+        </div>
+        <p class="hint" id="wkStatus" role="status"></p>
+      </section>
+
+      <section class="card grid workouts-part">
+        <h2 data-i18n="workouts.planTitle">Week plan</h2>
+        <p class="hint" data-i18n="workouts.planHint">Minutes of walking per day.</p>
+        <ul id="planList" class="plan"></ul>
+        <p class="hint" id="planSummary" role="status"></p>
       </section>
     </div>
 

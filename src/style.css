@@ -233,7 +233,8 @@ footer a, details a { color:var(--link); }
 
 /* Views: only the main column changes, the controls stay */
 html:not([data-view="history"]) .history-part { display:none; }
-html[data-view="history"] :is(.live, .more) { display:none; }
+html:not([data-view="workouts"]) .workouts-part { display:none; }
+html:is([data-view="history"], [data-view="workouts"]) :is(.live, .more) { display:none; }
 
 /* History */
 .hist-overview { display:grid; gap:20px; }
@@ -260,7 +261,33 @@ html[data-view="history"] :is(.live, .more) { display:none; }
 .run-body .row > * { flex:0 1 auto; }
 .badge { font-size:.75rem; font-weight:600; padding:2px 8px; border-radius:999px; background:var(--btn); color:var(--fg); }
 .badge.rec { background:var(--ok-bg); }
+
+/* Workouts */
+.head-row { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+.head-row h2 { margin:0; }
+.workouts-part h3 { font-size:.85rem; font-weight:600; color:var(--mute); margin:8px 0 0; }
+.wk-list, .wk-steps, .plan { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.wk-item { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; padding:12px 14px; border:1px solid var(--card-border); border-radius:12px; background:var(--input-bg); }
+.wk-name { font-weight:600; overflow-wrap:anywhere; }
+.wk-actions { display:flex; flex-wrap:wrap; gap:6px; }
+.wk-step { display:grid; grid-template-columns:1.6rem minmax(0, 1fr) 4.5rem minmax(0, 1fr) auto; gap:8px; align-items:center; }
+.wk-n { color:var(--mute); font-variant-numeric:tabular-nums; text-align:center; }
+.wk-move { display:flex; gap:4px; }
+.wk-move button { padding:6px 10px; min-width:36px; }
+.wk-step input, .wk-step select { width:100%; min-width:0; }
+.plan-day { display:grid; grid-template-columns:minmax(0, 1fr) 5.5rem minmax(5.5rem, auto) 1.2rem; gap:8px 12px; align-items:center; padding:8px 12px; border-radius:12px; border:1px solid transparent; }
+.plan-day.today { border-color:var(--card-border); background:var(--input-bg); }
+.plan-day.met .plan-progress { font-weight:600; }
+.plan-name { overflow-wrap:anywhere; }
+.plan-progress { color:var(--mute); font-size:.9rem; font-variant-numeric:tabular-nums; text-align:right; }
+.plan-mark { font-weight:700; }
 .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+
+/* Editor step rows on narrow screens: amount, unit and speed on one line, the move/remove buttons below */
+@media (max-width: 719px) {
+  .wk-step { grid-template-columns:1.6rem minmax(0, 1fr) 4.5rem minmax(0, 1fr); }
+  .wk-move { grid-column:2 / -1; justify-content:flex-end; }
+}
 
 /* Dialogs */
 .dlg { background:var(--card); color:var(--fg); border:1px solid var(--card-border); border-radius:18px; padding:22px; max-width:min(520px, calc(100vw - 32px)); box-shadow:0 20px 50px rgba(0, 0, 0, .3); }
@@ -295,7 +322,7 @@ html[data-view="history"] :is(.live, .more) { display:none; }
   .control { order:4; }
   .incline { order:5; }
   .more { order:6; }
-  .history-part { order:3; }
+  .history-part, .workouts-part { order:3; }
   /* Stop bar fixed to the bottom edge, like the dock in the training view */
   html[data-stop="bar"] .stopbar {
     display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; grid-template-areas:"state speed ctl stop" "state more ctl stop";
