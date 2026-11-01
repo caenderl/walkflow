@@ -32,6 +32,15 @@ If the treadmill sends different status bytes or none at all, please note the he
 
 Result connection loss: *(still open)*
 
+## History
+
+Saving runs only reads the live values the app already receives; it sends nothing to the treadmill.
+
+- [ ] Walk at least 1 minute, then stop. Right after disconnecting, or 5 minutes after the stop, the log says `Run saved: <km> km, <time>`. Does the distance match the treadmill’s display?
+- [ ] Stop on the treadmill and start again within 5 minutes: is it one run with a pause, and does the distance keep counting after the treadmill has reset its counter?
+- [ ] Stop the belt, then close the app without disconnecting. After reopening, is the run in the history (it is saved every 15 s)?
+- [ ] `⚠ Could not save the run` should never appear. If it does, please note the text after the colon.
+
 ## Desktop app
 
 - [ ] macOS: on the first “Connect”, macOS asks for Bluetooth. Does the chooser with the treadmill appear afterwards? Is the prompt text in the system language?

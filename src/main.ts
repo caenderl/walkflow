@@ -10,10 +10,13 @@ import {
   cmdPause, cmdRequestControl, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, describeMachineStatus, hex,
   OP, parseMachineStatus, parseTrainingStatus, type Range, type TreadmillData,
 } from './ftms';
+import { setupHistory } from './history';
 import { onLanguageChange, t, type Text } from './i18n';
-import { bindText, initLanguage, languageSelect } from './i18n-dom';
+import { bindText, initLanguage } from './i18n-dom';
+import { setupMenu, setupPrefsMenu } from './menus';
 import { fmtTime, parseProgram, ProgramRunner, totalSeconds } from './program';
 import { setupPwa } from './pwa';
+import type { RunSource } from './runs';
 import {
   beltMaybeRunning, checkConsoleCommand, decideLimitChange, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION,
   effectiveMax as calcEffectiveMax, isDisclaimerAccepted, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE, LIMIT_STORAGE_KEY,
@@ -21,8 +24,9 @@ import {
   serializeLimit, SpeedGovernor, StandstillDetector,
 } from './safety';
 import { SimulatorAdapter } from './sim';
-import { initTheme, onThemeChange, themeSelect } from './theme';
+import { initTheme, onThemeChange } from './theme';
 import { $, $button, $input, download, log, store } from './ui';
+import { setupViews, stopPlacement, type View } from './views';
 
 initTheme();
 initLanguage();
@@ -48,8 +52,15 @@ let sliderDragging = false;
 let inclRange: Range | null = null;
 let inclShown = 0;
 const cur: Omit<Sample, 'ts'> = {};   // latest measured values
-const samples: Sample[] = [];          // history (1 Hz)
+const samples: Sample[] = [];          // recording since the page was opened (1 Hz), for the chart and export
 let lastSample = 0;
+let runSource: RunSource = 'ble';
+let view: View = 'training';
+let uiConnected = false;
+
+// Saved runs. The recorder never throws and saves asynchronously, so it cannot hold up the control path.
+const history = setupHistory({ log, tcxSport: () => $<HTMLSelectElement>('tcxSport').value as TcxSport });
+const recorder = history.recorder;
 
 const connected = () => !!client?.connected;
 const maybeRunning = () => beltMaybeRunning({ startedByApp: beltStarted, lastMeasuredKmh: lastMeasured });
@@ -108,9 +119,11 @@ function onTreadmillData(r: TreadmillData) {
   const ts = Date.now();
   if (ts - lastSample >= 1000) {
     lastSample = ts;
-    samples.push({ ts, ...cur });
+    const sample = { ts, ...cur };
+    samples.push(sample);
     if (samples.length > 20000) samples.shift();
     redrawChart();
+    recorder.feed(sample, runSource);
   }
 }
 
@@ -123,6 +136,10 @@ function renderStats() {
   $('vTime').textContent = cur.time === undefined ? '–' : fmtTime(cur.time);
   $('vHr').textContent = cur.hr === undefined ? '–' : String(cur.hr);
   $('vKcal').textContent = cur.kcal === undefined ? '–' : String(cur.kcal);
+  // Stop bar (views other than training)
+  $('sbSpeed').textContent = connected() && cur.speed !== undefined ? t.control.speed(cur.speed) : '–';
+  $('sbMore').textContent = connected() && cur.time !== undefined ? t.stopBar.more(fmtTime(cur.time), (cur.dist ?? 0) / 1000) : '';
+  $('sbState').textContent = (lastMeasured ?? 0) > 0 ? t.stopBar.running : t.stopBar.idle;
 }
 
 function onMachineStatus(dv: DataView) {
@@ -171,6 +188,7 @@ function applyLimits() {
 
 function renderRangeInfo() {
   $('rangeInfo').textContent = t.settings.range(devMin, devMax, effectiveMax(), governor.maxStep, RAMP_INTERVAL_MS);
+  $('deviceInfo').textContent = t.connection.deviceInfo(devMin, devMax, effectiveMax());
 }
 
 function renderSpeed() {
@@ -304,11 +322,12 @@ async function connect(kind: 'ble' | 'demo') {
   $button('connect').disabled = true;
   $button('demo').disabled = true;
   try {
-    bindText($('status'), () => kind === 'demo' ? t.connection.demoConnecting : t.connection.searching);
+    setStatus(() => kind === 'demo' ? t.connection.demoConnecting : t.connection.searching);
     let adapter: BleAdapter = webAdapter;
     if (kind === 'demo') adapter = sim ??= new SimulatorAdapter({ version: APP_VERSION });
     const c = new TreadmillClient(adapter, events);
     client = c;
+    runSource = kind === 'demo' ? 'demo' : 'ble';
     devMin = 1.0; devMax = 12.0;
     resetIncline();
     const info = await c.connect();
@@ -331,17 +350,18 @@ async function connect(kind: 'ble' | 'demo') {
     $('alarm').hidden = true;
     $('demoBanner').hidden = kind !== 'demo';
     const name = info.deviceName;
-    bindText($('status'), () => {
+    bindText($('deviceName'), () => name ?? t.connection.defaultDeviceName);
+    setStatus(() => {
       const shown = name ?? t.connection.defaultDeviceName;
       return kind === 'demo' ? t.connection.demoConnected(shown) : t.connection.connected(shown);
-    });
+    }, () => (kind === 'demo' ? t.connection.demoConnectedShort : t.connection.connectedShort));
     desktop?.connectionChanged(true);
     await c.send(cmdRequestControl());
   } catch (e) {
     log(`❌ ${e instanceof Error ? e.message : String(e)}`);
     if (!connected()) {
       client = null;
-      bindText($('status'), () => t.connection.notConnected);
+      setStatus(() => t.connection.notConnected);
       setUi(false);
     }
   }
@@ -365,7 +385,7 @@ function onDisconnected() {
   desktop?.connectionChanged(false);
   client = null;
   beltStarted = false; lastMeasured = undefined; controlLost = false;
-  bindText($('status'), () => t.connection.notConnected);
+  setStatus(() => t.connection.notConnected);
   renderStats();
   $('demoBanner').hidden = true;
   setUi(false);
@@ -374,6 +394,7 @@ function onDisconnected() {
     $('alarm').scrollIntoView({ block: 'start' });
     log(t.disconnect.lostWhileRunning);
   }
+  recorder.finish();
 }
 
 async function disconnectClicked() {
@@ -414,12 +435,25 @@ function waitUntil(cond: () => boolean, timeoutMs: number): Promise<boolean> {
 }
 
 function setUi(isConnected: boolean) {
-  // Layout switch (style.css): connect buttons vs. live view, fixed control dock on narrow screens
+  // Layout switch (style.css): connection menu content, fixed control dock on narrow screens, stop bar
+  uiConnected = isConnected;
   document.documentElement.classList.toggle('connected', isConnected);
+  applyStopPlacement();
   $button('connect').disabled = isConnected || !$('unsupported').hidden;
   $button('demo').disabled = isConnected;
   $button('disconnect').disabled = !isConnected;
   document.querySelectorAll<HTMLButtonElement | HTMLInputElement>('.needs-conn').forEach(el => { el.disabled = !isConnected; });
+}
+
+/** Status in the header; narrow screens show the short form (the device name is in the connection menu). */
+function setStatus(text: Text, short: Text = text) {
+  bindText($('status'), text);
+  bindText($('statusShort'), short);
+}
+
+/** Controls in the training view, the stop bar elsewhere while connected (tested in views.test.ts). */
+function applyStopPlacement() {
+  document.documentElement.dataset.stop = stopPlacement(view, uiConnected);
 }
 
 // ---------- Wake lock & background ----------
@@ -435,17 +469,20 @@ function releaseWakeLock() {
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    if (!connected() || !maybeRunning()) return;
-    hiddenSince = Date.now();
-    document.title = t.hidden.title;
-    if ($<HTMLSelectElement>('hiddenMode').value === 'pause') {
-      hiddenWhileRunning = 'paused';
-      log(t.hidden.pausingLog);
-      void doPause(() => t.hidden.pausedReason);
-    } else {
-      hiddenWhileRunning = 'warned';
-      log(t.hidden.warnLog);
+    if (connected() && maybeRunning()) {
+      hiddenSince = Date.now();
+      document.title = t.hidden.title;
+      if ($<HTMLSelectElement>('hiddenMode').value === 'pause') {
+        hiddenWhileRunning = 'paused';
+        log(t.hidden.pausingLog);
+        void doPause(() => t.hidden.pausedReason);
+      } else {
+        hiddenWhileRunning = 'warned';
+        log(t.hidden.warnLog);
+      }
     }
+    // After the pause command has been queued, not before
+    recorder.flush();
     return;
   }
   document.title = APP_NAME;
@@ -461,6 +498,7 @@ document.addEventListener('visibilitychange', () => {
   hiddenWhileRunning = null;
 });
 
+window.addEventListener('pagehide', () => recorder.flush());
 window.addEventListener('beforeunload', e => {
   if (connected() && maybeRunning()) e.preventDefault();
 });
@@ -570,12 +608,17 @@ function link(href: string, text: string) {
 }
 
 // ---------- Events ----------
-$('prefs').append(languageSelect(), themeSelect());
+// The header menus never cover the controls (Start/Pause/Stop, ±)
+const controls = () => [document.querySelector('.dock')];
+const connMenu = setupMenu($button('statusBtn'), $('connMenu'), controls);
+setupPrefsMenu($button('prefsBtn'), $('prefsMenu'), $('langOptions'), $('themeOptions'), controls);
 onThemeChange(redrawChart);
 
-$button('connect').onclick = () => void connect('ble');
-$button('demo').onclick = () => void connect('demo');
-$button('disconnect').onclick = () => void disconnectClicked();
+$button('connect').onclick = () => { connMenu.close(); void connect('ble'); };
+$button('demo').onclick = () => { connMenu.close(); void connect('demo'); };
+$button('disconnect').onclick = () => { connMenu.close(); void disconnectClicked(); };
+$button('openConn').onclick = () => { connMenu.open(); $button('connect').disabled ? $button('demo').focus() : $button('connect').focus(); };
+$button('sbStop').onclick = () => void doStop();
 $button('alarmAck').onclick = () => { $('alarm').hidden = true; };
 $button('hiddenAck').onclick = () => { $('hiddenBanner').hidden = true; };
 $button('simLoss').onclick = () => sim?.simulateConnectionLoss();
@@ -644,14 +687,19 @@ onLanguageChange(() => {
 });
 
 // ---------- Init ----------
-bindText($('status'), () => t.connection.notConnected);
+setStatus(() => t.connection.notConnected);
 bindText($('progStatus'), () => t.program.idle);
+setupViews(v => {
+  view = v;
+  applyStopPlacement();
+  history.setVisible(v === 'history');
+});
 loadSettings();
 renderInfo();
 renderIncline();
 applyLimits();
 redrawChart();
-setInterval(redrawChart, 1000);
+setInterval(() => { redrawChart(); recorder.tick(Date.now()); }, 1000);
 new ResizeObserver(redrawChart).observe($('chart'));
 
 const env = { ua: navigator.userAgent, hasApi: !!navigator.bluetooth, secure: isSecureContext, touchPoints: navigator.maxTouchPoints };
@@ -659,11 +707,11 @@ if (bluetoothSupportHint(env)) {
   bindText($('unsupportedTitle'), () => bluetoothSupportHint(env)?.title ?? '');
   bindText($('unsupportedText'), () => bluetoothSupportHint(env)?.text ?? '');
   $('unsupported').hidden = false;
-  bindText($('status'), () => t.connection.noWebBluetooth);
+  setStatus(() => t.connection.noWebBluetooth);
 } else if (!desktop) {
   // Not in the desktop app: there, this would already trigger the macOS Bluetooth prompt at launch
   void webAdapter.availability().then(a => {
-    if (!a.ok && a.reason === 'no-adapter') bindText($('status'), () => t.connection.adapterOff);
+    if (!a.ok && a.reason === 'no-adapter') setStatus(() => t.connection.adapterOff);
   });
 }
 setUi(false);

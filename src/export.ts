@@ -38,7 +38,7 @@ const escapeXml = (s: string) => s.replace(/[<>&"']/g, c => `&#${c.charCodeAt(0)
  * If the counter drops (the treadmill started over after a stop), the new value counts on from 0.
  * Missing values carry the previous sum forward.
  */
-function accumulate(values: (number | undefined)[]): number[] {
+export function accumulate(values: readonly (number | undefined)[]): number[] {
   let sum = 0;
   let prev: number | undefined;
   return values.map(v => {
@@ -50,6 +50,17 @@ function accumulate(values: (number | undefined)[]): number[] {
   });
 }
 
+/** Metres from the first sample on: the treadmill's counter if it reports one, otherwise speed × time. */
+export function distanceSeries(pts: readonly Sample[]): number[] {
+  if (pts.some(p => p.dist !== undefined)) return accumulate(pts.map(p => p.dist));
+  const dist = pts.length ? [0] : [];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]!, b = pts[i]!;
+    dist.push(dist[i - 1]! + (((a.speed ?? 0) + (b.speed ?? 0)) / 2 / 3.6) * ((b.ts - a.ts) / 1000));
+  }
+  return dist;
+}
+
 export function buildTcx(all: readonly Sample[], opts: { sport: TcxSport; notes: string }): string | null {
   const withSpeed = all.filter(s => s.speed !== undefined);
   const first = withSpeed.findIndex(s => s.speed! > 0);
@@ -58,17 +69,7 @@ export function buildTcx(all: readonly Sample[], opts: { sport: TcxSport; notes:
   while (withSpeed[last]!.speed! <= 0) last--;
   const pts = withSpeed.slice(first, last + 1);
 
-  let dist: number[];
-  if (pts.some(p => p.dist !== undefined)) {
-    dist = accumulate(pts.map(p => p.dist));
-  } else {
-    // No distance from the treadmill: integrate speed over time
-    dist = [0];
-    for (let i = 1; i < pts.length; i++) {
-      const a = pts[i - 1]!, b = pts[i]!;
-      dist.push(dist[i - 1]! + ((a.speed! + b.speed!) / 2 / 3.6) * ((b.ts - a.ts) / 1000));
-    }
-  }
+  const dist = distanceSeries(pts);
   const kcal = accumulate(pts.map(p => p.kcal));
   const hrs = pts.map(p => p.hr ?? 0).filter(h => h > 0);
 

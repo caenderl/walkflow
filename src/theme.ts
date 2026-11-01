@@ -1,7 +1,6 @@
 // Colour theme: follow the system, or fixed dark/light. The colours themselves are tokens in style.css;
 // this module only sets data-theme on <html> and resolves tokens for places CSS cannot reach (canvas, meta).
 
-import { onLanguageChange, t } from './i18n';
 import { store } from './ui';
 
 export type ThemeChoice = 'system' | 'dark' | 'light';
@@ -61,24 +60,4 @@ export function cssColor(token: string): string {
   }
   probe.style.color = `var(${token})`;
   return getComputedStyle(probe).color;
-}
-
-export function themeSelect(): HTMLSelectElement {
-  const sel = document.createElement('select');
-  const render = () => {
-    sel.replaceChildren(...THEMES.map(c => {
-      const o = document.createElement('option');
-      o.value = c;
-      o.textContent = t.theme[c];
-      return o;
-    }));
-    sel.value = choice;
-    sel.setAttribute('aria-label', t.theme.label);
-    sel.title = t.theme.label;
-  };
-  render();
-  onLanguageChange(render);
-  onThemeChange(() => { sel.value = choice; });
-  sel.onchange = () => chooseTheme(parseTheme(sel.value));
-  return sel;
 }

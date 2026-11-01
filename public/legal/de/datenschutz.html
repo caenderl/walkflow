@@ -39,9 +39,11 @@
       <li>Keine Konten, kein eigener Server, keine Cookies, kein Tracking, kein Analytics.</li>
       <li>Keine Skripte, Schriften oder sonstigen Inhalte von Drittanbietern; alles wird von derselben Adresse geladen.</li>
       <li>Bluetooth-Daten des Laufbands werden nur im Browser verarbeitet und nirgendwohin gesendet.</li>
-      <li>Im localStorage des Browsers liegen nur Einstellungen: Speed-Limit, maximale Änderung pro Befehl, Verhalten im Hintergrund, Sportart für TCX, Sprache, Farbschema, bestätigter Sicherheitshinweis.</li>
+      <li>Im localStorage des Browsers liegen nur Einstellungen: Speed-Limit, maximale Änderung pro Befehl, Verhalten im Hintergrund, Sportart für TCX, Sprache, Farbschema, bestätigter Sicherheitshinweis, ob Läufe gespeichert werden.</li>
       <li>Ein Service Worker speichert die App-Dateien für die Offline-Nutzung im Browser-Cache.</li>
-      <li>Aufzeichnungen (Verlauf) liegen nur im Arbeitsspeicher, bis sie per CSV/TCX exportiert werden oder die Seite geschlossen wird.</li>
+      <li>Die laufende Aufzeichnung für Diagramm und CSV/TCX-Export liegt nur im Arbeitsspeicher, bis die Seite geschlossen wird.</li>
+      <li>Läufe werden in der IndexedDB des Browsers auf diesem Gerät gespeichert (Desktop-App: im Datenordner der App): Zeitpunkt, Geschwindigkeit, Strecke, Steigung, kcal und Puls (nur wenn das Laufband einen liefert), etwa einmal pro Sekunde. Sie verlassen das Gerät nur, wenn die Person selbst ein Backup oder einen Export herunterlädt. Das Speichern lässt sich abschalten; Läufe lassen sich einzeln oder alle löschen.</li>
+      <li>Nach dem ersten gespeicherten Lauf bittet die Web-App den Browser per <code>navigator.storage.persist()</code>, die Daten bei Platzmangel nicht zu löschen.</li>
       <li>Die Desktop-App (nicht diese Webseite) fragt beim Start bei api.github.com nach einer neueren Version; abschaltbar.</li>
     </ul>
   </div>

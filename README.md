@@ -25,13 +25,15 @@ Other FTMS treadmills may work but are not tested.
 ## Features
 
 - Connect/disconnect, start/pause/stop, speed via slider, presets and ±0.5, incline
+- Connecting, language and theme live in small menus in the header: click the connection status, or the settings button at the top right
 - Interval program (lines of `minutes km/h`)
 - Live values, chart of the last 5 minutes, export as CSV and TCX (Strava, Garmin Connect & co.)
+- History: runs are saved automatically on the device. Totals per week and month, distance per week, days in a row, records, a chart per run, CSV/TCX per run, backup and restore as a JSON file. Saving can be turned off; demo runs are listed but not counted.
 - Log of sent/received bytes and an experiment console for the Control Point
 - Demo mode with a simulated treadmill, no hardware needed
 - Works offline and can be installed (PWA)
-- English, German and French; picked from the browser languages, switchable at the top right, or via `?lang=de|en|fr` in the URL
-- Dark and light theme, or following the system (default); switchable at the top right
+- English, German and French; picked from the browser languages, switchable in the settings menu at the top right, or via `?lang=de|en|fr` in the URL
+- Dark and light theme, or following the system (default); switchable in the settings menu at the top right
 
 ### Safety features
 
@@ -41,6 +43,7 @@ Other FTMS treadmills may work but are not tested.
 - A running program ends on connection loss, when the treadmill reports “stopped” or “safety key”, or when it reports 0 km/h for 8 s.
 - Permanent notice that the app cannot stop the belt on connection loss; a large warning if the connection drops while the belt is probably running. “Disconnect” offers to stop first while the belt is running.
 - Background tabs: warning in the tab title, optionally pause the belt; programs run by timestamps instead of (throttled) timers.
+- The full controls are shown in the training view. In every other view a stop bar with Stop appears while a treadmill is connected; it sits above the header and its menus, so nothing covers it. Saving runs never throws into the control path and runs asynchronously, so it cannot delay a stop.
 
 ## Web version
 
@@ -74,7 +77,7 @@ npm run dev
 
 | Command | Purpose |
 | --- | --- |
-| `npm test` | Vitest (FTMS parser, safety logic, program runner, simulator, export, translations) |
+| `npm test` | Vitest (FTMS parser, safety logic, program runner, simulator, export, runs and statistics, translations) |
 | `npm run typecheck` | TypeScript strict for app, config and Electron |
 | `npm run build` | Web build to `dist/` (with service worker) |
 | `npm run electron` | Build the desktop variant and start Electron |
@@ -93,6 +96,11 @@ Without a treadmill: click “Demo (no treadmill)”. The simulator speaks real 
 | `src/program.ts` | Interval program: parser and timestamp-based runner |
 | `src/sim.ts` | Simulated FTMS treadmill (demo mode, tests) |
 | `src/export.ts` | CSV and TCX |
+| `src/runs.ts` | Runs: detection from the live samples, compact storage form, backup file |
+| `src/stats.ts` | Totals, weeks, streaks, records |
+| `src/run-store.ts` | IndexedDB storage of the runs (in memory if the browser does not allow it) |
+| `src/views.ts`, `src/history.ts` | View switch via the URL hash, where Stop is shown per view, history view |
+| `src/menus.ts` | Header menus (connection, language and theme) |
 | `src/i18n.ts`, `src/i18n-dom.ts`, `src/locales/` | Language selection, texts per language, binding to the HTML |
 | `src/theme.ts`, `src/style.css` | Theme choice; all colours are tokens in `style.css` |
 | `src/main.ts`, `ui.ts`, `chart.ts`, `dialogs.ts` | Thin UI layer, vanilla TS |

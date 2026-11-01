@@ -96,14 +96,50 @@ textarea { font-family:ui-monospace, monospace; font-size:13px; height:110px; re
 /* Header: name, connection status, language and theme */
 .top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 .logo { display:block; }
-.conn { display:flex; align-items:center; gap:10px; margin-left:12px; }
-.status { display:inline-flex; align-items:center; gap:8px; font-size:.875rem; background:var(--btn); border-radius:999px; padding:5px 12px 5px 10px; }
+.conn { margin-left:4px; }
+/* Status pill = button for the connection menu */
+.status { min-height:36px; gap:8px; font-size:.875rem; font-weight:400; border-radius:999px; padding:6px 10px 6px 12px; }
 .status::before { content:""; width:9px; height:9px; border-radius:50%; background:var(--mute); flex:none; }
-.connected .status { background:var(--ok-bg); }
+.connected .status { background:var(--ok-bg); border-color:transparent; }
 .connected .status::before { background:var(--accent); }
-html:not(.connected) #disconnect { display:none; }
-.prefs { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
-.prefs select { min-height:34px; padding:4px 8px; font-size:.9rem; }
+.status .chevron { width:14px; height:14px; transition:transform .15s; }
+.st-short { display:none; }
+.status[aria-expanded="true"] .chevron { transform:rotate(180deg); }
+.icon-btn { width:44px; height:44px; padding:0; }
+.icon-btn .icon { width:20px; height:20px; }
+
+/* Header menus (src/menus.ts) */
+.menu-anchor { position:relative; }
+.menu {
+  position:absolute; top:calc(100% + 8px); left:0; z-index:30; width:340px; max-width:calc(100vw - 24px);
+  background:var(--card); color:var(--fg); border:1px solid var(--card-border); border-radius:16px; padding:16px;
+  box-shadow:0 20px 50px rgba(0, 0, 0, .18);
+}
+/* Both open towards the left, away from the controls column on the right */
+.conn-menu { left:auto; right:0; }
+.prefs-menu { left:auto; right:0; width:280px; padding:12px; }
+.conn-menu > div { display:grid; gap:12px; }
+.connected .menu-off, html:not(.connected) .menu-on { display:none; }
+.menu p { margin:0; }
+.menu-title { font-size:1.05rem; }
+button.big { min-height:52px; font-size:1.05rem; }
+.device { display:flex; gap:12px; align-items:center; }
+.device > span:last-child { display:grid; }
+.device-icon { width:36px; height:36px; border-radius:50%; background:var(--ok-bg); color:var(--primary); display:inline-flex; align-items:center; justify-content:center; flex:none; }
+.menu-label { color:var(--mute); font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em; padding:2px 6px 6px; }
+.menu-list { display:grid; gap:2px; }
+.menu-list button { justify-content:space-between; min-height:40px; padding:8px 10px; border:0; border-radius:10px; background:transparent; font-weight:400; }
+.menu-list button[aria-checked="true"] { background:var(--btn); font-weight:600; }
+.menu-list button[aria-checked="true"]::after { content:""; width:6px; height:11px; margin:-3px 6px 0 0; border:solid var(--primary); border-width:0 2.5px 2.5px 0; transform:rotate(45deg); }
+.menu hr { border:0; border-top:1px solid var(--card-border); margin:10px 0; }
+.seg { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:2px; padding:3px; background:var(--btn); border:1px solid var(--btn-border); border-radius:12px; }
+.seg button { min-height:36px; padding:6px 4px; border:0; border-radius:9px; background:transparent; font-size:.875rem; }
+.seg button[aria-checked="true"] { background:var(--card); font-weight:600; box-shadow:0 1px 2px var(--shadow); }
+/* View switch (src/views.ts): a segmented control */
+.views { display:flex; gap:2px; padding:3px; background:var(--btn); border:1px solid var(--btn-border); border-radius:999px; }
+.views a { padding:5px 14px; border-radius:999px; color:var(--fg); text-decoration:none; font-size:.9rem; font-weight:500; text-align:center; }
+.views a:hover { background:var(--btn-hover); }
+.views a[aria-current="page"] { background:var(--card); font-weight:600; box-shadow:0 1px 2px var(--shadow); }
 
 /* Banners */
 .banner { border-radius:16px; padding:14px 18px; display:grid; gap:8px; }
@@ -122,13 +158,35 @@ html:not(.connected) #disconnect { display:none; }
 .main-col { display:grid; gap:16px; min-width:0; }
 .side { position:sticky; top:16px; display:grid; gap:16px; }
 
-/* Not connected: big connect buttons; hidden once connected */
-.welcome { display:grid; gap:14px; }
-.welcome h2 { margin:0; font-size:1.25rem; color:var(--fg); text-transform:none; letter-spacing:0; }
-.welcome .row { max-width:560px; }
-.welcome button { min-height:52px; font-size:1.05rem; }
-.welcome p { margin:0; }
-.connected .welcome { display:none; }
+/* Not connected: one line pointing to the connection menu */
+.offline-hint { margin:0; }
+.connected .offline-hint { display:none; }
+.linkish { display:inline; min-height:0; padding:0; border:0; background:none; color:var(--link); font:inherit; text-decoration:underline; cursor:pointer; }
+.linkish:hover:not(:disabled) { background:none; }
+
+/* Stop bar: outside the training view while connected (data-stop, src/views.ts). Above the menus (z-index 30). */
+.stopbar {
+  display:none; align-items:center; gap:10px 18px; flex-wrap:wrap; position:sticky; top:12px; z-index:40;
+  background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:8px 8px 8px 18px;
+  box-shadow:0 8px 24px rgba(0, 0, 0, .12);
+}
+html[data-stop="bar"] .stopbar { display:flex; }
+.sb-state { display:inline-flex; align-items:center; gap:8px; font-weight:600; }
+.sb-state .dot { width:9px; height:9px; border-radius:50%; background:var(--accent); }
+.sb-speed { font-size:1.35rem; font-weight:700; letter-spacing:-.01em; font-variant-numeric:tabular-nums; }
+.sb-more { font-variant-numeric:tabular-nums; }
+.sb-gap { flex:1; }
+.stopbar .stop { min-height:48px; padding:10px 28px; }
+a.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 16px;
+  border:1px solid var(--btn-border); border-radius:12px; background:var(--btn); color:var(--fg); text-decoration:none; font-weight:500;
+}
+a.btn:hover { background:var(--btn-hover); }
+.sb-controls .icon { display:none; }
+
+/* The full controls only in the training view */
+html:not([data-stop="controls"]) .side { display:none; }
+html:not([data-stop="controls"]) .layout { grid-template-columns:minmax(0, 1fr); }
 
 /* Live values: large enough to read from the treadmill */
 .live { display:grid; gap:20px; }
@@ -173,6 +231,37 @@ details p { margin:6px 0; }
 footer { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; padding:0 4px 24px; }
 footer a, details a { color:var(--link); }
 
+/* Views: only the main column changes, the controls stay */
+html:not([data-view="history"]) .history-part { display:none; }
+html[data-view="history"] :is(.live, .more) { display:none; }
+
+/* History */
+.hist-overview { display:grid; gap:20px; }
+.hist-overview h2, .hist-overview h3 { margin:0; }
+.hist-overview h3 { font-size:.85rem; font-weight:600; color:var(--mute); margin-bottom:8px; }
+.periods { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:16px; }
+.period .l { color:var(--mute); font-size:.8rem; }
+.period .v { font-size:clamp(1.8rem, 2.6vw, 2.6rem); font-weight:650; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+#weekChart { width:100%; height:200px; display:block; touch-action:pan-y; }
+#weekReadout { margin-top:6px; }
+.records { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px 16px; margin:0; }
+.records dt, .run-facts dt { color:var(--mute); font-size:.8rem; }
+.records dd, .run-facts dd { margin:2px 0 0; font-weight:600; font-variant-numeric:tabular-nums; }
+.hist-overview p { margin:0; }
+.runs { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.run details { border:1px solid var(--card-border); border-radius:12px; background:var(--input-bg); }
+.run summary { display:grid; grid-template-columns:minmax(0, 1fr) auto auto; padding:12px 14px; gap:4px 12px; color:var(--fg); font-weight:400; }
+.run details[open] summary { margin:0; }
+.run-head { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; font-weight:600; }
+.run-line { color:var(--mute); font-size:.9rem; font-variant-numeric:tabular-nums; margin-left:auto; text-align:right; }
+.run-body { display:grid; gap:14px; padding:4px 14px 14px; }
+.run-chart { width:100%; height:180px; display:block; }
+.run-facts { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px 16px; margin:0; }
+.run-body .row > * { flex:0 1 auto; }
+.badge { font-size:.75rem; font-weight:600; padding:2px 8px; border-radius:999px; background:var(--btn); color:var(--fg); }
+.badge.rec { background:var(--ok-bg); }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+
 /* Dialogs */
 .dlg { background:var(--card); color:var(--fg); border:1px solid var(--card-border); border-radius:18px; padding:22px; max-width:min(520px, calc(100vw - 32px)); box-shadow:0 20px 50px rgba(0, 0, 0, .3); }
 .dlg::backdrop { background:var(--backdrop); }
@@ -188,21 +277,44 @@ footer a, details a { color:var(--link); }
 .color-probe { position:absolute; width:0; height:0; overflow:hidden; pointer-events:none; }
 
 @media (min-width: 1280px) { .hero-stats { grid-template-columns:repeat(5, minmax(0, 1fr)); } }
-@media (max-width: 1279px) { .tagline { display:none; } }
+@media (min-width: 1280px) { .st-long { display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; } }
+/* The header menus open next to their buttons and stay left of the controls column (src/menus.ts moves them
+   if not): the tagline only on very wide screens, and below 1280 px the short status */
+@media (max-width: 1599px) { .tagline { display:none; } }
+@media (max-width: 1279px) {
+  .st-long { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  .st-short { display:inline-block; max-width:40vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
+}
 
-/* One column below 1024 px. While connected, the dock is fixed to the bottom edge so Stop is always reachable. */
+/* One column below 1024 px. While connected, the dock is fixed to the bottom edge so Stop is always reachable,
+   above the header menus. */
 @media (max-width: 1023px) {
   .layout, .main-col, .side { display:contents; }
-  .welcome { order:1; }
   #safetyNotice { order:2; }
   .live { order:3; }
   .control { order:4; }
   .incline { order:5; }
   .more { order:6; }
+  .history-part { order:3; }
+  /* Stop bar fixed to the bottom edge, like the dock in the training view */
+  html[data-stop="bar"] .stopbar {
+    display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; grid-template-areas:"state speed ctl stop" "state more ctl stop";
+    position:fixed; left:0; right:0; bottom:0; top:auto; gap:0 10px; border-radius:0; border-width:1px 0 0;
+    padding:10px max(16px, calc((100% - 720px) / 2)) calc(10px + env(safe-area-inset-bottom)); box-shadow:0 -6px 20px var(--shadow);
+  }
+  html[data-stop="bar"] .app { padding-bottom:110px; }
+  .sb-state { grid-area:state; }
+  .sb-state #sbState, .sb-keys, .sb-gap { display:none; }
+  .sb-speed { grid-area:speed; }
+  .sb-more { grid-area:more; }
+  .sb-controls { grid-area:ctl; width:52px; height:52px; padding:0; }
+  .sb-controls span { display:none; }
+  .sb-controls .icon { display:inline; width:22px; height:22px; }
+  .stopbar .stop { grid-area:stop; min-height:52px; padding:10px 22px; }
   footer { order:7; }
   .connected .app { padding-bottom:150px; }
   .connected .dock {
-    position:fixed; left:0; right:0; bottom:0; z-index:10;
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
     background:var(--card); border-top:1px solid var(--card-border); box-shadow:0 -6px 20px var(--shadow);
     padding:10px max(16px, calc((100% - 720px) / 2)) calc(10px + env(safe-area-inset-bottom));
   }
@@ -210,15 +322,27 @@ footer a, details a { color:var(--link); }
 }
 @media (max-width: 719px) {
   body { padding:12px; }
-  h1 { font-size:1.2rem; }
-  .prefs select { font-size:.85rem; padding:4px 6px; }
-  .conn { order:3; flex-basis:100%; margin-left:0; justify-content:space-between; }
+  h1 { font-size:1.1rem; }
+  .logo { width:28px; height:28px; }
+  .status { padding:6px 8px 6px 10px; gap:6px; }
+  /* Row 1: logo, name, status, settings; row 2: views. Menus open below row 1 at full width. */
+  .top { position:relative; }
+  .conn { order:3; margin-left:auto; }
+  .prefs { order:4; margin-left:0; }
+  .views { order:5; flex-basis:100%; }
+  .top { gap:8px; }
+  .menu-anchor { position:static; }
+  .menu, .prefs-menu { left:0; right:0; top:52px; width:auto; max-width:none; }
+  .periods { gap:10px; }
+  .period .v { font-size:1.35rem; }
+  .views a { flex:1; }
+  .run summary { grid-template-columns:minmax(0, 1fr) auto; }
+  .run-line { grid-row:2; margin-left:0; text-align:left; }
   .hero { grid-template-columns:minmax(0, 1fr); gap:16px; text-align:center; }
   .hero-stats { gap:14px 8px; }
   #chart { height:160px; }
   .more { grid-template-columns:minmax(0, 1fr); }
   .banner.demo { grid-template-columns:minmax(0, 1fr); }
-  .welcome .row { flex-direction:column; align-items:stretch; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
 

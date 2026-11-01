@@ -19,19 +19,65 @@
   <symbol id="i-bluetooth" viewBox="0 0 24 24"><path d="M7 7l10 10-5 5V2l5 5L7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-demo" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6.5L4.6 18.4A1.7 1.7 0 0 0 6.1 21h11.8a1.7 1.7 0 0 0 1.5-2.6L14 9.5V3M7.5 15h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0M12 17l4-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v4.5M12 17.2v.1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
 </svg>
 <!-- Texts come from src/locales/*.ts (data-i18n*); the English text here is only the fallback. -->
 <div class="app">
+  <!-- Outside the training view while connected (src/views.ts stopPlacement): Stop stays in reach.
+       Sticky at the top on wide screens, fixed to the bottom edge on narrow ones. Above the header and above
+       the header menus, so an open menu can never cover it. -->
+  <div id="stopBar" class="stopbar" role="region" aria-label="Treadmill" data-i18n-aria="stopBar.label">
+    <span class="sb-state"><span class="dot"></span><span id="sbState">Connected</span></span>
+    <span class="sb-speed" id="sbSpeed">–</span>
+    <span class="hint sb-more" id="sbMore"></span>
+    <span class="hint sb-keys" data-i18n-rich="stopBar.keys">Space or Esc = stop</span>
+    <span class="sb-gap"></span>
+    <a href="#" class="btn sb-controls" aria-label="To the controls" data-i18n-aria="stopBar.toControls"><svg class="icon" aria-hidden="true"><use href="#i-gauge"/></svg><span data-i18n="stopBar.toControls">To the controls</span></a>
+    <button id="sbStop" class="stop" type="button"><svg class="icon" aria-hidden="true"><use href="#i-stop"/></svg><span data-i18n="control.stop">Stop</span></button>
+  </div>
+
   <header class="top">
     <img src="/favicon.svg" alt="" width="32" height="32" class="logo">
     <h1>Walkflow</h1>
     <span class="hint tagline" data-i18n="header.tagline">Treadmill control via Bluetooth</span>
-    <span class="conn">
-      <span id="status" class="status" role="status">Not connected</span>
-      <button id="disconnect" class="small" disabled><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg><span data-i18n="connection.disconnect">Disconnect</span></button>
+    <nav class="views" aria-label="Views" data-i18n-aria="views.label">
+      <a href="#" data-view="training" data-i18n="views.training">Training</a>
+      <a href="#history" data-view="history" data-i18n="views.history">History</a>
+    </nav>
+    <!-- Connection menu: opens from the status; connect and demo, or the device and Disconnect -->
+    <span class="menu-anchor conn">
+      <button id="statusBtn" class="status" type="button" aria-haspopup="true"><span role="status"><span id="status" class="st-long">Not connected</span><span id="statusShort" class="st-short" aria-hidden="true">Not connected</span></span><svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+      <div id="connMenu" class="menu conn-menu" role="group" aria-label="Connection" data-i18n-aria="connection.menuLabel" hidden>
+        <div class="menu-off">
+          <strong class="menu-title" data-i18n="connection.title">Connect your treadmill</strong>
+          <button id="connect" class="primary big"><svg class="icon" aria-hidden="true"><use href="#i-bluetooth"/></svg><span data-i18n="connection.connect">Connect</span></button>
+          <button id="demo"><svg class="icon" aria-hidden="true"><use href="#i-demo"/></svg><span data-i18n="connection.demo">Demo (no treadmill)</span></button>
+          <p class="hint" data-i18n="connection.vendorAppHint">Close the manufacturer’s app first, the treadmill usually allows only one connection at a time.</p>
+        </div>
+        <div class="menu-on">
+          <div class="device">
+            <span class="device-icon"><svg class="icon" aria-hidden="true"><use href="#i-bluetooth"/></svg></span>
+            <span><strong id="deviceName"></strong><span class="hint" id="deviceInfo"></span></span>
+          </div>
+          <button id="disconnect" disabled><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg><span data-i18n="connection.disconnect">Disconnect</span></button>
+          <p class="hint" data-i18n="connection.disconnectHint">If the belt is still running, the app offers to stop it first.</p>
+        </div>
+      </div>
     </span>
-    <span id="prefs" class="prefs"></span>
+    <!-- Language and theme, right next to the status: both menus open over the main column, never over the controls -->
+    <span class="menu-anchor prefs">
+      <button id="prefsBtn" class="icon-btn" type="button" aria-haspopup="true" aria-label="Language and theme" data-i18n-aria="prefs.label"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg></button>
+      <div id="prefsMenu" class="menu prefs-menu" role="group" aria-label="Language and theme" data-i18n-aria="prefs.label" hidden>
+        <div class="menu-label" id="langLabel" data-i18n="languageLabel">Language</div>
+        <div id="langOptions" class="menu-list" role="radiogroup" aria-labelledby="langLabel"></div>
+        <hr>
+        <div class="menu-label" id="themeLabel" data-i18n="theme.label">Theme</div>
+        <div id="themeOptions" class="seg" role="radiogroup" aria-labelledby="themeLabel"></div>
+      </div>
+    </span>
   </header>
 
   <div id="updateBanner" class="banner info" hidden>
@@ -65,18 +111,10 @@
   </div>
 
   <!-- Wide screens: main column + sticky controls on the right. Narrow screens: one column, and while connected
-       the dock (start/pause/stop, ±) is fixed to the bottom edge so Stop never scrolls out of view. -->
+       the dock (start/pause/stop, ±) is fixed to the bottom edge so Stop never scrolls out of view.
+       The controls only show in the training view; elsewhere the stop bar above takes over. -->
   <div class="layout">
     <div class="main-col">
-      <section class="card welcome">
-        <h2 data-i18n="connection.title">Connect your treadmill</h2>
-        <div class="row">
-          <button id="connect" class="primary"><svg class="icon" aria-hidden="true"><use href="#i-bluetooth"/></svg><span data-i18n="connection.connect">Connect</span></button>
-          <button id="demo"><svg class="icon" aria-hidden="true"><use href="#i-demo"/></svg><span data-i18n="connection.demo">Demo (no treadmill)</span></button>
-        </div>
-        <p class="hint" data-i18n="connection.vendorAppHint">Close the manufacturer’s app first, the treadmill usually allows only one connection at a time.</p>
-      </section>
-
       <div class="notice" id="safetyNotice"><svg class="icon" aria-hidden="true"><use href="#i-warning"/></svg><span data-i18n-rich="notice">If the connection drops, this app cannot stop the belt. Then you can only stop it on the treadmill: stop button or safety key. Keep both within reach.</span></div>
 
       <section class="card live">
@@ -90,6 +128,7 @@
             <div class="stat"><div class="v" id="vHr">–</div><div class="l" data-i18n="stats.heartRate">Heart rate (bpm)</div></div>
           </div>
         </div>
+        <p class="hint offline-hint"><span data-i18n="connection.offlineHint">Not connected.</span> <button type="button" class="linkish" id="openConn" data-i18n="connection.connectNow">Connect now</button></p>
         <div>
           <h2 data-i18n="chart.title">Speed over the last 5 minutes</h2>
           <canvas id="chart" width="560" height="150"></canvas>
@@ -130,7 +169,7 @@
           <div class="row">
             <button id="csv" data-i18n="settings.csv">Export CSV</button>
             <button id="tcx" data-i18n="settings.tcx">Export TCX</button>
-            <button id="clear" data-i18n="settings.clear">Clear history</button>
+            <button id="clear" data-i18n="settings.clear">Clear recording</button>
           </div>
           <label class="hint field"><span data-i18n="settings.tcxSport">Sport in the TCX file (Strava, Garmin Connect &amp; co.)</span>
             <select id="tcxSport">
@@ -159,7 +198,7 @@
           <p id="infoTested"></p>
           <p id="infoAffiliation"></p>
           <h3 data-i18n="info.privacyTitle">Privacy</h3>
-          <p data-i18n="info.privacy">No accounts, no server, no tracking, no external scripts or fonts. Settings (limit, ramp, language, theme, accepted notice) are stored only locally in this browser. Recordings stay in memory until you export them or close the page.</p>
+          <p data-i18n="info.privacy">No accounts, no server, no tracking, no external scripts or fonts. Settings (limit, ramp, language, theme, accepted notice) are stored only locally in this browser. The saved runs stay on this device too.</p>
           <div id="infoDesktopPrivacy" hidden>
             <p data-i18n="info.desktopPrivacy">On startup, the desktop app asks GitHub whether there is a newer version. You can turn this off here:</p>
             <label class="check"><input type="checkbox" id="updateCheck" checked> <span data-i18n="info.updateCheck">check for updates</span></label>
@@ -168,6 +207,50 @@
           <p><span data-i18n="info.license">MIT license, without warranty.</span> <span id="infoSource"></span></p>
         </details>
       </div>
+
+      <!-- History view (src/history.ts). While connected, the stop bar keeps Stop in reach. -->
+      <section class="card history-part hist-overview">
+        <h2 data-i18n="history.title">History</h2>
+        <div class="periods">
+          <div class="period"><div class="l" data-i18n="history.week">This week</div><div class="v" id="hWeek">–</div><div class="hint" id="hWeekSub"></div></div>
+          <div class="period"><div class="l" data-i18n="history.month">This month</div><div class="v" id="hMonth">–</div><div class="hint" id="hMonthSub"></div></div>
+          <div class="period"><div class="l" data-i18n="history.all">All time</div><div class="v" id="hAll">–</div><div class="hint" id="hAllSub"></div></div>
+        </div>
+        <div>
+          <h3 data-i18n="history.chartTitle">Distance per week</h3>
+          <canvas id="weekChart" role="img" aria-label="Distance per week, last 12 weeks" data-i18n-aria="history.chartLabel"></canvas>
+          <div class="hint" id="weekReadout"></div>
+          <table class="sr-only" id="weekTable"></table>
+        </div>
+        <dl class="records">
+          <div><dt data-i18n="history.streak">Days in a row</dt><dd id="hStreak">–</dd></div>
+          <div><dt data-i18n="history.farthest">Farthest run</dt><dd id="hFarthest">–</dd></div>
+          <div><dt data-i18n="history.longest">Longest run</dt><dd id="hLongest">–</dd></div>
+          <div><dt data-i18n="history.bestWeek">Best week</dt><dd id="hBestWeek">–</dd></div>
+        </dl>
+        <p class="hint" id="hDemoNote" data-i18n="history.demoNote" hidden>Demo runs are listed but not counted.</p>
+      </section>
+
+      <section class="card grid history-part">
+        <h2 data-i18n="history.runsTitle">Runs</h2>
+        <p class="hint" id="runEmpty" data-i18n="history.empty" hidden>No runs yet.</p>
+        <ul id="runList" class="runs"></ul>
+        <button id="runMore" type="button" data-i18n="history.more" hidden>Show more</button>
+      </section>
+
+      <section class="card grid history-part">
+        <h2 data-i18n="history.dataTitle">Saved runs</h2>
+        <label class="check"><input type="checkbox" id="autoSave" checked> <span data-i18n="history.autoSave">Save runs automatically</span></label>
+        <p class="hint" id="storageInfo"></p>
+        <div class="row">
+          <button id="backup" type="button" data-i18n="history.backup">Download backup</button>
+          <button id="restore" type="button" data-i18n="history.restore">Restore backup</button>
+          <button id="deleteAll" type="button" data-i18n="history.deleteAll">Delete all runs</button>
+        </div>
+        <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+        <p class="hint" data-i18n="history.backupHint">The backup is a JSON file with all runs.</p>
+        <p class="hint" id="histStatus" role="status"></p>
+      </section>
     </div>
 
     <div class="side">

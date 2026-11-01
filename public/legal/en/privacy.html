@@ -39,9 +39,11 @@
       <li>No accounts, no own server, no cookies, no tracking, no analytics.</li>
       <li>No scripts, fonts or other content from third parties; everything is loaded from the same address.</li>
       <li>Bluetooth data from the treadmill is processed only in the browser and sent nowhere.</li>
-      <li>The browser’s localStorage holds only settings: speed limit, maximum change per command, background behaviour, sport for TCX, language, theme, accepted safety notice.</li>
+      <li>The browser’s localStorage holds only settings: speed limit, maximum change per command, background behaviour, sport for TCX, language, theme, accepted safety notice, whether runs are saved.</li>
       <li>A service worker stores the app files in the browser cache for offline use.</li>
-      <li>Recordings (history) stay only in memory until they are exported as CSV/TCX or the page is closed.</li>
+      <li>The current recording for the chart and the CSV/TCX export stays only in memory until the page is closed.</li>
+      <li>Runs are stored in the browser’s IndexedDB on this device (desktop app: in the app’s data folder): time, speed, distance, incline, kcal and heart rate (only if the treadmill reports one), about once per second. They leave the device only when the person downloads a backup or an export themselves. Saving can be turned off; runs can be deleted one by one or all at once.</li>
+      <li>After the first saved run, the web app asks the browser via <code>navigator.storage.persist()</code> not to delete the data when space runs low.</li>
       <li>The desktop app (not this website) asks api.github.com for a newer version on startup; can be turned off.</li>
     </ul>
   </div>
