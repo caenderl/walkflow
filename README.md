@@ -27,7 +27,7 @@ Other FTMS treadmills may work but are not tested.
 - Connect/disconnect, start/pause/stop, speed via slider, presets and ±0.5, incline
 - Connecting, language and theme live in small menus in the header: click the connection status, or the settings button at the top right
 - Workouts: a saved list of steps, each ending after a time or after a distance (the treadmill’s own distance counter), with a speed. Editor with examples, library, import/export as text (`5 min 4.0`, `400 m 3.5`), and a week plan (minutes per weekday) that is ticked off from the history. A step can carry an optional incline (`incl 2`), which is saved and shown but not sent to the treadmill yet (untested on the target hardware). Each weekday of the plan can suggest a workout or route; the training view offers today’s suggestion, and the day is still done by minutes.
-- Routes: import a GPX file (track or route, with or without elevations), keep it in a library, export it again. The route card in the training view shows where on the route you are (“0.9 of 5.2 km”), the elevation and the slope of the next 100 m, with an elevation profile. Progress follows the treadmill’s own distance counter. “Walk this route” starts it as a workout (one distance step over the whole route at a speed you enter, with the usual ramp, limit and confirmation); the route’s elevation never changes speed or incline. The card shows how long the route takes at that speed and whether it reaches today’s goal, and the history shows which workout or route a run was. No map yet.
+- Routes: import a GPX file (track or route, with or without elevations), keep it in a library, export it again. The route card in the training view shows where on the route you are (“0.9 of 5.2 km”), the elevation and the slope of the next 100 m, with an elevation profile. Progress follows the treadmill’s own distance counter. “Walk this route” starts it as a workout (one distance step over the whole route at a speed you enter, with the usual ramp, limit and confirmation); the route’s elevation never changes speed or incline. The card shows how long the route takes at that speed and whether it reaches today’s goal, and the history shows which workout or route a run was. An optional map (off by default) shows the route and your position on it; see [Map](#map). The routes view has an example route (Central Park Reservoir Loop, 2.5 km) to try everything without a GPX file.
 - Live values, chart of the last 5 minutes, export as CSV and TCX (Strava, Garmin Connect & co.)
 - History: runs are saved automatically on the device. Totals per week and month, distance per week, days in a row, records, a chart per run, CSV/TCX per run, backup and restore as a JSON file. Saving can be turned off; demo runs are listed but not counted.
 - Log of sent/received bytes and an experiment console for the Control Point
@@ -109,6 +109,8 @@ An invalid value stops the build. The privacy texts name the default server; cha
 | `src/ble.ts` | `BleAdapter` interface, `WebBluetoothAdapter`, serial write queue, connection sequence |
 | `src/safety.ts` | Limits, ramp (`SpeedGovernor`), console checks, standstill detection |
 | `src/program.ts` | Workout steps (time or distance): text format and the runner (time steps by timestamps, distance steps by the treadmill’s counter) |
+| `src/map-config.ts`, `src/csp.ts`, `src/map-geo.ts`, `src/map-view.ts`, `src/route-map.ts` | Optional map: build setting for the style URL, the Content-Security-Policy, route as map data, the map itself (loaded on demand), the slots on the route card and in the routes view |
+| `src/route-examples.ts` | Example routes that come with the app (data from OpenStreetMap), copied into the library on request |
 | `src/routes.ts`, `src/gpx.ts`, `src/route-store.ts`, `src/route-ui.ts` | Routes: validation, route maths and progress tracker, GPX reading (tag scanner, no DTD) and writing, IndexedDB storage, routes view and route card |
 | `src/workouts.ts`, `src/workout-store.ts`, `src/workout-ui.ts`, `src/db.ts` | Saved workouts and week plan: validation, IndexedDB storage (shared database with the runs), workouts view |
 | `src/sim.ts` | Simulated FTMS treadmill (demo mode, tests) |
@@ -188,3 +190,5 @@ There is no entitlement to support and no feature depends on support.
 ## License
 
 [MIT](LICENSE)
+
+The example routes in `src/route-examples.ts` are track data from [OpenStreetMap](https://www.openstreetmap.org/copyright), © OpenStreetMap contributors, available under the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/). The app shows this next to each example. The map uses OpenFreeMap tiles, which are also based on OpenStreetMap data and show their credits on the map.

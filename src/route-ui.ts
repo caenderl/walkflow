@@ -5,6 +5,7 @@
 import { confirmDialog } from './dialogs';
 import { GPX_MAX_CHARS, parseGpx, serializeGpx } from './gpx';
 import { onLanguageChange, t } from './i18n';
+import { exampleRoute, ROUTE_EXAMPLES } from './route-examples';
 import { createMapSlot, type MapSlot } from './route-map';
 import { fmtDistance, type ProgramStep } from './program';
 import { getRouteStore, type RouteStore } from './route-store';
@@ -247,6 +248,20 @@ export function setupRoutes(host: RoutesHost) {
     }));
   }
 
+  function renderExamples() {
+    $('rtExamples').replaceChildren(...ROUTE_EXAMPLES.map(ex => {
+      const have = routes.some(r => r.name === ex.name);
+      const length = fmtDistance(analyzeRoute(exampleRoute(ex, ex.key, 0)).total);
+      const add = button(have ? t.routes.exampleHave : t.routes.exampleAdd, () => void addExample(ex.key));
+      add.disabled = have;
+      return el('li', { className: 'wk-item' },
+        el('div', { className: 'wk-info' },
+          el('div', { className: 'wk-name', textContent: ex.name }),
+          el('div', { className: 'hint', textContent: `${ex.place} · ${length} · ${ex.source}` })),
+        el('div', { className: 'wk-actions' }, add));
+    }));
+  }
+
   function renderPreview() {
     const card = $('rtPreview');
     card.hidden = !analysed;
@@ -302,6 +317,18 @@ export function setupRoutes(host: RoutesHost) {
     ].join(' '));
   }
 
+  /** Copy an example into the library, like an import: it is the person's own route from then on */
+  async function addExample(key: string) {
+    const ex = ROUTE_EXAMPLES.find(e => e.key === key);
+    if (!ex) return;
+    const route = readRoute(exampleRoute(ex, newRouteId(Date.now()), Date.now()));
+    if (!route) { setStatus(() => t.routes.noPoints); return; }
+    try { await (await ready).put(route); } catch (e) { setStatus(() => t.routes.failed(String(e))); return; }
+    await reload();
+    select(route.id);
+    setStatus(() => t.routes.exampleAdded(route.name));
+  }
+
   // ---------- Loading ----------
   async function reload() {
     const s = await ready;
@@ -319,6 +346,7 @@ export function setupRoutes(host: RoutesHost) {
   function renderAll() {
     renderPicker();
     renderList();
+    renderExamples();
     renderPreview();
     renderEstimate();
     if (statusText) $('rtStatus').textContent = statusText();
