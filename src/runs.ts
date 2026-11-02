@@ -3,6 +3,7 @@
 // control path: it never throws, and saving runs asynchronously, so it cannot delay a stop.
 
 import { accumulate, distanceSeries, type Sample } from './export';
+import { readRoutes, type Route } from './routes';
 import { readPlan, readWorkouts, type WeekPlan, type Workout } from './workouts';
 
 export type RunSource = 'ble' | 'demo';
@@ -257,12 +258,13 @@ export const BACKUP_VERSION = 1;
 
 export interface BackupExtras {
   workouts?: readonly Workout[];
+  routes?: readonly Route[];
   plan?: WeekPlan | null;
 }
 
 /**
  * Only start, source and samples are written; the summary is computed again when reading.
- * Workouts and the week plan are optional additions to version 1: older files simply do not have them.
+ * Workouts, routes and the week plan are optional additions to version 1: older files simply do not have them.
  */
 export function serializeBackup(runs: readonly Run[], exported: Date, extras: BackupExtras = {}): string {
   return JSON.stringify({
@@ -271,12 +273,13 @@ export function serializeBackup(runs: readonly Run[], exported: Date, extras: Ba
     exported: exported.toISOString(),
     runs: runs.map(r => ({ start: r.summary.start, source: r.summary.source, track: r.track })),
     ...(extras.workouts?.length ? { workouts: extras.workouts } : {}),
+    ...(extras.routes?.length ? { routes: extras.routes } : {}),
     ...(extras.plan ? { plan: extras.plan } : {}),
   });
 }
 
 export type BackupResult =
-  | { ok: true; runs: Run[]; invalid: number; workouts: Workout[]; invalidWorkouts: number; plan: WeekPlan | null }
+  | { ok: true; runs: Run[]; invalid: number; workouts: Workout[]; invalidWorkouts: number; routes: Route[]; invalidRoutes: number; plan: WeekPlan | null }
   | { ok: false; reason: 'unreadable' | 'newer' };
 
 /** Allowed integer range per column, in the stored resolution */
@@ -330,5 +333,6 @@ export function parseBackup(text: string): BackupResult {
     if (run) runs.push(run); else invalid++;
   }
   const { workouts, invalid: invalidWorkouts } = readWorkouts(data.workouts);
-  return { ok: true, runs, invalid, workouts, invalidWorkouts, plan: readPlan(data.plan) };
+  const { routes, invalid: invalidRoutes } = readRoutes(data.routes);
+  return { ok: true, runs, invalid, workouts, invalidWorkouts, routes, invalidRoutes, plan: readPlan(data.plan) };
 }

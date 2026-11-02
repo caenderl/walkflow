@@ -7,6 +7,7 @@ import { confirmDialog } from './dialogs';
 import { buildTcx, exportFilename, toCsv, type Sample, type TcxSport } from './export';
 import { lang, onLanguageChange, t } from './i18n';
 import { bindText } from './i18n-dom';
+import { getRouteStore } from './route-store';
 import { getRunStore } from './run-store';
 import { getWorkoutStore } from './workout-store';
 import { decodeTrack, parseBackup, RunRecorder, serializeBackup, type RunSummary } from './runs';
@@ -21,7 +22,7 @@ const WEEKS = 12;
 export interface HistoryHost {
   log(msg: string): void;
   tcxSport(): TcxSport;
-  /** A backup was restored: workouts and the week plan may have changed */
+  /** A backup was restored: workouts, routes and the week plan may have changed */
   onRestored?(): void;
 }
 
@@ -275,9 +276,9 @@ export function setupHistory(host: HistoryHost) {
   async function backup() {
     const all = await (await ready).all();
     const w = await getWorkoutStore();
-    const [workouts, plan] = [await w.list(), await w.plan()];
-    if (!all.length && !workouts.length && !plan) { bindText($('histStatus'), () => t.history.noRuns); return; }
-    download(serializeBackup(all, new Date(), { workouts, plan }), 'application/json', `walkflow-backup-${localDate(new Date())}.json`);
+    const [workouts, plan, routes] = [await w.list(), await w.plan(), await (await getRouteStore()).list()];
+    if (!all.length && !workouts.length && !routes.length && !plan) { bindText($('histStatus'), () => t.history.noRuns); return; }
+    download(serializeBackup(all, new Date(), { workouts, routes, plan }), 'application/json', `walkflow-backup-${localDate(new Date())}.json`);
   }
 
   async function restore(file: File) {
@@ -306,10 +307,19 @@ export function setupHistory(host: HistoryHost) {
       await ws.put(w);
       workoutsAdded++;
     }
+    const rs = await getRouteStore();
+    const haveRoutes = new Set((await rs.list()).map(x => x.id));
+    let routesAdded = 0;
+    for (const r of result.routes) {
+      if (haveRoutes.has(r.id)) continue;
+      await rs.put(r);
+      routesAdded++;
+    }
     const planRestored = !!result.plan && !(await ws.plan());
     if (result.plan && planRestored) await ws.setPlan(result.plan);
-    const extra = workoutsAdded || planRestored || result.invalidWorkouts;
-    bindText($('histStatus'), () => t.history.restored(added, already, invalid) + (extra ? ` ${t.history.restoredExtra(workoutsAdded, planRestored, result.invalidWorkouts)}` : ''));
+    const invalidExtra = result.invalidWorkouts + result.invalidRoutes;
+    const extra = workoutsAdded || routesAdded || planRestored || invalidExtra;
+    bindText($('histStatus'), () => t.history.restored(added, already, invalid) + (extra ? ` ${t.history.restoredExtra(workoutsAdded, routesAdded, planRestored, invalidExtra)}` : ''));
     host.onRestored?.();
     await render();
   }

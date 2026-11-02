@@ -26,6 +26,7 @@ import {
 import { SimulatorAdapter } from './sim';
 import { initTheme, onThemeChange } from './theme';
 import { $, $button, $input, download, log, store } from './ui';
+import { setupRoutes } from './route-ui';
 import { setupViews, stopPlacement, type View } from './views';
 import { setupWorkouts } from './workout-ui';
 
@@ -63,10 +64,11 @@ let uiConnected = false;
 const history = setupHistory({
   log,
   tcxSport: () => $<HTMLSelectElement>('tcxSport').value as TcxSport,
-  onRestored: () => void workouts.reload(),
+  onRestored: () => { void workouts.reload(); void routes.reload(); },
 });
 const recorder = history.recorder;
 const workouts = setupWorkouts({ maxSpeed: () => effectiveMax() });
+const routes = setupRoutes();
 
 const connected = () => !!client?.connected;
 const maybeRunning = () => beltMaybeRunning({ startedByApp: beltStarted, lastMeasuredKmh: lastMeasured });
@@ -104,7 +106,7 @@ const events: TreadmillEvents = {
 // ---------- Live data ----------
 function onTreadmillData(r: TreadmillData) {
   if (r.speed !== undefined) cur.speed = r.speed;
-  if (r.dist !== undefined) cur.dist = r.dist;
+  if (r.dist !== undefined) { cur.dist = r.dist; routes.update(cur.dist); }
   if (r.incl !== undefined) cur.incl = r.incl;
   if (r.kcal !== undefined) cur.kcal = r.kcal;
   if (r.time !== undefined) cur.time = r.time;
@@ -702,6 +704,7 @@ setupViews(v => {
   applyStopPlacement();
   history.setVisible(v === 'history');
   workouts.setVisible(v === 'workouts');
+  routes.setVisible(v === 'routes');
 });
 loadSettings();
 renderInfo();

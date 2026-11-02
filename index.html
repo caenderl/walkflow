@@ -47,6 +47,7 @@
       <a href="#" data-view="training" data-i18n="views.training">Training</a>
       <a href="#history" data-view="history" data-i18n="views.history">History</a>
       <a href="#workouts" data-view="workouts" data-i18n="views.workouts">Workouts</a>
+      <a href="#routes" data-view="routes" data-i18n="views.routes">Routes</a>
     </nav>
     <!-- Connection menu: opens from the status; connect and demo, or the device and Disconnect -->
     <span class="menu-anchor conn">
@@ -150,6 +151,22 @@
           </div>
           <div class="hint" id="progStatus">No program running</div>
           <p class="hint"><a href="#workouts" data-i18n="program.edit">Edit workouts</a></p>
+        </section>
+
+        <section class="card grid" id="routeCard">
+          <h2 data-i18n="routes.cardTitle">Route</h2>
+          <label class="hint field"><span data-i18n="routes.choose">Route</span>
+            <select id="routeSelect"></select>
+          </label>
+          <div class="grid" id="routeLive" hidden>
+            <progress id="routeBar" max="1000" value="0"></progress>
+            <div id="routeText" class="route-text"></div>
+            <div class="hint" id="routeDetail"></div>
+            <div id="routeProfile" class="profile"></div>
+            <div class="row"><button id="routeRestart" type="button" data-i18n="routes.restart">Restart route</button></div>
+          </div>
+          <div class="hint" data-i18n="routes.trainingHint">Progress follows the treadmill’s own distance counter.</div>
+          <p class="hint"><a href="#routes" data-i18n="routes.manage">Manage routes</a></p>
         </section>
 
         <section class="card grid">
@@ -297,6 +314,28 @@
         <p class="hint" data-i18n="workouts.planHint">Minutes of walking per day.</p>
         <ul id="planList" class="plan"></ul>
         <p class="hint" id="planSummary" role="status"></p>
+      </section>
+
+      <!-- Routes view (src/route-ui.ts): GPX import and export, the library. Progress is shown in the training view. -->
+      <section class="card grid routes-part">
+        <div class="head-row">
+          <h2 data-i18n="routes.mineTitle">My routes</h2>
+          <button id="rtImport" type="button" data-i18n="routes.import">Import GPX file</button>
+        </div>
+        <input type="file" id="rtFile" accept=".gpx,.xml,application/gpx+xml,application/xml,text/xml" aria-label="GPX file" data-i18n-aria="routes.fileLabel" hidden>
+        <p class="hint" id="rtEmpty" data-i18n="routes.empty" hidden>No routes yet.</p>
+        <ul id="rtList" class="wk-list"></ul>
+        <p class="hint" id="rtStorage" hidden></p>
+        <p class="hint" id="rtStatus" role="status"></p>
+        <p class="hint" data-i18n="routes.privacy">The file is read on this device.</p>
+        <p class="hint" data-i18n="routes.hint">A route only shows where you are along it.</p>
+      </section>
+
+      <section class="card grid routes-part" id="rtPreview" hidden>
+        <h2 id="rtPreviewTitle"></h2>
+        <div id="rtProfile" class="profile big"></div>
+        <p class="hint" id="rtNoEle" hidden></p>
+        <dl class="records" id="rtFacts"></dl>
       </section>
     </div>
 

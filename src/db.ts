@@ -1,11 +1,12 @@
 // The one IndexedDB database of the app: runs and their samples (run-store.ts), workouts and settings
-// (workout-store.ts). Opened once; a missing or blocked IndexedDB makes both stores fall back to memory.
+// (workout-store.ts), routes (route-store.ts). Opened once; a missing or blocked IndexedDB makes the stores fall back to memory.
 
 export const DB_NAME = 'walkflow';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 export const RUNS = 'runs';
 export const TRACKS = 'tracks';
 export const WORKOUTS = 'workouts';
+export const ROUTES = 'routes';
 /** Small single values (the week plan), under out-of-line keys */
 export const META = 'meta';
 
@@ -36,6 +37,7 @@ export function openDb(timeoutMs = 5000): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(RUNS)) db.createObjectStore(RUNS, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(TRACKS)) db.createObjectStore(TRACKS);
       if (!db.objectStoreNames.contains(WORKOUTS)) db.createObjectStore(WORKOUTS, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(ROUTES)) db.createObjectStore(ROUTES, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(META)) db.createObjectStore(META);
     };
     const db = await Promise.race([

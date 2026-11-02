@@ -317,7 +317,7 @@ describe('backup file', () => {
   it('round trip: runs come back with the same summaries', () => {
     const text = serializeBackup([runA, runB], new Date(T0));
     const r = parseBackup(text);
-    expect(r).toEqual({ ok: true, runs: [runA, runB], invalid: 0, workouts: [], invalidWorkouts: 0, plan: null });
+    expect(r).toEqual({ ok: true, runs: [runA, runB], invalid: 0, workouts: [], invalidWorkouts: 0, routes: [], invalidRoutes: 0, plan: null });
   });
 
   it('is a readable JSON file with format and version', () => {
@@ -350,7 +350,7 @@ describe('backup file', () => {
     ];
     const tampered = { ...good, summary: { dist: 99999 } };
     const r = parseBackup(JSON.stringify({ format: 'walkflow-backup', version: 1, runs: [...broken, tampered] }));
-    expect(r).toEqual({ ok: true, runs: [runA], invalid: broken.length, workouts: [], invalidWorkouts: 0, plan: null });
+    expect(r).toEqual({ ok: true, runs: [runA], invalid: broken.length, workouts: [], invalidWorkouts: 0, routes: [], invalidRoutes: 0, plan: null });
   });
 
   describe('workouts and week plan in the same file', () => {
@@ -359,7 +359,7 @@ describe('backup file', () => {
 
     it('round trip', () => {
       const r = parseBackup(serializeBackup([runA], new Date(T0), { workouts: [workout], plan }));
-      expect(r).toEqual({ ok: true, runs: [runA], invalid: 0, workouts: [workout], invalidWorkouts: 0, plan });
+      expect(r).toEqual({ ok: true, runs: [runA], invalid: 0, workouts: [workout], invalidWorkouts: 0, routes: [], invalidRoutes: 0, plan });
     });
 
     it('a file without them (made before) still reads', () => {
@@ -379,7 +379,33 @@ describe('backup file', () => {
         workouts: [workout, { ...workout, id: 'w2', steps: [{ sec: -1, speed: 3 }] }, 'x'],
         plan: { minutes: [1, 2, 3] },
       });
-      expect(parseBackup(text)).toEqual({ ok: true, runs: [], invalid: 0, workouts: [workout], invalidWorkouts: 2, plan: null });
+      expect(parseBackup(text)).toEqual({ ok: true, runs: [], invalid: 0, workouts: [workout], invalidWorkouts: 2, routes: [], invalidRoutes: 0, plan: null });
+    });
+  });
+  describe('routes in the same file', () => {
+    const route = { id: 'r1', name: 'Park loop', updated: 7, points: [{ lat: 48.1, lon: 11.5, ele: 520 }, { lat: 48.101, lon: 11.5, ele: 521 }] };
+
+    it('round trip', () => {
+      const r = parseBackup(serializeBackup([runA], new Date(T0), { routes: [route] }));
+      expect(r).toMatchObject({ ok: true, runs: [runA], routes: [route], invalidRoutes: 0 });
+    });
+
+    it('a file without routes (made before) still reads', () => {
+      const data = JSON.parse(serializeBackup([runA], new Date(T0), { workouts: [] }));
+      expect(data.routes).toBeUndefined();
+      expect(parseBackup(JSON.stringify(data))).toMatchObject({ ok: true, routes: [], invalidRoutes: 0 });
+    });
+
+    it('only routes, without runs', () => {
+      expect(parseBackup(serializeBackup([], new Date(T0), { routes: [route] }))).toMatchObject({ ok: true, runs: [], routes: [route] });
+    });
+
+    it('broken routes are counted and left out', () => {
+      const text = JSON.stringify({
+        format: 'walkflow-backup', version: 1, runs: [],
+        routes: [route, { ...route, id: 'r2', points: [{ lat: 99, lon: 0 }, { lat: 0, lon: 0 }] }, 'x'],
+      });
+      expect(parseBackup(text)).toMatchObject({ ok: true, routes: [route], invalidRoutes: 2 });
     });
   });
 });

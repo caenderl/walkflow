@@ -52,6 +52,16 @@ Time steps work as before. A distance step ends when the treadmill’s own dista
 - [ ] Press Stop (button, Space or Esc) during a distance step: belt stops and the program ends, nothing restarts it.
 - [ ] Reconnect case: does the treadmill reset its distance counter when you start the belt, or only after a stop? (The app handles both: a counter that jumps back adds nothing for that update.)
 
+## Routes
+
+A route only displays progress. It follows the treadmill’s own distance counter and sends nothing to the treadmill: no speed, no incline. Nothing in this section can move the belt.
+
+- [ ] Import a real GPX file (**Routes → Import GPX file**) and choose it in the **Training** route card. Start the belt and walk 100 m: does “km of km” advance together with the distance shown on the treadmill’s display? Note how far apart the two are after 100 m.
+- [ ] Press **Restart route**: the progress goes back to 0 and counts on from there, the belt is not affected.
+- [ ] Stop the belt and start it again: does the route continue where it was, or did the treadmill’s counter reset and the route lose or double distance? (The app adds up only increases; a counter that goes back adds nothing.)
+- [ ] Disconnect and reconnect in the middle of a route: does the progress carry on without a jump?
+- [ ] The slope shown for the next 100 m is only information about the file. Check that the treadmill’s incline did not change at all while you walked.
+
 ## Desktop app
 
 - [ ] macOS: on the first “Connect”, macOS asks for Bluetooth. Does the chooser with the treadmill appear afterwards? Is the prompt text in the system language?

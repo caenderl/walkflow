@@ -33,3 +33,17 @@ export const store = {
     try { localStorage.setItem(key, value); } catch { /* private mode */ }
   },
 };
+
+export function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> = {}, ...children: (Node | string)[]): HTMLElementTagNameMap[K] {
+  const e = document.createElement(tag);
+  Object.assign(e, props);
+  e.append(...children);
+  return e;
+}
+
+export function button(text: string, onClick: () => void, disabled = false): HTMLButtonElement {
+  const b = el('button', { type: 'button', textContent: text });
+  b.onclick = onClick;
+  b.disabled = disabled;
+  return b;
+}

@@ -27,6 +27,7 @@ Other FTMS treadmills may work but are not tested.
 - Connect/disconnect, start/pause/stop, speed via slider, presets and ±0.5, incline
 - Connecting, language and theme live in small menus in the header: click the connection status, or the settings button at the top right
 - Workouts: a saved list of steps, each ending after a time or after a distance (the treadmill’s own distance counter), with a speed. Editor with examples, library, import/export as text (`5 min 4.0`, `400 m 3.5`), and a week plan (minutes per weekday) that is ticked off from the history. Incline is not part of workouts yet (untested on the target hardware).
+- Routes: import a GPX file (track or route, with or without elevations), keep it in a library, export it again. The route card in the training view shows where on the route you are (“0.9 of 5.2 km”), the elevation and the slope of the next 100 m, with an elevation profile. It follows the treadmill’s own distance counter and only displays: it never changes speed or incline. No map yet.
 - Live values, chart of the last 5 minutes, export as CSV and TCX (Strava, Garmin Connect & co.)
 - History: runs are saved automatically on the device. Totals per week and month, distance per week, days in a row, records, a chart per run, CSV/TCX per run, backup and restore as a JSON file. Saving can be turned off; demo runs are listed but not counted.
 - Log of sent/received bytes and an experiment console for the Control Point
@@ -94,6 +95,7 @@ Without a treadmill: click “Demo (no treadmill)”. The simulator speaks real 
 | `src/ble.ts` | `BleAdapter` interface, `WebBluetoothAdapter`, serial write queue, connection sequence |
 | `src/safety.ts` | Limits, ramp (`SpeedGovernor`), console checks, standstill detection |
 | `src/program.ts` | Workout steps (time or distance): text format and the runner (time steps by timestamps, distance steps by the treadmill’s counter) |
+| `src/routes.ts`, `src/gpx.ts`, `src/route-store.ts`, `src/route-ui.ts` | Routes: validation, route maths and progress tracker, GPX reading (tag scanner, no DTD) and writing, IndexedDB storage, routes view and route card |
 | `src/workouts.ts`, `src/workout-store.ts`, `src/workout-ui.ts`, `src/db.ts` | Saved workouts and week plan: validation, IndexedDB storage (shared database with the runs), workouts view |
 | `src/sim.ts` | Simulated FTMS treadmill (demo mode, tests) |
 | `src/export.ts` | CSV and TCX |

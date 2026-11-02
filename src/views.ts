@@ -1,13 +1,14 @@
-// Views via the URL hash (#history, #workouts). The full controls only belong to the training view; every other view
+// Views via the URL hash (#history, #workouts, #routes). The full controls only belong to the training view; every other view
 // shows a stop bar while a treadmill is connected, so Stop is always in reach. style.css reads the
 // data-view and data-stop attributes on <html>.
 
-export type View = 'training' | 'history' | 'workouts';
-export const VIEWS: readonly View[] = ['training', 'history', 'workouts'];
+export type View = 'training' | 'history' | 'workouts' | 'routes';
+export const VIEWS: readonly View[] = ['training', 'history', 'workouts', 'routes'];
 
 export type StopPlacement = 'controls' | 'bar' | 'none';
 
-export const viewFromHash = (hash: string): View => (hash === '#history' ? 'history' : hash === '#workouts' ? 'workouts' : 'training');
+export const viewFromHash = (hash: string): View =>
+  hash === '#history' ? 'history' : hash === '#workouts' ? 'workouts' : hash === '#routes' ? 'routes' : 'training';
 
 /** Training: the controls (disabled without a connection). Elsewhere: the stop bar while connected. */
 export function stopPlacement(view: View, connected: boolean): StopPlacement {

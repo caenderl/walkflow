@@ -7,7 +7,7 @@ import { onLanguageChange, t } from './i18n';
 import { fmtLength, formatProgram, parseProgram, programLength, type ProgramStep } from './program';
 import { getRunStore } from './run-store';
 import type { RunSummary } from './runs';
-import { $, $button, $input, store } from './ui';
+import { $, $button, $input, button, el, store } from './ui';
 import { getWorkoutStore, type WorkoutStore } from './workout-store';
 import {
   newWorkoutId, planFromMinutes, readWorkout, TEMPLATES, weekProgress, WORKOUT_NAME_MAX, type WeekPlan, type Workout,
@@ -51,20 +51,6 @@ function toStep(row: Row): ProgramStep | null {
 }
 
 const templateSteps = (id: string): ProgramStep[] | undefined => TEMPLATES.find(tpl => tpl.id === id)?.steps;
-
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> = {}, ...children: (Node | string)[]): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  Object.assign(e, props);
-  e.append(...children);
-  return e;
-}
-
-function button(text: string, onClick: () => void, disabled = false): HTMLButtonElement {
-  const b = el('button', { type: 'button', textContent: text });
-  b.onclick = onClick;
-  b.disabled = disabled;
-  return b;
-}
 
 export function setupWorkouts(host: WorkoutsHost) {
   const ready: Promise<WorkoutStore> = getWorkoutStore();

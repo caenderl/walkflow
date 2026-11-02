@@ -5,6 +5,7 @@ describe('views', () => {
   it('view from the URL hash, training for everything unknown', () => {
     expect(viewFromHash('#history')).toBe('history');
     expect(viewFromHash('#workouts')).toBe('workouts');
+    expect(viewFromHash('#routes')).toBe('routes');
     expect(viewFromHash('')).toBe('training');
     expect(viewFromHash('#')).toBe('training');
     expect(viewFromHash('#nonsense')).toBe('training');
@@ -22,6 +23,8 @@ describe('where Stop is shown', () => {
     expect(stopPlacement('history', false)).toBe('none');
     expect(stopPlacement('workouts', true)).toBe('bar');
     expect(stopPlacement('workouts', false)).toBe('none');
+    expect(stopPlacement('routes', true)).toBe('bar');
+    expect(stopPlacement('routes', false)).toBe('none');
   });
 
   it('while connected, every view shows a Stop button', () => {
