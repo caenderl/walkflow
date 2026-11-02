@@ -1,6 +1,6 @@
 // Electron main process. Loads only the locally bundled web app via its own scheme app://walkflow/.
 import { readFile } from 'node:fs/promises';
-import { extname, join, normalize, sep } from 'node:path';
+import { join, normalize, sep } from 'node:path';
 import {
   app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeTheme, powerSaveBlocker, protocol, screen, session, shell,
   type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions,
@@ -8,6 +8,7 @@ import {
 import { detectLanguage, isLang, setLanguage, t } from '../src/i18n';
 import { buildCsp } from '../src/csp';
 import { mapOrigin, resolveMapStyle } from '../src/map-config';
+import { mimeFor } from '../src/mime';
 import { isNewerVersion } from '../src/version';
 
 declare const __GITHUB_REPO__: string;
@@ -27,11 +28,6 @@ const background = () => (nativeTheme.shouldUseDarkColors ? BACKGROUND.dark : BA
 const MAP_STYLE = resolveMapStyle(__MAP_STYLE_RAW__);
 const MAP_ORIGIN = MAP_STYLE ? mapOrigin(MAP_STYLE) : null;
 const CSP = buildCsp({ mapOrigin: MAP_ORIGIN, header: true });
-
-const MIME: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.webmanifest': 'application/manifest+json',
-};
 
 /** Allowed permission requests. Everything else (camera, microphone, location, notifications …) is denied. */
 const ALLOWED_PERMISSIONS = new Set(['screen-wake-lock', 'fullscreen']);
@@ -65,7 +61,7 @@ async function serve(request: Request): Promise<Response> {
   try {
     const body = await readFile(file);
     return new Response(body, {
-      headers: { 'content-type': MIME[extname(file)] ?? 'application/octet-stream', 'content-security-policy': CSP },
+      headers: { 'content-type': mimeFor(file), 'content-security-policy': CSP },
     });
   } catch {
     return new Response('Not found', { status: 404 });
