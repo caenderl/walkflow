@@ -3,27 +3,31 @@
 
 import { t, type Text } from './i18n';
 
-/** A step ends after a time or after the belt has covered a distance. */
+/**
+ * A step ends after a time or after the belt has covered a distance. The incline (percent) is optional and only
+ * stored and shown for now: the runner never sends it, ProgramHost has no way to.
+ */
 export type ProgramStep =
-  | { sec: number; speed: number; meters?: undefined }
-  | { meters: number; speed: number; sec?: undefined };
+  | { sec: number; speed: number; incline?: number; meters?: undefined }
+  | { meters: number; speed: number; incline?: number; sec?: undefined };
 
 const num = (v: string) => parseFloat(v.replace(',', '.'));
 
 /**
- * One step per line: "<amount> [unit] <km/h>", decimal point or comma. Unit min (default), s, m or km.
+ * One step per line: "<amount> [unit] <km/h> [incl <percent>]", decimal point or comma. Unit min (default), s, m or km.
  * Unreadable lines are ignored, and so is a distance step without a speed, which could never end.
  */
 export function parseProgram(text: string): ProgramStep[] {
   const steps: ProgramStep[] = [];
   for (const line of text.split('\n')) {
-    const m = line.trim().match(/^(\d+(?:[.,]\d+)?)\s*(min|km|s|m)?\s+(\d+(?:[.,]\d+)?)/);
+    const m = line.trim().match(/^(\d+(?:[.,]\d+)?)\s*(min|km|s|m)?\s+(\d+(?:[.,]\d+)?)(?:\s+incl\s+(-?\d+(?:[.,]\d+)?))?/);
     if (!m?.[1] || !m[3]) continue;
     const amount = num(m[1]), speed = num(m[3]), unit = m[2] ?? 'min';
+    const incline = m[4] === undefined ? {} : { incline: num(m[4]) };
     if (unit === 'm' || unit === 'km') {
-      if (speed > 0) steps.push({ meters: Math.round(amount * (unit === 'km' ? 1000 : 1)), speed });
+      if (speed > 0) steps.push({ meters: Math.round(amount * (unit === 'km' ? 1000 : 1)), speed, ...incline });
     } else {
-      steps.push({ sec: Math.round(amount * (unit === 's' ? 1 : 60)), speed });
+      steps.push({ sec: Math.round(amount * (unit === 's' ? 1 : 60)), speed, ...incline });
     }
   }
   return steps;
@@ -32,8 +36,9 @@ export function parseProgram(text: string): ProgramStep[] {
 /** Text that parseProgram reads back to the same steps */
 export function formatProgram(steps: readonly ProgramStep[]): string {
   return steps.map(s => {
-    if (s.meters !== undefined) return s.meters >= 1000 ? `${s.meters / 1000} km ${s.speed}` : `${s.meters} m ${s.speed}`;
-    return s.sec % 60 === 0 ? `${s.sec / 60} ${s.speed}` : `${s.sec} s ${s.speed}`;
+    const incl = s.incline === undefined ? '' : ` incl ${s.incline}`;
+    if (s.meters !== undefined) return (s.meters >= 1000 ? `${s.meters / 1000} km ${s.speed}` : `${s.meters} m ${s.speed}`) + incl;
+    return (s.sec % 60 === 0 ? `${s.sec / 60} ${s.speed}` : `${s.sec} s ${s.speed}`) + incl;
   }).join('\n');
 }
 

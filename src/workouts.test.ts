@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { RunSummary } from './runs';
 import {
-  newWorkoutId, planFromMinutes, readPlan, readWorkout, readWorkouts, TEMPLATES, todayGoal, weekProgress, WORKOUT_MAX_STEPS,
+  newWorkoutId, planFromMinutes, readPlan, readWorkout, readWorkouts, TEMPLATES, todayGoal, todaySuggestion, weekProgress, WORKOUT_MAX_STEPS,
+  type PlanSuggestion,
 } from './workouts';
 
 const good = { id: 'w1', name: 'Easy', steps: [{ sec: 120, speed: 2 }, { meters: 400, speed: 3.5 }], updated: 1 };
@@ -33,6 +34,23 @@ describe('readWorkout', () => {
     expect(readWorkout({ ...good, steps: [{ meters: 100_001, speed: 3 }] })).toBeNull();
     expect(readWorkout({ ...good, steps: [{ sec: Infinity, speed: 3 }] })).toBeNull();
     expect(readWorkout({ ...good, updated: 'x' })).toBeNull();
+  });
+});
+
+// The incline of a step is only stored and shown for now. The runner has no way to send it (ProgramHost has no
+// incline call), so a stored value can not move anything.
+describe('step incline', () => {
+  it('is optional, and kept on both kinds of steps', () => {
+    const steps = [{ sec: 120, speed: 2, incline: 1.5 }, { meters: 400, speed: 3.5, incline: 0 }, { sec: 60, speed: 3 }];
+    expect(readWorkout({ ...good, steps })?.steps).toEqual(steps);
+    expect('incline' in readWorkout({ ...good, steps: [{ sec: 60, speed: 3 }] })!.steps[0]!).toBe(false);
+  });
+
+  it('accepts −10 to 40 percent, nothing outside or not a number', () => {
+    for (const ok of [-10, 0, 7.5, 40]) expect(readWorkout({ ...good, steps: [{ sec: 60, speed: 3, incline: ok }] })).not.toBeNull();
+    for (const bad of [-10.1, 40.1, NaN, Infinity, '2', null, [], {}]) {
+      expect(readWorkout({ ...good, steps: [{ sec: 60, speed: 3, incline: bad }] })).toBeNull();
+    }
   });
 });
 
@@ -69,6 +87,48 @@ describe('week plan', () => {
     expect(readPlan({ minutes: [0, 30, 0, 30, 0, 30, 1.5] })).toBeNull();
     expect(readPlan({ minutes: [0, 30, 0, 30, 0, 30, -1] })).toBeNull();
     expect(readPlan(null)).toBeNull();
+  });
+
+  describe('suggestions per day', () => {
+    const minutes = [30, 0, 30, 0, 30, 0, 0];
+    const suggest: (PlanSuggestion | null)[] = [{ kind: 'workout', id: 'w1' }, null, { kind: 'route', id: 'r1' }, null, null, null, null];
+
+    it('are optional and kept next to the minutes', () => {
+      expect(readPlan({ minutes, suggest })).toEqual({ minutes, suggest });
+      expect(readPlan({ minutes })).toEqual({ minutes });
+    });
+
+    it('keeps only the known fields', () => {
+      const r = readPlan({ minutes, suggest: [{ kind: 'route', id: 'r1', extra: 1 }, null, null, null, null, null, null] });
+      expect(r?.suggest?.[0]).toEqual({ kind: 'route', id: 'r1' });
+    });
+
+    it('are all dropped when none is set', () => {
+      expect(readPlan({ minutes, suggest: [null, null, null, null, null, null, null] })).toEqual({ minutes });
+    });
+
+    it('damaged suggestions cost the suggestions, not the plan', () => {
+      for (const bad of [
+        'x', [], [null], Array(8).fill(null), [{ kind: 'other', id: 'a' }, ...Array(6).fill(null)],
+        [{ kind: 'route', id: '' }, ...Array(6).fill(null)], [{ kind: 'route', id: 'x'.repeat(65) }, ...Array(6).fill(null)],
+        [{ kind: 'route', id: 5 }, ...Array(6).fill(null)], [5, ...Array(6).fill(null)],
+      ]) expect(readPlan({ minutes, suggest: bad })).toEqual({ minutes });
+    });
+
+    it('planFromMinutes keeps them when it is given the suggestions', () => {
+      expect(planFromMinutes([10, 0, 0, 0, 0, 0, 0], suggest)).toEqual({ minutes: [10, 0, 0, 0, 0, 0, 0], suggest });
+      expect(planFromMinutes([10, 0, 0, 0, 0, 0, 0])).toEqual({ minutes: [10, 0, 0, 0, 0, 0, 0] });
+    });
+
+    it('todaySuggestion is the one of the weekday of `now`, Monday first', () => {
+      const plan = { minutes, suggest };
+      const day = (d: number) => new Date(2026, 9, d, 12).getTime(); // 26 Oct 2026 is a Monday
+      expect(todaySuggestion(plan, day(26))).toEqual({ kind: 'workout', id: 'w1' });
+      expect(todaySuggestion(plan, day(27))).toBeNull();
+      expect(todaySuggestion(plan, day(28))).toEqual({ kind: 'route', id: 'r1' });
+      expect(todaySuggestion(plan, day(32))).toBeNull(); // Sunday
+      expect(todaySuggestion({ minutes }, day(26))).toBeNull();
+    });
   });
 
   it('planFromMinutes clamps and rounds what comes from input fields', () => {

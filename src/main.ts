@@ -68,7 +68,7 @@ const history = setupHistory({
   onRestored: () => { void workouts.reload(); void routes.reload(); },
 });
 const recorder = history.recorder;
-const workouts = setupWorkouts({ maxSpeed: () => effectiveMax() });
+const workouts = setupWorkouts({ maxSpeed: () => effectiveMax(), useRoute: id => routes.use(id) });
 const routes = setupRoutes({
   maxSpeed: () => effectiveMax(),
   walk: (route, steps, kmh) => runRoute(route, steps, kmh),
@@ -730,7 +730,7 @@ setupViews(v => {
   workouts.setVisible(v === 'workouts');
   routes.setVisible(v === 'routes');
   // The plan or the runs may have changed in another view
-  if (v === 'training') void routes.refreshGoal();
+  if (v === 'training') { void routes.refreshGoal(); void workouts.reload(); }
 });
 loadSettings();
 renderInfo();

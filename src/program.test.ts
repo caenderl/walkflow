@@ -2,6 +2,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setLanguage } from './i18n';
 import { fmtLength, fmtTime, formatProgram, parseProgram, programLength, ProgramRunner, totalSeconds, type ProgramHost } from './program';
 
+describe('incline in the text format', () => {
+  it('reads "incl <percent>" after the speed', () => {
+    expect(parseProgram('5 4 incl 2\n400 m 3.5 incl 1,5\n1 3 incl -1')).toEqual([
+      { sec: 300, speed: 4, incline: 2 }, { meters: 400, speed: 3.5, incline: 1.5 }, { sec: 60, speed: 3, incline: -1 },
+    ]);
+  });
+
+  it('leaves it out when it is not there or not a number', () => {
+    expect(parseProgram('5 4 incl\n5 4 incl x')).toEqual([{ sec: 300, speed: 4 }, { sec: 300, speed: 4 }]);
+  });
+
+  it('formatProgram writes it, and the text parses back to the same steps', () => {
+    const steps = [{ sec: 300, speed: 4, incline: 2 }, { meters: 400, speed: 3.5, incline: 0 }, { sec: 20, speed: 3 }];
+    expect(formatProgram(steps)).toBe('5 4 incl 2\n400 m 3.5 incl 0\n20 s 3');
+    expect(parseProgram(formatProgram(steps))).toEqual(steps);
+  });
+});
+
 describe('parseProgram', () => {
   it('reads "minutes km/h" lines', () => {
     expect(parseProgram('2 2.0\n3 3.5\n1 5')).toEqual([

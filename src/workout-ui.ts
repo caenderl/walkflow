@@ -5,12 +5,15 @@
 import { confirmDialog } from './dialogs';
 import { onLanguageChange, t } from './i18n';
 import { fmtLength, formatProgram, parseProgram, programLength, type ProgramStep } from './program';
+import { getRouteStore } from './route-store';
+import type { Route } from './routes';
 import { getRunStore } from './run-store';
 import type { RunSummary } from './runs';
 import { $, $button, $input, button, el, store } from './ui';
 import { getWorkoutStore, type WorkoutStore } from './workout-store';
 import {
-  newWorkoutId, planFromMinutes, readWorkout, TEMPLATES, weekProgress, WORKOUT_NAME_MAX, type WeekPlan, type Workout,
+  newWorkoutId, planFromMinutes, readWorkout, TEMPLATES, todaySuggestion, weekProgress, WORKOUT_NAME_MAX,
+  type PlanSuggestion, type WeekPlan, type Workout,
 } from './workouts';
 
 export const SELECTED_STORAGE_KEY = 'walkflow.workout';
@@ -20,6 +23,8 @@ const DEFAULT_SELECTED = `${TEMPLATE_PREFIX}intervals`;
 export interface WorkoutsHost {
   /** Effective speed limit in km/h, for the "runs at the limit" note */
   maxSpeed(): number;
+  /** Today's suggestion is a route: select it in the route card */
+  useRoute(id: string): void;
 }
 
 type Unit = 'min' | 's' | 'm';
@@ -29,6 +34,8 @@ interface Row {
   unit: Unit;
   amount: number;
   speed: number;
+  /** Percent; undefined = none */
+  incline?: number;
 }
 
 interface Draft {
@@ -39,15 +46,19 @@ interface Draft {
 }
 
 function toRow(step: ProgramStep): Row {
-  if (step.meters !== undefined) return { unit: 'm', amount: step.meters, speed: step.speed };
-  return step.sec % 60 === 0 ? { unit: 'min', amount: step.sec / 60, speed: step.speed } : { unit: 's', amount: step.sec, speed: step.speed };
+  const incline = step.incline === undefined ? {} : { incline: step.incline };
+  if (step.meters !== undefined) return { unit: 'm', amount: step.meters, speed: step.speed, ...incline };
+  return step.sec % 60 === 0
+    ? { unit: 'min', amount: step.sec / 60, speed: step.speed, ...incline }
+    : { unit: 's', amount: step.sec, speed: step.speed, ...incline };
 }
 
 /** null = the numbers are not usable */
 function toStep(row: Row): ProgramStep | null {
   if (!Number.isFinite(row.amount) || !Number.isFinite(row.speed) || row.amount < 0) return null;
-  if (row.unit === 'm') return { meters: Math.round(row.amount), speed: row.speed };
-  return { sec: Math.round(row.amount * (row.unit === 'min' ? 60 : 1)), speed: row.speed };
+  const incline = row.incline !== undefined && Number.isFinite(row.incline) ? { incline: row.incline } : {};
+  if (row.unit === 'm') return { meters: Math.round(row.amount), speed: row.speed, ...incline };
+  return { sec: Math.round(row.amount * (row.unit === 'min' ? 60 : 1)), speed: row.speed, ...incline };
 }
 
 const templateSteps = (id: string): ProgramStep[] | undefined => TEMPLATES.find(tpl => tpl.id === id)?.steps;
@@ -56,6 +67,7 @@ export function setupWorkouts(host: WorkoutsHost) {
   const ready: Promise<WorkoutStore> = getWorkoutStore();
   let visible = false;
   let workouts: Workout[] = [];
+  let routes: Route[] = [];
   let plan: WeekPlan = { minutes: [0, 0, 0, 0, 0, 0, 0] };
   let runs: RunSummary[] = [];
   let selected = store.get(SELECTED_STORAGE_KEY) ?? DEFAULT_SELECTED;
@@ -185,8 +197,8 @@ export function setupWorkouts(host: WorkoutsHost) {
   }
 
   function stepRow(d: Draft, row: Row, i: number) {
-    const num = (value: number, step: string, label: string, onInput: (v: number) => void, placeholder = '') => {
-      const input = el('input', { type: 'number', min: '0', step, placeholder, value: Number.isFinite(value) ? String(value) : '' });
+    const num = (value: number, step: string, label: string, onInput: (v: number) => void, placeholder = '', min = '0') => {
+      const input = el('input', { type: 'number', min, step, placeholder, value: Number.isFinite(value) ? String(value) : '' });
       input.setAttribute('aria-label', `${t.workouts.step(i + 1)}: ${label}`);
       input.setAttribute('inputmode', 'decimal');
       input.oninput = () => { onInput(input.valueAsNumber); renderTotals(); };
@@ -211,11 +223,15 @@ export function setupWorkouts(host: WorkoutsHost) {
       b.title = label;
       return b;
     };
+    const incline = num(row.incline ?? NaN, '0.1', t.workouts.incline, v => { row.incline = Number.isFinite(v) ? v : undefined; }, t.workouts.inclShort, '-10');
+    incline.max = '40';
+    incline.classList.add('wk-incl');
     return el('li', { className: 'wk-step' },
       el('span', { className: 'wk-n', textContent: String(i + 1) }),
       num(row.amount, 'any', t.workouts.amount, v => { row.amount = v; }),
       unit,
       num(row.speed, '0.1', t.workouts.speed, v => { row.speed = v; }, 'km/h'),
+      incline,
       el('span', { className: 'wk-move' },
         icon('↑', t.workouts.up, () => move(-1), i === 0),
         icon('↓', t.workouts.down, () => move(1), i === d.rows.length - 1),
@@ -249,6 +265,57 @@ export function setupWorkouts(host: WorkoutsHost) {
   }
 
   // ---------- Week plan ----------
+  const encode = (s: PlanSuggestion) => `${s.kind}:${s.id}`;
+  function decode(value: string): PlanSuggestion | null {
+    const i = value.indexOf(':');
+    const kind = value.slice(0, i), id = value.slice(i + 1);
+    return i > 0 && id && (kind === 'workout' || kind === 'route') ? { kind, id } : null;
+  }
+
+  /** What a suggestion points to, undefined when it has been deleted */
+  function suggestionName(s: PlanSuggestion): string | undefined {
+    if (s.kind === 'route') return routes.find(r => r.id === s.id)?.name;
+    if (s.id.startsWith(TEMPLATE_PREFIX)) return templateSteps(s.id.slice(TEMPLATE_PREFIX.length)) ? exampleName(s.id.slice(TEMPLATE_PREFIX.length)) : undefined;
+    return workouts.find(w => w.id === s.id)?.name;
+  }
+
+  function suggestSelect(day: string, current: PlanSuggestion | null) {
+    const sel = el('select', { className: 'plan-suggest' });
+    sel.setAttribute('aria-label', t.workouts.suggestFor(day));
+    const group = (label: string, items: [string, string][]) => {
+      const g = el('optgroup', { label });
+      g.append(...items.map(([value, text]) => el('option', { value, textContent: text })));
+      return g;
+    };
+    const known: PlanSuggestion[] = [
+      ...workouts.map((w): PlanSuggestion => ({ kind: 'workout', id: w.id })),
+      ...TEMPLATES.map((tpl): PlanSuggestion => ({ kind: 'workout', id: TEMPLATE_PREFIX + tpl.id })),
+      ...routes.map((r): PlanSuggestion => ({ kind: 'route', id: r.id })),
+    ];
+    sel.append(el('option', { value: '', textContent: t.workouts.suggestNone }));
+    if (workouts.length) sel.append(group(t.program.mine, workouts.map(w => [encode({ kind: 'workout', id: w.id }), w.name])));
+    sel.append(group(t.program.examples, TEMPLATES.map(tpl => [encode({ kind: 'workout', id: TEMPLATE_PREFIX + tpl.id }), exampleName(tpl.id)])));
+    if (routes.length) sel.append(group(t.routes.mineTitle, routes.map(r => [encode({ kind: 'route', id: r.id }), r.name])));
+    // A target that is gone keeps its place, so changing another day does not silently drop it
+    if (current && !known.some(k => encode(k) === encode(current))) {
+      sel.append(el('option', { value: encode(current), textContent: t.workouts.suggestMissing }));
+    }
+    sel.value = current ? encode(current) : '';
+    sel.onchange = () => void savePlan();
+    return sel;
+  }
+
+  function renderToday() {
+    const sug = todaySuggestion(plan, Date.now());
+    const name = sug && suggestionName(sug);
+    $('todayPlan').hidden = !sug || !name;
+    if (!sug || !name) return;
+    $('todayPlanText').textContent = t.workouts.todaySuggest(sug.kind === 'route' ? t.history.tagRoute : t.history.tagWorkout, name);
+    const use = $button('todayPlanUse');
+    use.textContent = t.workouts.use;
+    use.onclick = () => { if (sug.kind === 'route') host.useRoute(sug.id); else select(sug.id); };
+  }
+
   function renderPlan() {
     const progress = weekProgress(plan, runs, Date.now());
     $('planList').replaceChildren(...progress.map((p, i) => {
@@ -265,6 +332,7 @@ export function setupWorkouts(host: WorkoutsHost) {
         input,
         el('span', { className: 'plan-progress', textContent: p.target ? t.workouts.progress(done, p.target) : t.workouts.progressRest(done) }),
         el('span', { className: 'plan-mark', textContent: p.met ? '✓' : '' }, ...(p.met ? [el('span', { className: 'sr-only', textContent: t.workouts.metLabel })] : [])),
+        suggestSelect(day, plan.suggest?.[i] ?? null),
       );
     }));
     const planned = progress.filter(p => p.target > 0);
@@ -272,7 +340,10 @@ export function setupWorkouts(host: WorkoutsHost) {
   }
 
   async function savePlan() {
-    plan = planFromMinutes([...$('planList').querySelectorAll('input')].map(i => i.valueAsNumber));
+    plan = planFromMinutes(
+      [...$('planList').querySelectorAll('input')].map(i => i.valueAsNumber),
+      [...$('planList').querySelectorAll<HTMLSelectElement>('select.plan-suggest')].map(s => decode(s.value)),
+    );
     try { await (await ready).setPlan(plan); } catch (e) { $('planSummary').textContent = t.workouts.failed(String(e)); return; }
     renderPlan();
   }
@@ -284,6 +355,7 @@ export function setupWorkouts(host: WorkoutsHost) {
     workouts = await s.list();
     plan = (await s.plan()) ?? plan;
     runs = await (await getRunStore()).list().catch(() => []);
+    routes = await (await getRouteStore()).list().catch(() => []);
     renderAll();
   }
 
@@ -292,6 +364,7 @@ export function setupWorkouts(host: WorkoutsHost) {
     renderLists();
     renderEditor();
     renderPlan();
+    renderToday();
   }
 
   // ---------- Events ----------

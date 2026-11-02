@@ -140,6 +140,10 @@
       <div class="more">
         <section class="card grid">
           <h2 data-i18n="program.title">Workout</h2>
+          <div class="today-plan" id="todayPlan" hidden>
+            <span class="hint" id="todayPlanText"></span>
+            <button id="todayPlanUse" type="button"></button>
+          </div>
           <label class="hint field"><span data-i18n="program.choose">Workout</span>
             <select id="progSelect"></select>
           </label>
@@ -306,6 +310,7 @@
         </div>
         <div class="row"><button id="wkAdd" type="button" data-i18n="workouts.addStep">Add step</button></div>
         <p class="hint" id="wkTotal"></p>
+        <p class="hint" data-i18n="workouts.inclHint">The incline is optional and not sent to the treadmill yet.</p>
         <details>
           <summary data-i18n="workouts.textTitle">As text</summary>
           <div class="grid">

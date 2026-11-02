@@ -17,6 +17,7 @@ export interface WorkoutStore {
 }
 
 const byName = (a: Workout, b: Workout) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) || a.id.localeCompare(b.id);
+const copyPlan = (p: WeekPlan): WeekPlan => ({ minutes: [...p.minutes], ...(p.suggest ? { suggest: p.suggest.map(s => s && { ...s }) } : {}) });
 const copy = (w: Workout): Workout => ({ ...w, steps: w.steps.map(s => ({ ...s })) });
 
 export class MemoryWorkoutStore implements WorkoutStore {
@@ -27,8 +28,8 @@ export class MemoryWorkoutStore implements WorkoutStore {
   async list() { return [...this.workouts.values()].map(copy).sort(byName); }
   async put(w: Workout) { this.workouts.set(w.id, copy(w)); }
   async delete(id: string) { this.workouts.delete(id); }
-  async plan() { return this.weekPlan && { minutes: [...this.weekPlan.minutes] }; }
-  async setPlan(p: WeekPlan) { this.weekPlan = { minutes: [...p.minutes] }; }
+  async plan() { return this.weekPlan && copyPlan(this.weekPlan); }
+  async setPlan(p: WeekPlan) { this.weekPlan = copyPlan(p); }
 }
 
 const PLAN_KEY = 'plan';

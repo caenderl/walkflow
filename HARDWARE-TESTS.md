@@ -51,6 +51,7 @@ Time steps work as before. A distance step ends when the treadmill’s own dista
 - [ ] Mixed workout: a time step, then a distance step, then a time step. Does the second time step really last its full time after the distance step ended?
 - [ ] Press Stop (button, Space or Esc) during a distance step: belt stops and the program ends, nothing restarts it.
 - [ ] Reconnect case: does the treadmill reset its distance counter when you start the belt, or only after a stop? (The app handles both: a counter that jumps back adds nothing for that update.)
+- [ ] Incline per step is stored and shown only. Run a workout whose steps have an incline (`5 min 3 incl 4`): the log must show speed commands only, no `Set Inclination`, and the treadmill’s incline must stay where it was.
 
 ## Routes
 

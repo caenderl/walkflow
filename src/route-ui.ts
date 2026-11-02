@@ -321,6 +321,8 @@ export function setupRoutes(host: RoutesHost) {
 
   return {
     update,
+    /** Choose a route from outside (the plan's suggestion); the one that is already selected keeps its progress */
+    use(id: string) { if (id !== selectedId) select(id); },
     /** A walk starts: the route begins at its start, wherever the counter is now */
     restart() { tracker.reset(); renderProgress(); },
     /** A run was saved: today's goal may have moved */

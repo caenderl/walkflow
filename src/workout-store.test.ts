@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryWorkoutStore } from './workout-store';
+import type { WeekPlan } from './workouts';
 
 const w = (id: string, name: string, updated: number) => ({ id, name, steps: [{ sec: 60, speed: 3 }], updated });
 
@@ -20,6 +21,16 @@ describe('MemoryWorkoutStore (fallback without IndexedDB)', () => {
     expect(await store.plan()).toBeNull();
     await store.setPlan({ minutes: [30, 0, 0, 0, 0, 0, 0] });
     expect(await store.plan()).toEqual({ minutes: [30, 0, 0, 0, 0, 0, 0] });
+  });
+
+  it('keeps the suggestions of the plan, as a copy', async () => {
+    const store = new MemoryWorkoutStore();
+    const plan: WeekPlan = { minutes: [30, 0, 0, 0, 0, 0, 0], suggest: [{ kind: 'route', id: 'r1' }, null, null, null, null, null, null] };
+    await store.setPlan(plan);
+    const read = (await store.plan())!;
+    expect(read).toEqual(plan);
+    read.suggest![0] = null;
+    expect((await store.plan())!.suggest![0]).toEqual({ kind: 'route', id: 'r1' });
   });
 
   it('returns copies, so edits in the UI do not change what is stored before saving', async () => {

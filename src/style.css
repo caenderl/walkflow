@@ -272,7 +272,7 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
 .wk-item { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; padding:12px 14px; border:1px solid var(--card-border); border-radius:12px; background:var(--input-bg); }
 .wk-name { font-weight:600; overflow-wrap:anywhere; }
 .wk-actions { display:flex; flex-wrap:wrap; gap:6px; }
-.wk-step { display:grid; grid-template-columns:1.6rem minmax(0, 1fr) 4.5rem minmax(0, 1fr) auto; gap:8px; align-items:center; }
+.wk-step { display:grid; grid-template-columns:1.6rem minmax(0, 1fr) 4.5rem minmax(0, 1fr) minmax(0, 5.5rem) auto; gap:8px; align-items:center; }
 .wk-n { color:var(--mute); font-variant-numeric:tabular-nums; text-align:center; }
 .wk-move { display:flex; gap:4px; }
 .wk-move button { padding:6px 10px; min-width:36px; }
@@ -281,6 +281,8 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
 .plan-day.today { border-color:var(--card-border); background:var(--input-bg); }
 .plan-day.met .plan-progress { font-weight:600; }
 .plan-name { overflow-wrap:anywhere; }
+.plan-suggest { grid-column:1 / -1; width:100%; min-width:0; }
+.today-plan { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; }
 .plan-progress { color:var(--mute); font-size:.9rem; font-variant-numeric:tabular-nums; text-align:right; }
 .plan-mark { font-weight:700; }
 .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
@@ -288,7 +290,8 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
 /* Editor step rows on narrow screens: amount, unit and speed on one line, the move/remove buttons below */
 @media (max-width: 719px) {
   .wk-step { grid-template-columns:1.6rem minmax(0, 1fr) 4.5rem minmax(0, 1fr); }
-  .wk-move { grid-column:2 / -1; justify-content:flex-end; }
+  .wk-incl { grid-column:2; }
+  .wk-move { grid-column:3 / -1; justify-content:flex-end; }
 }
 
 /* Routes */

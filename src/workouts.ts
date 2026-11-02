@@ -20,17 +20,22 @@ export const WORKOUT_NAME_MAX = 60;
 const MAX_SPEED = 30;
 const MAX_STEP_SEC = 86_400;
 const MAX_STEP_METERS = 100_000;
+/** Percent. Only bounds what is stored: nothing sends it to the treadmill. */
+const INCLINE_MIN = -10;
+const INCLINE_MAX = 40;
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isInt = (v: unknown, min: number, max: number): v is number => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
 
 function readStep(v: unknown): ProgramStep | null {
   if (!isObject(v)) return null;
-  const { sec, meters, speed } = v;
+  const { sec, meters, speed, incline } = v;
   if (typeof speed !== 'number' || !Number.isFinite(speed) || speed < 0 || speed > MAX_SPEED) return null;
-  if (sec !== undefined && meters === undefined) return isInt(sec, 0, MAX_STEP_SEC) ? { sec, speed } : null;
+  if (incline !== undefined && !(typeof incline === 'number' && incline >= INCLINE_MIN && incline <= INCLINE_MAX)) return null;
+  const extra = incline === undefined ? {} : { incline };
+  if (sec !== undefined && meters === undefined) return isInt(sec, 0, MAX_STEP_SEC) ? { sec, speed, ...extra } : null;
   // A distance step without a speed could never end
-  if (meters !== undefined && sec === undefined) return isInt(meters, 0, MAX_STEP_METERS) && speed > 0 ? { meters, speed } : null;
+  if (meters !== undefined && sec === undefined) return isInt(meters, 0, MAX_STEP_METERS) && speed > 0 ? { meters, speed, ...extra } : null;
   return null;
 }
 
@@ -89,27 +94,58 @@ export const TEMPLATES: readonly Template[] = [
 
 // ---------- Weekly plan ----------
 
-/** Target minutes of moving time per weekday, Monday first. 0 = no target (rest day). */
+/** A workout or route that is proposed for a day. Only a pointer: the target is looked up when it is shown. */
+export interface PlanSuggestion {
+  kind: 'workout' | 'route';
+  id: string;
+}
+
+/**
+ * Target minutes of moving time per weekday, Monday first. 0 = no target (rest day). A day may also point to a
+ * workout or route as a suggestion; whether the day is done is still decided by the minutes alone.
+ */
 export interface WeekPlan {
   minutes: number[];
+  suggest?: (PlanSuggestion | null)[];
 }
 
 export const PLAN_MAX_MINUTES = 600;
 
+function readSuggest(v: unknown): (PlanSuggestion | null)[] | undefined {
+  if (!Array.isArray(v) || v.length !== 7) return undefined;
+  const out: (PlanSuggestion | null)[] = [];
+  for (const s of v as unknown[]) {
+    if (s === null) { out.push(null); continue; }
+    if (!isObject(s) || (s.kind !== 'workout' && s.kind !== 'route')) return undefined;
+    if (typeof s.id !== 'string' || !s.id || s.id.length > 64) return undefined;
+    out.push({ kind: s.kind, id: s.id });
+  }
+  return out.some(s => s !== null) ? out : undefined;
+}
+
 export function readPlan(v: unknown): WeekPlan | null {
   if (!isObject(v) || !Array.isArray(v.minutes) || v.minutes.length !== 7) return null;
   if (!v.minutes.every(m => isInt(m, 0, PLAN_MAX_MINUTES))) return null;
-  return { minutes: v.minutes as number[] };
+  // Damaged suggestions cost the suggestions, not the plan
+  const suggest = readSuggest(v.suggest);
+  return { minutes: v.minutes as number[], ...(suggest ? { suggest } : {}) };
 }
 
 /** From input fields: whatever was typed ends up as a whole number in range */
-export function planFromMinutes(values: readonly number[]): WeekPlan {
+export function planFromMinutes(values: readonly number[], suggest?: WeekPlan['suggest']): WeekPlan {
+  const kept = readSuggest(suggest);
   return {
     minutes: Array.from({ length: 7 }, (_, i) => {
       const v = values[i] ?? 0;
       return Number.isFinite(v) ? Math.min(PLAN_MAX_MINUTES, Math.max(0, Math.round(v))) : 0;
     }),
+    ...(kept ? { suggest: kept } : {}),
   };
+}
+
+/** What the plan proposes for the weekday of `now` (Monday first), if anything */
+export function todaySuggestion(plan: WeekPlan, now: number): PlanSuggestion | null {
+  return plan.suggest?.[(new Date(now).getDay() + 6) % 7] ?? null;
 }
 
 export interface DayProgress {
