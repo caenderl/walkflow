@@ -5,6 +5,7 @@ import { Map as MapLibreMap, Marker, NavigationControl, setWorkerUrl } from 'map
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { routeBounds, routeLine } from './map-geo';
+import { applyTint, mapTint } from './map-tint';
 import type { Route } from './routes';
 
 export interface RouteMap {
@@ -17,6 +18,10 @@ export interface RouteMap {
 
 export interface RouteMapOptions {
   style: string;
+  /** The style is a dark one: the route is drawn in a light colour then */
+  dark: boolean;
+  /** Give the style's main layers more colour (only for the built-in styles, see src/map-tint.ts) */
+  tint: boolean;
   /** Texts of the map's own controls and gesture hints */
   locale: Record<string, string>;
   /** The style, a tile or the WebGL context failed to load */
@@ -24,8 +29,8 @@ export interface RouteMapOptions {
 }
 
 const SOURCE = 'route';
-const LINE_COLOR = '#15803d';
-const CASING_COLOR = '#ffffff';
+/** Route line and the edge around it, for a light and for a dark map */
+const COLORS = { light: { line: '#15803d', casing: '#ffffff' }, dark: { line: '#4ade80', casing: '#0b1f12' } } as const;
 const FIT_PADDING = 28;
 
 export function createRouteMap(box: HTMLElement, opts: RouteMapOptions): RouteMap {
@@ -49,6 +54,9 @@ export function createRouteMap(box: HTMLElement, opts: RouteMapOptions): RouteMa
 
   let loaded = false;
   let pending: Route | null = null;
+  /** The route on show, and whether the person has moved or zoomed the map since it was fitted */
+  let shown: Route | null = null;
+  let touched = false;
   let marker: Marker | null = null;
 
   function draw(route: Route) {
@@ -59,14 +67,26 @@ export function createRouteMap(box: HTMLElement, opts: RouteMapOptions): RouteMa
     } else {
       map.addSource(SOURCE, { type: 'geojson', data: data as never });
       const layout = { 'line-join': 'round', 'line-cap': 'round' } as const;
-      map.addLayer({ id: 'route-casing', type: 'line', source: SOURCE, layout, paint: { 'line-color': CASING_COLOR, 'line-width': 8, 'line-opacity': 0.9 } });
-      map.addLayer({ id: 'route-line', type: 'line', source: SOURCE, layout, paint: { 'line-color': LINE_COLOR, 'line-width': 4 } });
+      map.addLayer({ id: 'route-casing', type: 'line', source: SOURCE, layout, paint: { 'line-color': COLORS[opts.dark ? 'dark' : 'light'].casing, 'line-width': 8, 'line-opacity': 0.9 } });
+      map.addLayer({ id: 'route-line', type: 'line', source: SOURCE, layout, paint: { 'line-color': COLORS[opts.dark ? 'dark' : 'light'].line, 'line-width': 4 } });
     }
+    fit(route);
+    shown = route;
+    touched = false;
+  }
+
+  function fit(route: Route) {
     map.fitBounds(routeBounds(route.points), { padding: FIT_PADDING, animate: false, maxZoom: 18 });
   }
 
+  // The map's size changes (window, phone turned): fit the route again, unless the person has set the view themselves
+  map.on('dragstart', () => { touched = true; });
+  map.on('zoomstart', e => { if ((e as { originalEvent?: unknown }).originalEvent) touched = true; });
+  map.on('resize', () => { if (loaded && shown && !touched) fit(shown); });
+
   map.on('load', () => {
     loaded = true;
+    if (opts.tint) applyTint({ getLayer: id => map.getLayer(id), setPaintProperty: (id, p, v) => map.setPaintProperty(id, p as never, v as never), addLayer: (l, before) => map.addLayer(l as never, before) }, mapTint(opts.dark));
     if (pending) { draw(pending); pending = null; }
   });
 

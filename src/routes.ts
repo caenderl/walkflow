@@ -2,6 +2,7 @@
 // A route only shows progress: it follows the treadmill's own distance counter and never writes to the treadmill,
 // neither speed nor incline. What comes from a file or a backup is checked point by point (readRoute).
 
+import { isCountryCode } from './country';
 import type { ProgramStep } from './program';
 import { newWorkoutId } from './workouts';
 
@@ -18,7 +19,23 @@ export interface Route {
   points: RoutePoint[];
   /** Unix ms of the last change */
   updated: number;
+  /** Country of the start (ISO 3166-1 alpha-2). '' = looked up, none found; missing = not looked up yet. */
+  country?: string;
+  /** Walking speed in km/h that goes with this route; the duration follows from it. Missing = DEFAULT_WALK_SPEED. */
+  defaultSpeed?: number;
+  /** Optional text about the route, plain text, in whatever language the person wrote it in */
+  description?: string;
+  /** Key of the example route this is (src/route-examples.ts). While it has no description of its own, the example's text is shown in the language of the app. */
+  example?: string;
 }
+
+export const ROUTE_SPEED_MIN = 0.5;
+export const ROUTE_SPEED_MAX = 20;
+export const DEFAULT_WALK_SPEED = 3;
+export const ROUTE_DESCRIPTION_MAX = 1000;
+
+/** The walking speed of a route in km/h */
+export const routeSpeed = (r: Route): number => r.defaultSpeed ?? DEFAULT_WALK_SPEED;
 
 export const ROUTE_MAX_POINTS = 5000;
 export const ROUTE_NAME_MAX = 80;
@@ -153,6 +170,15 @@ export function readRoute(v: unknown): Route | null {
   }
   if (withEle !== 0 && withEle !== out.length) return null;
   const route: Route = { id, name: trimmed, points: out, updated };
+  // A damaged country is dropped, not a reason to lose the route: it is looked up again
+  if (v.country === '' || isCountryCode(v.country)) route.country = v.country;
+  if (typeof v.defaultSpeed === 'number' && Number.isFinite(v.defaultSpeed) && v.defaultSpeed >= ROUTE_SPEED_MIN && v.defaultSpeed <= ROUTE_SPEED_MAX) route.defaultSpeed = v.defaultSpeed;
+  if (typeof v.description === 'string') {
+    // Plain text: control characters out (a line break stays), cut to length
+    const text = v.description.replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, '').trim().slice(0, ROUTE_DESCRIPTION_MAX).trim();
+    if (text) route.description = text;
+  }
+  if (typeof v.example === 'string' && /^[a-z0-9-]{1,40}$/.test(v.example)) route.example = v.example;
   return analyzeRoute(route).total >= ROUTE_MIN_METERS ? route : null;
 }
 

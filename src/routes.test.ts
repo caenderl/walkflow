@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  analyzeRoute, DistanceTracker, distanceBetween, elevationSeries, gradeAhead, newRouteId, pointAt, readRoute, readRoutes,
-  ROUTE_MAX_POINTS, walkSeconds, walkSteps, type Route, type RoutePoint,
-} from './routes';
+import { analyzeRoute, DistanceTracker, distanceBetween, elevationSeries, gradeAhead, newRouteId, pointAt, readRoute, readRoutes, ROUTE_MAX_POINTS, walkSeconds, walkSteps, type Route, type RoutePoint, DEFAULT_WALK_SPEED, ROUTE_DESCRIPTION_MAX, routeSpeed } from './routes';
 
 /** 0.001° of longitude at the equator, in metres */
 const MILLI_DEG = 111.195;
@@ -138,6 +135,56 @@ describe('readRoute', () => {
 
   it('accepts a valid route and keeps only the known fields', () => {
     expect(readRoute({ ...good, extra: 1, points: good.points.map(p => ({ ...p, junk: 1 })) })).toEqual(good);
+  });
+
+  it('keeps a valid country, and the empty one that means "looked up, none found"', () => {
+    expect(readRoute({ ...good, country: 'DE' })?.country).toBe('DE');
+    expect(readRoute({ ...good, country: '' })?.country).toBe('');
+    expect('country' in readRoute(good)!).toBe(false);
+  });
+
+  it('drops a damaged country instead of rejecting the route', () => {
+    for (const bad of ['de', 'DEU', 5, null, {}, 'D!']) {
+      const r = readRoute({ ...good, country: bad });
+      expect(r, String(bad)).not.toBeNull();
+      expect('country' in r!, String(bad)).toBe(false);
+    }
+  });
+
+  it('keeps a usable default speed and drops anything else, without losing the route', () => {
+    expect(readRoute({ ...good, defaultSpeed: 3.5 })?.defaultSpeed).toBe(3.5);
+    expect(readRoute({ ...good, defaultSpeed: 0.5 })?.defaultSpeed).toBe(0.5);
+    expect(readRoute({ ...good, defaultSpeed: 20 })?.defaultSpeed).toBe(20);
+    for (const bad of [0, -1, 0.4, 20.1, 99, NaN, Infinity, '3', null, {}]) {
+      const r = readRoute({ ...good, defaultSpeed: bad });
+      expect(r, String(bad)).not.toBeNull();
+      expect('defaultSpeed' in r!, String(bad)).toBe(false);
+    }
+  });
+
+  it('keeps a description as plain trimmed text', () => {
+    expect(readRoute({ ...good, description: '  Flach, am Wasser.\nMit Aussicht.  ' })?.description).toBe('Flach, am Wasser.\nMit Aussicht.');
+    expect(readRoute({ ...good, description: 'a\u0000b\u0007c' })?.description).toBe('abc');
+  });
+
+  it('keeps the key of an example, and drops anything that is not one', () => {
+    expect(readRoute({ ...good, example: 'central-park-reservoir' })?.example).toBe('central-park-reservoir');
+    for (const bad of [5, '', 'Has Space', 'x'.repeat(60), null, {}]) {
+      expect('example' in readRoute({ ...good, example: bad })!, String(bad)).toBe(false);
+    }
+  });
+
+  it('leaves an empty or unusable description out', () => {
+    for (const bad of ['', '   ', '\n\n', 5, null, {}, ['x']]) {
+      const r = readRoute({ ...good, description: bad });
+      expect(r, String(bad)).not.toBeNull();
+      expect('description' in r!, String(bad)).toBe(false);
+    }
+  });
+
+  it('cuts a very long description instead of refusing the route', () => {
+    const r = readRoute({ ...good, description: 'x'.repeat(ROUTE_DESCRIPTION_MAX + 50) });
+    expect(r?.description).toHaveLength(ROUTE_DESCRIPTION_MAX);
   });
 
   it('accepts a route without elevations', () => {
@@ -286,5 +333,15 @@ describe('walkSeconds', () => {
     expect(walkSeconds(1000, 0)).toBe(0);
     expect(walkSeconds(1000, NaN)).toBe(0);
     expect(walkSeconds(1000, -2)).toBe(0);
+  });
+});
+
+describe('routeSpeed', () => {
+  const base = { id: 'r', name: 'n', updated: 1, points: [{ lat: 0, lon: 0 }, { lat: 0, lon: 0.01 }] };
+
+  it('is the speed of the route, or 3 km/h when it has none', () => {
+    expect(DEFAULT_WALK_SPEED).toBe(3);
+    expect(routeSpeed(base)).toBe(3);
+    expect(routeSpeed({ ...base, defaultSpeed: 4.5 })).toBe(4.5);
   });
 });

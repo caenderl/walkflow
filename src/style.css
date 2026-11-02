@@ -93,10 +93,10 @@ textarea { font-family:ui-monospace, monospace; font-size:13px; height:110px; re
 .center { text-align:center; }
 [hidden] { display:none !important; }
 
-/* Header: name, connection status, language and theme */
+/* Header: name, views, connection status, settings */
 .top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 .logo { display:block; }
-.conn { margin-left:4px; }
+.conn { margin-left:auto; }
 /* Status pill = button for the connection menu */
 .status { min-height:36px; gap:8px; font-size:.875rem; font-weight:400; border-radius:999px; padding:6px 10px 6px 12px; }
 .status::before { content:""; width:9px; height:9px; border-radius:50%; background:var(--mute); flex:none; }
@@ -117,7 +117,6 @@ textarea { font-family:ui-monospace, monospace; font-size:13px; height:110px; re
 }
 /* Both open towards the left, away from the controls column on the right */
 .conn-menu { left:auto; right:0; }
-.prefs-menu { left:auto; right:0; width:280px; padding:12px; }
 .conn-menu > div { display:grid; gap:12px; }
 .connected .menu-off, html:not(.connected) .menu-on { display:none; }
 .menu p { margin:0; }
@@ -235,7 +234,7 @@ footer a, details a { color:var(--link); }
 html:not([data-view="history"]) .history-part { display:none; }
 html:not([data-view="workouts"]) .workouts-part { display:none; }
 html:not([data-view="routes"]) .routes-part { display:none; }
-html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is(.live, .more) { display:none; }
+html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is(.live, .stage, .more) { display:none; }
 
 /* History */
 .hist-overview { display:grid; gap:20px; }
@@ -277,13 +276,19 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
 .wk-move { display:flex; gap:4px; }
 .wk-move button { padding:6px 10px; min-width:36px; }
 .wk-step input, .wk-step select { width:100%; min-width:0; }
-.plan-day { display:grid; grid-template-columns:minmax(0, 1fr) 5.5rem minmax(5.5rem, auto) 1.2rem; gap:8px 12px; align-items:center; padding:8px 12px; border-radius:12px; border:1px solid transparent; }
-.plan-day.today { border-color:var(--card-border); background:var(--input-bg); }
+.plan-day {
+  display:grid; grid-template-columns:minmax(0, 1fr) 5rem; grid-template-areas:"name minutes" "progress mark" "suggest suggest";
+  gap:8px 12px; align-items:center; padding:10px 12px; border-radius:12px; border:1px solid var(--card-border); background:var(--input-bg);
+}
+.plan-day input { grid-area:minutes; width:100%; }
+.plan-mark { grid-area:mark; justify-self:end; }
+.plan-day.today { border-color:var(--accent); }
+.plan-day.met { background:var(--ok-bg); }
 .plan-day.met .plan-progress { font-weight:600; }
-.plan-name { overflow-wrap:anywhere; }
-.plan-suggest { grid-column:1 / -1; width:100%; min-width:0; }
+.plan-name { grid-area:name; display:grid; min-width:0; }
+.plan-suggest { grid-area:suggest; width:100%; min-width:0; }
 .today-plan { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; }
-.plan-progress { color:var(--mute); font-size:.9rem; font-variant-numeric:tabular-nums; text-align:right; }
+.plan-progress { grid-area:progress; color:var(--mute); font-size:.9rem; font-variant-numeric:tabular-nums; }
 .plan-mark { font-weight:700; }
 .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 
@@ -328,8 +333,7 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
 @media (min-width: 1280px) { .hero-stats { grid-template-columns:repeat(5, minmax(0, 1fr)); } }
 @media (min-width: 1280px) { .st-long { display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; } }
 /* The header menus open next to their buttons and stay left of the controls column (src/menus.ts moves them
-   if not): the tagline only on very wide screens, and below 1280 px the short status */
-@media (max-width: 1599px) { .tagline { display:none; } }
+   if not): below 1280 px the short status */
 @media (max-width: 1279px) {
   .st-long { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
   .st-short { display:inline-block; max-width:40vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
@@ -341,9 +345,10 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
   .layout, .main-col, .side { display:contents; }
   #safetyNotice { order:2; }
   .live { order:3; }
-  .control { order:4; }
-  .incline { order:5; }
-  .more { order:6; }
+  .stage { order:4; }
+  .control { order:5; }
+  .incline { order:6; }
+  .more { order:7; }
   .history-part, .workouts-part, .routes-part { order:3; }
   /* Stop bar fixed to the bottom edge, like the dock in the training view */
   html[data-stop="bar"] .stopbar {
@@ -360,7 +365,7 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
   .sb-controls span { display:none; }
   .sb-controls .icon { display:inline; width:22px; height:22px; }
   .stopbar .stop { grid-area:stop; min-height:52px; padding:10px 22px; }
-  footer { order:7; }
+  footer { order:8; }
   .connected .app { padding-bottom:150px; }
   .connected .dock {
     position:fixed; left:0; right:0; bottom:0; z-index:40;
@@ -377,11 +382,11 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
   /* Row 1: logo, name, status, settings; row 2: views. Menus open below row 1 at full width. */
   .top { position:relative; }
   .conn { order:3; margin-left:auto; }
-  .prefs { order:4; margin-left:0; }
+  .settings-anchor { order:4; }
   .views { order:5; flex-basis:100%; }
   .top { gap:8px; }
   .menu-anchor { position:static; }
-  .menu, .prefs-menu { left:0; right:0; top:52px; width:auto; max-width:none; }
+  .menu { left:0; right:0; top:52px; width:auto; max-width:none; }
   .periods { gap:10px; }
   .period .v { font-size:1.35rem; }
   .views a { flex:1; }
@@ -390,6 +395,7 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
   .hero { grid-template-columns:minmax(0, 1fr); gap:16px; text-align:center; }
   .hero-stats { gap:14px 8px; }
   #chart { height:160px; }
+  .stage-map { height:clamp(260px, 52vh, 420px); }
   .more { grid-template-columns:minmax(0, 1fr); }
   .banner.demo { grid-template-columns:minmax(0, 1fr); }
 }
@@ -398,3 +404,148 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
 /* Hidden until the texts of the chosen language are in place; shown anyway after 1.5 s if the script fails */
 html:not(.i18n-ready) body { visibility:hidden; animation:i18n-reveal 0s 1.5s forwards; }
 @keyframes i18n-reveal { to { visibility:visible; } }
+
+/* ---------- Stage: the main element of the training view (data-mode: map | interval | chart, src/main.ts) ---------- */
+.stage { display:grid; gap:16px; }
+.stage-map { height:clamp(320px, 56vh, 640px); }
+.stage[data-mode="interval"] .stage-map, .stage[data-mode="interval"] #routeLive { display:none; }
+.interval { display:grid; gap:16px; }
+.iv-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+.iv-head h2 { margin:0; font-size:1.1rem; color:var(--fg); text-transform:none; letter-spacing:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.iv-now { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; }
+.iv-right { text-align:right; }
+.iv-v { font-size:clamp(3rem, 6vw, 5.5rem); font-weight:650; line-height:1; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+.iv-now .l, .iv-next .l { color:var(--mute); font-size:.8rem; margin-top:2px; }
+#ivBar { width:100%; height:10px; accent-color:var(--accent); }
+.iv-strip { width:100%; height:72px; display:block; }
+.iv-strip .iv-todo { fill:var(--line); }
+.iv-strip .iv-done { fill:var(--accent); fill-opacity:.35; }
+.iv-strip .iv-now-bar { fill:var(--accent); }
+.iv-next ol { margin:6px 0 0; padding:0; list-style:none; display:grid; gap:4px; font-variant-numeric:tabular-nums; }
+.iv-next li.none { color:var(--mute); }
+
+/* ---------- Settings dialog (src/settings-ui.ts) ---------- */
+.settings-dlg {
+  padding:0; border:1px solid var(--card-border); border-radius:20px; background:var(--card); color:var(--fg);
+  width:min(920px, calc(100vw - 32px)); height:min(680px, calc(100vh - 48px)); max-width:none; max-height:none;
+  box-shadow:0 20px 60px rgba(0, 0, 0, .35);
+}
+.settings-dlg[open] { display:flex; flex-direction:column; }
+.settings-dlg::backdrop { background:var(--backdrop); }
+.sd-head { display:flex; align-items:center; justify-content:space-between; padding:10px 12px 10px 24px; border-bottom:1px solid var(--card-border); }
+.sd-head h2 { margin:0; font-size:1.1rem; color:var(--fg); text-transform:none; letter-spacing:0; }
+.sd-main { display:grid; grid-template-columns:200px minmax(0, 1fr); flex:1; min-height:0; }
+.sd-tabs { display:flex; flex-direction:column; gap:4px; padding:16px 12px; border-right:1px solid var(--card-border); overflow:auto; }
+.sd-tabs button { justify-content:flex-start; min-height:42px; border:0; background:transparent; font-weight:500; }
+.sd-tabs button:hover { background:var(--btn-hover); }
+.sd-tabs button[aria-selected="true"] { background:var(--btn); font-weight:600; }
+.sd-panels { overflow:auto; padding:24px; }
+.sd-panel { display:grid; gap:16px; max-width:560px; align-content:start; }
+.sd-panel:not(.grid) { display:block; }
+.sd-panel h3 { margin:0 0 4px; }
+.sd-panel hr { width:100%; border:0; border-top:1px solid var(--card-border); margin:4px 0; }
+.sd-panel .menu-label { padding-left:0; }
+.settings-anchor { display:inline-flex; }
+@media (max-width: 719px) {
+  .settings-dlg { width:100vw; height:100dvh; border-radius:0; border-width:0; }
+  .sd-main { grid-template-columns:minmax(0, 1fr); grid-template-rows:auto minmax(0, 1fr); }
+  .sd-tabs { flex-direction:row; border-right:0; border-bottom:1px solid var(--card-border); padding:8px 12px; }
+  .sd-panels { padding:16px; }
+}
+
+/* A switch: a checkbox with role="switch" */
+.switch { position:relative; display:grid; grid-template-columns:auto minmax(0, 1fr); gap:14px; align-items:start; cursor:pointer; }
+.switch input { position:absolute; left:0; top:0; width:44px; height:26px; margin:0; opacity:0; cursor:pointer; }
+.sw-track { position:relative; width:44px; height:26px; border-radius:999px; background:var(--btn-border); transition:background .15s; flex:none; }
+.sw-track::after { content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0, 0, 0, .3); transition:transform .15s; }
+.switch input:checked + .sw-track { background:var(--primary); }
+.switch input:checked + .sw-track::after { transform:translateX(18px); }
+.switch input:focus-visible + .sw-track { outline:2px solid var(--focus); outline-offset:2px; }
+.sw-text { display:grid; gap:4px; }
+
+/* Quiet mode (settings): no safety notice. Everything that limits or stops the belt stays. */
+html[data-quiet="1"] #safetyNotice { display:none; }
+
+/* The demo note sits in the controls panel (training view): one column, the buttons below the text */
+.control .banner.demo { grid-template-columns:minmax(0, 1fr); padding:12px 14px; font-size:.9rem; }
+.control .banner.demo .row { display:grid; grid-template-columns:minmax(0, 1fr); gap:8px; }
+.control .banner.demo button { white-space:normal; }
+
+/* Flag in front of a route's name */
+.flag { width:1.5em; height:1.125em; object-fit:cover; border-radius:2px; box-shadow:0 0 0 1px var(--line); vertical-align:-.2em; margin-right:.5em; }
+/* A route in the library, opened: profile, map and figures under its row */
+.rt-detail { flex-basis:100%; display:grid; gap:12px; padding-top:8px; }
+.rt-detail .hint { margin:0; }
+.rt-meta { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 12px; }
+.rt-length { font-size:1.25rem; font-weight:650; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+
+/* Week plan: one tile per day side by side on wide screens (seven in a row from 1024 px), one row per day on phones */
+@media (min-width: 720px) {
+  .plan { grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
+  .plan-day { grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"name mark" "minutes minutes" "progress progress" "suggest suggest"; align-content:start; padding:12px; }
+  .plan-suggest { font-size:.85rem; padding:6px 4px; }
+}
+@media (min-width: 1024px) { .plan { grid-template-columns:repeat(7, minmax(0, 1fr)); } }
+
+/* The chosen workout or route at the top of the stage */
+.stage-head { display:flex; align-items:center; justify-content:space-between; gap:8px 16px; flex-wrap:wrap; }
+.sh-title { display:flex; align-items:baseline; gap:10px; min-width:0; }
+.sh-title strong { font-size:1.15rem; overflow-wrap:anywhere; }
+.stage-info { display:grid; gap:4px; }
+.stage-info .hint { margin:0; }
+.stage-info > div:first-child { color:var(--fg); font-variant-numeric:tabular-nums; }
+#shDesc, .rt-desc { white-space:pre-line; }
+.rt-desc { margin-top:4px; max-width:60ch; }
+/* Editor for walking speed and description, in the right column of an opened route */
+.rt-edit > * { max-width:560px; }
+.rt-edit input[type=number] { width:8rem; }
+.rt-edit textarea { height:auto; font-family:inherit; font-size:inherit; }
+
+/* Route in the library: outline, text, actions. One action stands out; the rest is quiet or in the menu. */
+.rt-item { flex-wrap:wrap; justify-content:flex-start; align-items:center; gap:12px 14px; }
+.rt-item .wk-info { flex:1 1 14rem; min-width:0; }
+.rt-item .wk-actions { margin-left:auto; display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.rt-outline { width:56px; height:56px; flex:none; border-radius:12px; border:1px solid var(--card-border); background:var(--card); }
+.rt-outline-line { fill:none; stroke:var(--accent); stroke-width:2.6; stroke-linejoin:round; stroke-linecap:round; }
+.rt-outline-start { fill:var(--fg); }
+.rt-desc { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.rt-desc-full { margin:0; white-space:pre-line; }
+
+/* Opened route: the map left, what there is to know right */
+.rt-detail { grid-template-columns:minmax(0, 1fr); align-items:start; gap:16px; }
+.rt-detail.with-map { grid-template-columns:minmax(0, 3fr) minmax(0, 2fr); }
+.rt-detail .route-map { height:auto; aspect-ratio:4 / 3; max-height:520px; }
+.rt-info { display:grid; gap:12px; align-content:start; min-width:0; }
+.rt-info .profile .profile-svg { height:90px; }
+.rt-info .records { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+.rt-info .hint { margin:0; }
+@media (max-width: 719px) {
+  .rt-detail.with-map { grid-template-columns:minmax(0, 1fr); }
+}
+.rt-top { display:grid; gap:10px; }
+.rt-speed { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.rt-speed > div { display:grid; gap:2px; }
+.rt-speed strong { font-size:1.15rem; font-variant-numeric:tabular-nums; }
+.rt-speed .icon-btn { width:40px; height:40px; border-radius:10px; flex:none; }
+/* Icon buttons in a route's row: the walking icon stands out, the chevron turns when the route is open */
+.rt-item .icon-btn { width:40px; height:40px; border-radius:10px; }
+.rt-item .icon-btn.primary { width:48px; }
+.rt-item .icon-btn .icon { width:22px; height:22px; transition:transform .15s; }
+.rt-item .icon-btn[aria-expanded="true"] .icon { transform:rotate(180deg); }
+
+/* The "⋯" menu (src/overflow-menu.ts) */
+.overflow { position:relative; }
+.overflow > summary {
+  display:inline-flex; align-items:center; justify-content:center; min-width:40px; min-height:40px; padding:0 10px; margin:0;
+  border:1px solid var(--btn-border); border-radius:10px; background:var(--btn); color:var(--fg); font-weight:700; font-size:1.1rem; cursor:pointer;
+}
+.overflow > summary::after { display:none; }
+.overflow > summary:hover { background:var(--btn-hover); }
+.overflow[open] > summary { margin-bottom:0; }
+.overflow-panel {
+  position:absolute; right:0; top:calc(100% + 6px); z-index:20; min-width:11rem; display:grid; gap:2px; padding:6px;
+  background:var(--card); border:1px solid var(--card-border); border-radius:12px; box-shadow:0 12px 32px rgba(0, 0, 0, .25);
+}
+.overflow-panel button { justify-content:flex-start; border:0; background:transparent; font-weight:500; }
+.overflow-panel button:hover { background:var(--btn-hover); }
+.overflow-panel button.danger { color:var(--stop); }

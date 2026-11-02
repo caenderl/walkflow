@@ -276,7 +276,7 @@ describe('SpeedGovernor', () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(sent).toEqual([[0, 2.5], [1500, 3]]);
     expect(gov.target).toBeNull();
-    expect(logs.join()).toMatch(/Ramp aborted/);
+    expect(logs.join()).toMatch(/Stepwise speed change aborted/);
   });
 
   it('from standstill, the ramp starts at the device minimum', async () => {

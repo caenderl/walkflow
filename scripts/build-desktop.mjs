@@ -22,7 +22,7 @@ await esbuild({
   format: 'cjs',
   target: 'node22',
   external: ['electron'],
-  define: { __GITHUB_REPO__: JSON.stringify(repo), __MAP_STYLE_RAW__: JSON.stringify(process.env.WALKFLOW_MAP_STYLE ?? '') },
+  define: { __GITHUB_REPO__: JSON.stringify(repo), __MAP_STYLE_RAW__: JSON.stringify(process.env.WALKFLOW_MAP_STYLE ?? ''), __MAP_STYLE_DARK_RAW__: JSON.stringify(process.env.WALKFLOW_MAP_STYLE_DARK ?? '') },
   logLevel: 'warning',
 });
 

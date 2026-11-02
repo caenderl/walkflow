@@ -55,9 +55,9 @@ Time steps work as before. A distance step ends when the treadmill’s own dista
 
 ## Routes
 
-The route’s progress follows the treadmill’s own distance counter. The route itself sends nothing to the treadmill: no incline, and no speed from the file. The checks up to “Restart route” only display; **Walk this route** starts a workout (see below), so the belt moves only after the usual confirmation.
+The route’s progress follows the treadmill’s own distance counter. The route itself sends nothing to the treadmill: no incline, and no speed from the file. The checks up to “Restart route” only display; **Start** with a route chosen starts a workout (see below), so the belt moves only after the usual confirmation.
 
-- [ ] Import a real GPX file (**Routes → Import GPX file**) and choose it in the **Training** route card. Start the belt and walk 100 m: does “km of km” advance together with the distance shown on the treadmill’s display? Note how far apart the two are after 100 m.
+- [ ] Import a real GPX file (**Routes → Import GPX file**) and choose it with **Use** (the training view is about it then). Start the belt and walk 100 m: does “km of km” advance together with the distance shown on the treadmill’s display? Note how far apart the two are after 100 m.
 - [ ] Press **Restart route**: the progress goes back to 0 and counts on from there, the belt is not affected.
 - [ ] Stop the belt and start it again: does the route continue where it was, or did the treadmill’s counter reset and the route lose or double distance? (The app adds up only increases; a counter that goes back adds nothing.)
 - [ ] Disconnect and reconnect in the middle of a route: does the progress carry on without a jump?
@@ -65,22 +65,33 @@ The route’s progress follows the treadmill’s own distance counter. The route
 
 ### Walk this route (route as a workout)
 
-**Walk this route** is one workout step: the whole route as a distance step at the speed typed in the card. Ramp, limit, confirmation and stop work as for every workout. Please check in the log:
+With a route chosen, **Start** (it reads “Strecke gehen” / “Walk this route”) is one workout step: the whole route as a distance step at the route’s own walking speed (**Routes** → open a route with the arrow → pencil icon, default 3 km/h). Speed steps, limit, confirmation and stop work as for every workout. Please check in the log:
 
 - [ ] Start a short route (about 200 m) at a low speed (3 km/h). The confirmation names the route, its length and the speed. After confirming, the log shows Request Control and Start, then speed commands that follow the ramp (0.5 km/h per command, at least 1.5 s apart). There is no incline command at all.
-- [ ] Type a speed above your limit: the confirmation says it is capped, and the belt never goes above the limit.
+- [ ] Give the route a walking speed above your limit (**Routes** → arrow → pencil icon): the confirmation says it is capped, and the belt never goes above the limit.
 - [ ] Let it run to the end: the belt stops by itself, the status says the program is done, and the route card says “Route completed”. How far apart are the route progress and the end of the program on the treadmill’s display? (Both use the distance counter, a few metres are expected.)
-- [ ] Press **Cancel & stop** or Space halfway: the belt stops at once. The run appears in the history as “Started from: Route: …, stopped early”.
+- [ ] Press **Stop** or Space halfway: the belt stops at once. The run appears in the history as “Started from: Route: …, stopped early”.
 - [ ] After a complete walk of more than a minute the run shows “completed”, and its minutes count toward today’s goal in **Workouts → week plan**. Check that the minutes match the treadmill’s time (they are moving seconds without pauses).
-- [ ] Walk a route while today has a target in the week plan: the card says how many minutes are left and whether this route reaches the goal. It refreshes after a run was saved.
+- [ ] Walk a route while today has a target in the week plan: the training view says how many minutes are left and whether this route reaches the goal. It refreshes after a run was saved.
 
 ### Map (optional)
 
 The map only draws. It reads the position the route card already has and sends nothing to the treadmill.
 
-- [ ] Switch the map on in the route card, then walk a route (with or without the map the log must look the same: same commands, same spacing, no extra writes). The blue-green dot should move along the line together with “km of km”.
-- [ ] With the map on, press Space/Esc and **Cancel & stop** during a walk: the belt stops as fast as without the map.
+- [ ] Switch the map on in the training view (route chosen), then walk a route (with or without the map the log must look the same: same commands, same spacing, no extra writes). The blue-green dot should move along the line together with “km of km”.
+- [ ] With the map on, press Space/Esc and **Stop** during a walk: the belt stops as fast as without the map.
 - [ ] Take the computer offline while the map is on: the route card keeps counting, the map shows a hint, the belt is not affected.
+
+## Settings and training view
+
+The settings dialog and the training view only change what is shown, plus one setting (quiet mode) that skips the question before a start.
+
+- [ ] Start the belt (any way). The settings button in the header is greyed out while the belt runs, and available again a few seconds after it stopped. Also check this after a connection loss and after stopping on the treadmill itself.
+- [ ] **Settings → Safety → Hide warnings and safety questions**: switching it on asks first. Then press **Start** and start a workout: the belt starts without the “Band starten?” question. The log must still show the usual ramp (0.5 km/h per command, at least 1.5 s apart), the speed limit still caps a higher target, and Space/Esc still stops at once. A raw Start (`07`) in the experiment console still asks.
+- [ ] With quiet mode on, pull the safety key or disconnect: the alarm for the lost connection still appears.
+- [ ] With a workout or a route chosen, **Start** starts exactly that, and nothing else (no free start). With nothing chosen (“Stattdessen frei trainieren”), Start begins free training as before. Pressing Start again while a program runs does nothing.
+- [ ] Run a workout with several steps: the main element shows the current step (target speed, time or distance left), the strip of all steps and the next steps. Compare the step changes with the treadmill’s display and with the log (speed commands at the step boundaries).
+- [ ] Choose a route and switch the map on: the map is the main element of the training view, also while the route is walked. During a workout with steps the steps are shown instead.
 
 ## Desktop app
 

@@ -3,7 +3,8 @@
 // data-view and data-stop attributes on <html>.
 
 export type View = 'training' | 'history' | 'workouts' | 'routes';
-export const VIEWS: readonly View[] = ['training', 'history', 'workouts', 'routes'];
+/** In the order of the navigation */
+export const VIEWS: readonly View[] = ['training', 'workouts', 'routes', 'history'];
 
 export type StopPlacement = 'controls' | 'bar' | 'none';
 

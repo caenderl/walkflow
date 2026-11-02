@@ -91,6 +91,18 @@ export const COUNTDOWN_MS = 4500;
 
 export type ProgramPhase = 'idle' | 'starting' | 'countdown' | 'running';
 
+/** Where a running program stands, for display */
+export interface ProgramProgress {
+  phase: Exclude<ProgramPhase, 'idle'>;
+  steps: readonly ProgramStep[];
+  /** The step in progress; -1 before the first one (belt starting, countdown) */
+  index: number;
+  /** How much of the step in progress is done, 0..1 */
+  fraction: number;
+  /** What is left of the step in progress; null before the first one */
+  left: { sec: number } | { meters: number } | null;
+}
+
 interface RunState {
   steps: readonly ProgramStep[];
   phase: Exclude<ProgramPhase, 'idle'>;
@@ -129,6 +141,21 @@ export class ProgramRunner {
   get active() { return this.cur !== null; }
   get phase(): ProgramPhase { return this.cur?.phase ?? 'idle'; }
   get stepIndex() { return this.cur?.index ?? -1; }
+
+  /** Read-only view of the running program for the display; changes nothing. null = no program. */
+  progress(): ProgramProgress | null {
+    const st = this.cur;
+    if (!st) return null;
+    const step = st.phase === 'running' ? st.steps[st.index] : undefined;
+    const base = { phase: st.phase, steps: st.steps, index: st.index };
+    if (!step) return { ...base, fraction: 0, left: null };
+    if (step.meters !== undefined) {
+      const left = Math.max(0, step.meters - st.covered);
+      return { ...base, fraction: step.meters > 0 ? Math.min(1, st.covered / step.meters) : 1, left: { meters: left } };
+    }
+    const remainingMs = Math.max(0, st.stepStart + step.sec * 1000 - this.now());
+    return { ...base, fraction: step.sec > 0 ? Math.min(1, 1 - remainingMs / (step.sec * 1000)) : 1, left: { sec: Math.ceil(remainingMs / 1000) } };
+  }
 
   abort(msg?: Text) {
     const st = this.cur;

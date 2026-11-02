@@ -393,3 +393,56 @@ describe('ProgramRunner: distance steps', () => {
     await expect(done).resolves.toBe('finished');
   });
 });
+
+describe('ProgramRunner: progress (display only)', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('is null while no program runs, and after it ended', async () => {
+    const { runner, advance } = setup();
+    expect(runner.progress()).toBeNull();
+    const done = runner.run([{ sec: 1, speed: 2 }]);
+    await advance(4500 + 1000);
+    await done;
+    expect(runner.progress()).toBeNull();
+  });
+
+  it('is before the first step while the belt starts and during its countdown', async () => {
+    const { runner, advance } = setup();
+    void runner.run([{ sec: 10, speed: 2 }, { sec: 5, speed: 3 }]);
+    expect(runner.progress()).toMatchObject({ phase: 'starting', index: -1, left: null, fraction: 0 });
+    await advance(0);
+    expect(runner.progress()).toMatchObject({ phase: 'countdown', index: -1, left: null });
+    expect(runner.progress()!.steps).toHaveLength(2);
+  });
+
+  it('counts the time left in a time step', async () => {
+    const { runner, advance } = setup();
+    void runner.run([{ sec: 4, speed: 2 }, { sec: 10, speed: 3 }]);
+    await advance(4500);
+    expect(runner.progress()).toMatchObject({ phase: 'running', index: 0, left: { sec: 4 }, fraction: 0 });
+    await advance(1000);
+    expect(runner.progress()).toMatchObject({ index: 0, left: { sec: 3 }, fraction: 0.25 });
+    await advance(3000);
+    expect(runner.progress()).toMatchObject({ index: 1, left: { sec: 10 }, fraction: 0 });
+  });
+
+  it('counts the distance left in a distance step', async () => {
+    const ctx = setup();
+    ctx.setDist(5000);
+    void ctx.runner.run([{ meters: 100, speed: 3 }, { sec: 5, speed: 2 }]);
+    await ctx.advance(4500);
+    expect(ctx.runner.progress()).toMatchObject({ index: 0, left: { meters: 100 }, fraction: 0 });
+    ctx.setDist(5025); ctx.runner.tick();
+    expect(ctx.runner.progress()).toMatchObject({ index: 0, left: { meters: 75 }, fraction: 0.25 });
+  });
+
+  it('never changes what the runner does', async () => {
+    const { runner, calls, advance } = setup();
+    void runner.run([{ sec: 2, speed: 2 }]);
+    await advance(4500);
+    const before = [...calls];
+    for (let i = 0; i < 5; i++) runner.progress();
+    expect(calls).toEqual(before);
+  });
+});

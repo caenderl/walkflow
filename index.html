@@ -20,6 +20,8 @@
   <symbol id="i-demo" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6.5L4.6 18.4A1.7 1.7 0 0 0 6.1 21h11.8a1.7 1.7 0 0 0 1.5-2.6L14 9.5V3M7.5 15h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
   <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="14" cy="4.5" r="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 8.5l-2 5 3 3.5-.5 4M11 13.5l-2.5 4-3 1.5M13 9.5l3.5 2.5 2-.5M13 9.5l-3 1.5-1.5 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3zM14.5 7.5l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0M12 17l4-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v4.5M12 17.2v.1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
@@ -42,12 +44,11 @@
   <header class="top">
     <img src="/favicon.svg" alt="" width="32" height="32" class="logo">
     <h1>Walkflow</h1>
-    <span class="hint tagline" data-i18n="header.tagline">Treadmill control via Bluetooth</span>
     <nav class="views" aria-label="Views" data-i18n-aria="views.label">
       <a href="#" data-view="training" data-i18n="views.training">Training</a>
-      <a href="#history" data-view="history" data-i18n="views.history">History</a>
       <a href="#workouts" data-view="workouts" data-i18n="views.workouts">Workouts</a>
       <a href="#routes" data-view="routes" data-i18n="views.routes">Routes</a>
+      <a href="#history" data-view="history" data-i18n="views.history">History</a>
     </nav>
     <!-- Connection menu: opens from the status; connect and demo, or the device and Disconnect -->
     <span class="menu-anchor conn">
@@ -69,16 +70,9 @@
         </div>
       </div>
     </span>
-    <!-- Language and theme, right next to the status: both menus open over the main column, never over the controls -->
-    <span class="menu-anchor prefs">
-      <button id="prefsBtn" class="icon-btn" type="button" aria-haspopup="true" aria-label="Language and theme" data-i18n-aria="prefs.label"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg></button>
-      <div id="prefsMenu" class="menu prefs-menu" role="group" aria-label="Language and theme" data-i18n-aria="prefs.label" hidden>
-        <div class="menu-label" id="langLabel" data-i18n="languageLabel">Language</div>
-        <div id="langOptions" class="menu-list" role="radiogroup" aria-labelledby="langLabel"></div>
-        <hr>
-        <div class="menu-label" id="themeLabel" data-i18n="theme.label">Theme</div>
-        <div id="themeOptions" class="seg" role="radiogroup" aria-labelledby="themeLabel"></div>
-      </div>
+    <!-- Settings: a large dialog (src/settings-ui.ts). Locked while the belt is running. -->
+    <span class="menu-anchor settings-anchor" id="settingsAnchor">
+      <button id="settingsBtn" class="icon-btn" type="button" aria-haspopup="dialog" aria-label="Settings" data-i18n-aria="settings.open"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg></button>
     </span>
   </header>
 
@@ -104,14 +98,6 @@
     <button id="hiddenAck" type="button" data-i18n="common.ok">OK</button>
   </div>
 
-  <div id="demoBanner" class="banner demo" hidden>
-    <span data-i18n-rich="demo.banner">Demo: simulated treadmill, no real hardware, all values are simulated.</span>
-    <div class="row">
-      <button id="simLoss" type="button" data-i18n="demo.simLoss">Simulate connection loss</button>
-      <button id="simKey" type="button" data-i18n="demo.simKey">Pull safety key</button>
-    </div>
-  </div>
-
   <!-- Wide screens: main column + sticky controls on the right. Narrow screens: one column, and while connected
        the dock (start/pause/stop, ±) is fixed to the bottom edge so Stop never scrolls out of view.
        The controls only show in the training view; elsewhere the stop bar above takes over. -->
@@ -131,119 +117,66 @@
           </div>
         </div>
         <p class="hint offline-hint"><span data-i18n="connection.offlineHint">Not connected.</span> <button type="button" class="linkish" id="openConn" data-i18n="connection.connectNow">Connect now</button></p>
-        <div>
+      </section>
+
+      <!-- The main element of the training view: the map when a route is chosen and the map is on, the steps while a
+           workout runs, otherwise the speed chart (data-mode, set in src/main.ts). Route progress sits below it. -->
+      <section class="card stage" id="stage" data-mode="chart">
+        <div class="today-plan" id="todayPlan" hidden>
+          <span class="hint" id="todayPlanText"></span>
+          <button id="todayPlanUse" type="button"></button>
+        </div>
+        <!-- What the Start button starts: a workout or a route chosen in its own view, or nothing (free training) -->
+        <div class="stage-head" id="stageHead" hidden>
+          <div class="sh-title"><span class="badge" id="shKind"></span><strong id="shName"></strong></div>
+          <button id="shClear" type="button" class="linkish"></button>
+        </div>
+        <div class="stage-info" id="stageInfo" hidden>
+          <div id="shInfo"></div>
+          <div class="hint" id="shDesc"></div>
+          <div class="hint" id="routeEstimate"></div>
+        </div>
+        <div class="hint" id="progStatus"></div>
+        <div id="routeMap" class="route-map stage-map" role="region" hidden></div>
+        <div id="stageInterval" class="interval" role="group" aria-label="Workout progress" data-i18n-aria="interval.label" hidden>
+          <div class="iv-head"><span class="hint" id="ivStep"></span></div>
+          <div class="iv-now">
+            <div><div class="iv-v" id="ivSpeed">–</div><div class="l" data-i18n="interval.targetUnit">km/h target</div></div>
+            <div class="iv-right"><div class="iv-v" id="ivLeft">–</div><div class="l" id="ivLeftLabel"></div></div>
+          </div>
+          <progress id="ivBar" max="1000" value="0"></progress>
+          <svg id="ivStrip" class="iv-strip" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div class="iv-next"><span class="l" data-i18n="interval.next">Next</span><ol id="ivNext"></ol></div>
+        </div>
+        <div id="stageChart">
           <h2 data-i18n="chart.title">Speed over the last 5 minutes</h2>
           <canvas id="chart" width="560" height="150"></canvas>
+          <p class="hint" id="stageFreeHint" data-i18n="stage.freeHint">Free training.</p>
+        </div>
+        <div class="grid" id="routeLive" hidden>
+          <progress id="routeBar" max="1000" value="0"></progress>
+          <div id="routeText" class="route-text"></div>
+          <div class="hint" id="routeDetail"></div>
+          <div id="routeProfile" class="profile"></div>
+          <div class="row">
+            <button id="routeRestart" type="button" data-i18n="routes.restart">Restart route</button>
+            <button id="routeMapToggle" type="button" class="map-toggle" aria-pressed="false" hidden></button>
+          </div>
+          <div class="hint map-note" id="routeMapNote" role="status" hidden></div>
         </div>
       </section>
 
       <div class="more">
-        <section class="card grid">
-          <h2 data-i18n="program.title">Workout</h2>
-          <div class="today-plan" id="todayPlan" hidden>
-            <span class="hint" id="todayPlanText"></span>
-            <button id="todayPlanUse" type="button"></button>
-          </div>
-          <label class="hint field"><span data-i18n="program.choose">Workout</span>
-            <select id="progSelect"></select>
-          </label>
-          <div class="hint" id="progSummary"></div>
-          <div class="hint" data-i18n-rich="program.hint">Speeds are capped to the limit.</div>
-          <div class="row">
-            <button id="progStart" class="primary needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><span data-i18n="program.start">Start program</span></button>
-            <button id="progStop" class="needs-conn" disabled data-i18n="program.stop">Cancel &amp; stop</button>
-          </div>
-          <div class="hint" id="progStatus">No program running</div>
-          <p class="hint"><a href="#workouts" data-i18n="program.edit">Edit workouts</a></p>
-        </section>
-
-        <section class="card grid" id="routeCard">
-          <h2 data-i18n="routes.cardTitle">Route</h2>
-          <label class="hint field"><span data-i18n="routes.choose">Route</span>
-            <select id="routeSelect"></select>
-          </label>
-          <div class="grid" id="routeWalk" hidden>
-            <label class="hint field"><span data-i18n="routes.speed">Walking speed (km/h)</span>
-              <input type="number" id="routeSpeed" min="0.5" max="20" step="0.1" inputmode="decimal" value="3">
-            </label>
-            <div class="hint" id="routeEstimate"></div>
+        <details class="card wide" id="consoleCard">
+          <summary data-i18n="console.title">Experiment console (Control Point 0x2AD9)</summary>
+          <div class="grid">
             <div class="row">
-              <button id="routeStart" type="button" class="primary needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><span data-i18n="routes.walk">Walk this route</span></button>
-              <button id="routeStop" type="button" class="needs-conn" disabled data-i18n="program.stop">Cancel &amp; stop</button>
+              <input type="text" id="raw" class="needs-conn grow2" placeholder="Hex bytes, e.g. 02 2C 01" disabled aria-label="Hex bytes" data-i18n-placeholder="console.placeholder" data-i18n-aria="console.inputLabel">
+              <button id="rawSend" class="needs-conn" disabled data-i18n="console.send">Send</button>
             </div>
-            <div class="hint" id="routeStatus"></div>
-            <div class="hint" data-i18n="routes.walkHint">A route is walked as a workout.</div>
+            <div class="hint" data-i18n-rich="console.hint">Set Speed (02 …) is blocked if it is above the limit, larger than the maximum change, or comes too soon after the last speed command. Start (07) only after confirmation, Set Target Heart Rate (06) not at all. Everything else is sent raw.</div>
+            <div id="log" aria-live="off"></div>
           </div>
-          <div class="grid" id="routeLive" hidden>
-            <progress id="routeBar" max="1000" value="0"></progress>
-            <div id="routeText" class="route-text"></div>
-            <div class="hint" id="routeDetail"></div>
-            <div id="routeProfile" class="profile"></div>
-            <div id="routeMap" class="route-map" role="region" hidden></div>
-            <div class="row">
-              <button id="routeRestart" type="button" data-i18n="routes.restart">Restart route</button>
-              <button id="routeMapToggle" type="button" class="map-toggle" aria-pressed="false" hidden></button>
-            </div>
-            <div class="hint map-note" id="routeMapNote" role="status" hidden></div>
-          </div>
-          <div class="hint" data-i18n="routes.trainingHint">Progress follows the treadmill’s own distance counter.</div>
-          <p class="hint"><a href="#routes" data-i18n="routes.manage">Manage routes</a></p>
-        </section>
-
-        <section class="card grid">
-          <h2 data-i18n="settings.title">Settings &amp; data</h2>
-          <label class="hint field"><span data-i18n="settings.limit">Personal speed limit (km/h)</span>
-            <input type="number" id="cap" min="1" max="20" step="0.5" value="6">
-          </label>
-          <label class="hint field"><span data-i18n="settings.maxStep">Maximum change per command (km/h)</span>
-            <input type="number" id="maxStep" min="0.1" max="1" step="0.1" value="0.5">
-          </label>
-          <label class="hint field"><span data-i18n="settings.hiddenMode">When the tab goes to the background while the belt is running</span>
-            <select id="hiddenMode">
-              <option value="warn" data-i18n="settings.hiddenWarn">only warn</option>
-              <option value="pause" data-i18n="settings.hiddenPause">pause the belt</option>
-            </select>
-          </label>
-          <div class="hint" id="rangeInfo"></div>
-          <div class="row">
-            <button id="csv" data-i18n="settings.csv">Export CSV</button>
-            <button id="tcx" data-i18n="settings.tcx">Export TCX</button>
-            <button id="clear" data-i18n="settings.clear">Clear recording</button>
-          </div>
-          <label class="hint field"><span data-i18n="settings.tcxSport">Sport in the TCX file (Strava, Garmin Connect &amp; co.)</span>
-            <select id="tcxSport">
-              <option value="Running" data-i18n="settings.sportRunning">Running/walking (Running)</option>
-              <option value="Other" data-i18n="settings.sportOther">Other (Other)</option>
-            </select>
-          </label>
-          <div class="hint" data-i18n="settings.tcxHint">TCX contains time, distance, speed, kcal and heart rate (if available) from the first to the last moment with movement. Values come from the device and may be inaccurate.</div>
-        </section>
-
-        <section class="card grid wide">
-          <h2 data-i18n="console.title">Experiment console (Control Point 0x2AD9)</h2>
-          <div class="row">
-            <input type="text" id="raw" class="needs-conn grow2" placeholder="Hex bytes, e.g. 02 2C 01" disabled aria-label="Hex bytes" data-i18n-placeholder="console.placeholder" data-i18n-aria="console.inputLabel">
-            <button id="rawSend" class="needs-conn" disabled data-i18n="console.send">Send</button>
-          </div>
-          <div class="hint" data-i18n-rich="console.hint">Set Speed (02 …) is blocked if it is above the limit, larger than the maximum change, or comes too soon after the last speed command. Start (07) only after confirmation, Set Target Heart Rate (06) not at all. Everything else is sent raw.</div>
-          <div id="log" aria-live="off"></div>
-        </section>
-
-        <details class="card wide" id="info">
-          <summary data-i18n="info.summary">Info, safety &amp; privacy</summary>
-          <h3 data-i18n="info.safetyTitle">Safety and liability</h3>
-          <ul id="infoDisclaimer"></ul>
-          <h3 data-i18n="info.testedTitle">Tested with</h3>
-          <p id="infoTested"></p>
-          <p id="infoAffiliation"></p>
-          <h3 data-i18n="info.privacyTitle">Privacy</h3>
-          <p data-i18n="info.privacy">No accounts, no server, no tracking, no external scripts or fonts. Only if you switch on the optional route map, it loads map data from a map server (named on the route card). Settings (limit, ramp, language, theme, accepted notice) are stored only locally in this browser. The saved runs stay on this device too.</p>
-          <div id="infoDesktopPrivacy" hidden>
-            <p data-i18n="info.desktopPrivacy">On startup, the desktop app asks GitHub whether there is a newer version. You can turn this off here:</p>
-            <label class="check"><input type="checkbox" id="updateCheck" checked> <span data-i18n="info.updateCheck">check for updates</span></label>
-          </div>
-          <h3 data-i18n="info.licenseTitle">License</h3>
-          <p><span data-i18n="info.license">MIT license, without warranty.</span> <span id="infoSource"></span></p>
         </details>
       </div>
 
@@ -268,6 +201,7 @@
           <div><dt data-i18n="history.bestWeek">Best week</dt><dd id="hBestWeek">–</dd></div>
         </dl>
         <p class="hint" id="hDemoNote" data-i18n="history.demoNote" hidden>Demo runs are listed but not counted.</p>
+        <div class="row"><button id="openData" type="button" data-i18n="history.openData">Backup and saved runs…</button></div>
       </section>
 
       <section class="card grid history-part">
@@ -275,20 +209,6 @@
         <p class="hint" id="runEmpty" data-i18n="history.empty" hidden>No runs yet.</p>
         <ul id="runList" class="runs"></ul>
         <button id="runMore" type="button" data-i18n="history.more" hidden>Show more</button>
-      </section>
-
-      <section class="card grid history-part">
-        <h2 data-i18n="history.dataTitle">Saved runs</h2>
-        <label class="check"><input type="checkbox" id="autoSave" checked> <span data-i18n="history.autoSave">Save runs automatically</span></label>
-        <p class="hint" id="storageInfo"></p>
-        <div class="row">
-          <button id="backup" type="button" data-i18n="history.backup">Download backup</button>
-          <button id="restore" type="button" data-i18n="history.restore">Restore backup</button>
-          <button id="deleteAll" type="button" data-i18n="history.deleteAll">Delete all runs</button>
-        </div>
-        <input type="file" id="restoreFile" accept=".json,application/json" hidden>
-        <p class="hint" data-i18n="history.backupHint">The backup is a JSON file with all runs.</p>
-        <p class="hint" id="histStatus" role="status"></p>
       </section>
 
       <!-- Workouts view (src/workout-ui.ts): library, editor and week plan. A workout is started from the training view. -->
@@ -349,30 +269,20 @@
         <ul id="rtList" class="wk-list"></ul>
         <p class="hint" id="rtStorage" hidden></p>
         <p class="hint" id="rtStatus" role="status"></p>
-        <p class="hint" data-i18n="routes.privacy">The file is read on this device.</p>
         <p class="hint" data-i18n="routes.hint">A route only shows where you are along it.</p>
-      </section>
-
-      <section class="card grid routes-part">
-        <h2 data-i18n="routes.examplesTitle">Example routes</h2>
-        <p class="hint" data-i18n="routes.examplesHint">Real tracks to try routes without a GPX file. They have no elevation data.</p>
-        <ul id="rtExamples" class="wk-list"></ul>
-      </section>
-
-      <section class="card grid routes-part" id="rtPreview" hidden>
-        <h2 id="rtPreviewTitle"></h2>
-        <div id="rtProfile" class="profile big"></div>
-        <p class="hint" id="rtNoEle" hidden></p>
-        <div id="rtMap" class="route-map big" role="region" hidden></div>
-        <div class="row"><button id="rtMapToggle" type="button" class="map-toggle" aria-pressed="false" hidden></button></div>
-        <div class="hint map-note" id="rtMapNote" role="status" hidden></div>
-        <dl class="records" id="rtFacts"></dl>
       </section>
     </div>
 
     <div class="side">
       <section class="card control">
         <h2 data-i18n="control.title">Controls</h2>
+        <div id="demoBanner" class="banner demo" hidden>
+          <span data-i18n-rich="demo.banner">Demo: simulated treadmill, no real hardware, all values are simulated.</span>
+          <div class="row">
+            <button id="simLoss" type="button" data-i18n="demo.simLoss">Simulate connection loss</button>
+            <button id="simKey" type="button" data-i18n="demo.simKey">Pull safety key</button>
+          </div>
+        </div>
         <div class="dock">
           <div class="adjust">
             <button id="minus" class="needs-conn" disabled data-i18n="control.minus">− 0.5</button>
@@ -380,7 +290,7 @@
             <button id="plus" class="needs-conn" disabled data-i18n="control.plus">+ 0.5</button>
           </div>
           <div class="row actions">
-            <button id="start" class="primary needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><span data-i18n="control.start">Start</span></button>
+            <button id="start" class="primary needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><span id="startLabel">Start</span></button>
             <button id="pause" class="needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg><span data-i18n="control.pause">Pause</span></button>
             <button id="stop" class="stop needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-stop"/></svg><span data-i18n="control.stop">Stop</span></button>
           </div>
@@ -410,6 +320,104 @@
     <span id="footerLinks"></span>
   </footer>
 </div>
+<!-- Settings (src/settings-ui.ts): one large dialog with sections. The element ids are the same as when these were cards in
+     the page; the code that reads and writes them does not care where they sit. -->
+<dialog id="settingsDlg" class="settings-dlg" aria-labelledby="settingsTitle">
+  <div class="sd-head">
+    <h2 id="settingsTitle" data-i18n="settings.title">Settings &amp; data</h2>
+    <button id="settingsClose" type="button" class="icon-btn" aria-label="Close" data-i18n-aria="settings.close"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+  </div>
+  <div class="sd-main">
+    <div class="sd-tabs" role="tablist" aria-label="Settings sections" data-i18n-aria="settings.tabsLabel">
+      <button type="button" role="tab" id="tab-general" aria-controls="sd-general" data-tab="general" data-i18n="settings.tabGeneral">General</button>
+      <button type="button" role="tab" id="tab-safety" aria-controls="sd-safety" data-tab="safety" data-i18n="settings.tabSafety">Safety</button>
+      <button type="button" role="tab" id="tab-data" aria-controls="sd-data" data-tab="data" data-i18n="settings.tabData">Data</button>
+      <button type="button" role="tab" id="tab-info" aria-controls="sd-info" data-tab="info" data-i18n="settings.tabInfo">Info</button>
+    </div>
+    <div class="sd-panels">
+      <section class="sd-panel grid" id="sd-general" role="tabpanel" aria-labelledby="tab-general">
+        <div>
+          <div class="menu-label" id="langLabel" data-i18n="languageLabel">Language</div>
+          <div id="langOptions" class="menu-list" role="radiogroup" aria-labelledby="langLabel"></div>
+        </div>
+        <div>
+          <div class="menu-label" id="themeLabel" data-i18n="theme.label">Theme</div>
+          <div id="themeOptions" class="seg" role="radiogroup" aria-labelledby="themeLabel"></div>
+        </div>
+      </section>
+
+      <section class="sd-panel grid" id="sd-safety" role="tabpanel" aria-labelledby="tab-safety" hidden>
+        <label class="hint field"><span data-i18n="settings.limit">Personal speed limit (km/h)</span>
+          <input type="number" id="cap" min="1" max="20" step="0.5" value="6">
+        </label>
+        <label class="hint field"><span data-i18n="settings.maxStep">Maximum change per command (km/h)</span>
+          <input type="number" id="maxStep" min="0.1" max="1" step="0.1" value="0.5">
+        </label>
+        <label class="hint field"><span data-i18n="settings.hiddenMode">When the tab goes to the background while the belt is running</span>
+          <select id="hiddenMode">
+            <option value="warn" data-i18n="settings.hiddenWarn">only warn</option>
+            <option value="pause" data-i18n="settings.hiddenPause">pause the belt</option>
+          </select>
+        </label>
+        <div class="hint" id="rangeInfo"></div>
+        <hr>
+        <label class="switch">
+          <input type="checkbox" role="switch" id="quietSwitch">
+          <span class="sw-track" aria-hidden="true"></span>
+          <span class="sw-text"><strong data-i18n="settings.quietLabel">Hide warnings and safety questions</strong><span class="hint" data-i18n="settings.quietHint">Hides the safety notice and the question before every start.</span></span>
+        </label>
+      </section>
+
+      <section class="sd-panel grid" id="sd-data" role="tabpanel" aria-labelledby="tab-data" hidden>
+        <div class="grid">
+          <h3 data-i18n="history.dataTitle">Saved runs</h3>
+          <label class="check"><input type="checkbox" id="autoSave" checked> <span data-i18n="history.autoSave">Save runs automatically</span></label>
+          <p class="hint" id="storageInfo"></p>
+          <div class="row">
+            <button id="backup" type="button" data-i18n="history.backup">Download backup</button>
+            <button id="restore" type="button" data-i18n="history.restore">Restore backup</button>
+            <button id="deleteAll" type="button" data-i18n="history.deleteAll">Delete all runs</button>
+          </div>
+          <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+          <p class="hint" data-i18n="history.backupHint">The backup is a JSON file with all runs.</p>
+          <p class="hint" id="histStatus" role="status"></p>
+        </div>
+        <hr>
+        <div class="grid">
+          <h3 data-i18n="settings.recordingTitle">Current recording</h3>
+          <div class="row">
+            <button id="csv" data-i18n="settings.csv">Export CSV</button>
+            <button id="tcx" data-i18n="settings.tcx">Export TCX</button>
+            <button id="clear" data-i18n="settings.clear">Clear recording</button>
+          </div>
+          <label class="hint field"><span data-i18n="settings.tcxSport">Sport in the TCX file (Strava, Garmin Connect &amp; co.)</span>
+            <select id="tcxSport">
+              <option value="Running" data-i18n="settings.sportRunning">Running/walking (Running)</option>
+              <option value="Other" data-i18n="settings.sportOther">Other (Other)</option>
+            </select>
+          </label>
+          <div class="hint" data-i18n="settings.tcxHint">TCX contains time, distance, speed, kcal and heart rate (if available) from the first to the last moment with movement. Values come from the device and may be inaccurate.</div>
+        </div>
+      </section>
+
+      <section class="sd-panel" id="sd-info" role="tabpanel" aria-labelledby="tab-info" hidden>
+        <h3 data-i18n="info.safetyTitle">Safety and liability</h3>
+        <ul id="infoDisclaimer"></ul>
+        <h3 data-i18n="info.testedTitle">Tested with</h3>
+        <p id="infoTested"></p>
+        <p id="infoAffiliation"></p>
+        <h3 data-i18n="info.privacyTitle">Privacy</h3>
+        <p data-i18n="info.privacy">No accounts, no server, no tracking, no external scripts or fonts. Only if you show the map of a route, it loads map data from a map server (by default OpenFreeMap, tiles.openfreemap.org), which sees your IP address and the part of the map you look at. Settings (limit, ramp, language, theme, accepted notice) are stored only locally in this browser. The saved runs stay on this device too.</p>
+        <div id="infoDesktopPrivacy" hidden>
+          <p data-i18n="info.desktopPrivacy">On startup, the desktop app asks GitHub whether there is a newer version. You can turn this off here:</p>
+          <label class="check"><input type="checkbox" id="updateCheck" checked> <span data-i18n="info.updateCheck">check for updates</span></label>
+        </div>
+        <h3 data-i18n="info.licenseTitle">License</h3>
+        <p><span data-i18n="info.license">MIT license, without warranty.</span> <span id="infoSource"></span></p>
+      </section>
+    </div>
+  </div>
+</dialog>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

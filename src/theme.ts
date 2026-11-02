@@ -23,6 +23,11 @@ export function currentTheme(): ThemeChoice {
   return choice;
 }
 
+/** Whether the page is dark right now: the chosen theme, or the system's */
+export function isDark(): boolean {
+  return effectiveTheme(choice, !!systemDark()?.matches) === 'dark';
+}
+
 /** Also called when the system switches between light and dark. */
 export function onThemeChange(cb: (c: ThemeChoice) => void): () => void {
   listeners.add(cb);

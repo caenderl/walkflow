@@ -108,8 +108,8 @@ describe('number formatting', () => {
   });
 
   it('formats speeds in the messages', () => {
-    expect(messagesFor('de').control.ramping(2, 2.5)).toBe('Rampe läuft: 2,0 → 2,5 km/h');
-    expect(messagesFor('en').control.ramping(2, 2.5)).toBe('Ramping: 2.0 → 2.5 km/h');
+    expect(messagesFor('de').control.ramping(2, 2.5)).toBe('Tempo wird in Stufen angepasst: 2,0 → 2,5 km/h');
+    expect(messagesFor('en').control.ramping(2, 2.5)).toBe('Changing speed in steps: 2.0 → 2.5 km/h');
   });
 });
 

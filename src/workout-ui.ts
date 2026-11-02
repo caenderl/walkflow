@@ -23,8 +23,14 @@ const DEFAULT_SELECTED = `${TEMPLATE_PREFIX}intervals`;
 export interface WorkoutsHost {
   /** Effective speed limit in km/h, for the "runs at the limit" note */
   maxSpeed(): number;
-  /** Today's suggestion is a route: select it in the route card */
+  /** Today's suggestion is a route: choose it for the training view */
   useRoute(id: string): void;
+  /** A workout was chosen ("Use", or today's suggestion): the training view is about it now */
+  useWorkout(): void;
+  /** True while the training view is about a workout (and not about a route or free training) */
+  wanted(): boolean;
+  /** What is shown for the chosen workout may have changed (library loaded, workout edited) */
+  changed(): void;
 }
 
 type Unit = 'min' | 's' | 'm';
@@ -93,31 +99,17 @@ export function setupWorkouts(host: WorkoutsHost) {
   function select(id: string) {
     selected = id;
     store.set(SELECTED_STORAGE_KEY, id);
-    renderPicker();
     renderLists();
   }
 
-  function renderPicker() {
-    const sel = $<HTMLSelectElement>('progSelect');
-    const group = (label: string, items: [string, string][]) => {
-      const g = el('optgroup', { label });
-      g.append(...items.map(([value, text]) => el('option', { value, textContent: text })));
-      return g;
-    };
-    sel.replaceChildren(
-      ...(workouts.length ? [group(t.program.mine, workouts.map(w => [w.id, w.name]))] : []),
-      group(t.program.examples, TEMPLATES.map(tpl => [TEMPLATE_PREFIX + tpl.id, exampleName(tpl.id)])),
-    );
-    // A workout that no longer exists falls back to the first example
+  /** A workout that no longer exists falls back to the first example */
+  function keepSelectionValid() {
     if (!selectedSteps()) selected = DEFAULT_SELECTED;
-    sel.value = selected;
-    const steps = selectedSteps() ?? [];
-    $('progSummary').textContent = t.program.summary(steps.length, fmtLength(programLength(steps)));
   }
 
   // ---------- Library ----------
   function listItem(name: string, steps: ProgramStep[], id: string, actions: HTMLElement[]) {
-    const isSelected = id === selected;
+    const isSelected = id === selected && host.wanted();
     const li = el('li', { className: 'wk-item' });
     li.append(
       el('div', { className: 'wk-info' },
@@ -129,7 +121,7 @@ export function setupWorkouts(host: WorkoutsHost) {
   }
 
   function useButton(id: string) {
-    return button(t.workouts.use, () => { select(id); location.hash = ''; });
+    return button(t.workouts.use, () => { select(id); host.useWorkout(); location.hash = ''; });
   }
 
   function renderLists() {
@@ -313,7 +305,7 @@ export function setupWorkouts(host: WorkoutsHost) {
     $('todayPlanText').textContent = t.workouts.todaySuggest(sug.kind === 'route' ? t.history.tagRoute : t.history.tagWorkout, name);
     const use = $button('todayPlanUse');
     use.textContent = t.workouts.use;
-    use.onclick = () => { if (sug.kind === 'route') host.useRoute(sug.id); else select(sug.id); };
+    use.onclick = () => { if (sug.kind === 'route') host.useRoute(sug.id); else { select(sug.id); host.useWorkout(); } };
   }
 
   function renderPlan() {
@@ -360,15 +352,15 @@ export function setupWorkouts(host: WorkoutsHost) {
   }
 
   function renderAll() {
-    renderPicker();
+    keepSelectionValid();
     renderLists();
     renderEditor();
     renderPlan();
     renderToday();
+    host.changed();
   }
 
   // ---------- Events ----------
-  $<HTMLSelectElement>('progSelect').onchange = e => select((e.target as HTMLSelectElement).value);
   $button('wkNew').onclick = () => startEdit({ id: null, name: '', rows: [{ unit: 'min', amount: 5, speed: 3 }] });
   $button('wkAdd').onclick = () => {
     if (!draft) return;
@@ -393,6 +385,8 @@ export function setupWorkouts(host: WorkoutsHost) {
 
   return {
     selectedInfo,
+    /** The training view's choice changed: the "selected" marks in the library follow */
+    refresh: renderLists,
     /** The limit changed: the note in the editor depends on it */
     refreshLimit: renderTotals,
     setVisible(on: boolean) {

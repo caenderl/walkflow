@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import indexHtml from '../index.html?raw';
 import { stopPlacement, VIEWS, viewFromHash } from './views';
 
 describe('views', () => {
@@ -29,5 +30,11 @@ describe('where Stop is shown', () => {
 
   it('while connected, every view shows a Stop button', () => {
     for (const v of VIEWS) expect(stopPlacement(v, true)).not.toBe('none');
+  });
+
+  it('is in the order Training, Workouts, Routes, History, in the code and in the navigation', () => {
+    expect(VIEWS).toEqual(['training', 'workouts', 'routes', 'history']);
+    const nav = [...indexHtml.matchAll(/<a href="[^"]*" data-view="(\w+)"/g)].map(m => m[1]);
+    expect(nav).toEqual([...VIEWS]);
   });
 });

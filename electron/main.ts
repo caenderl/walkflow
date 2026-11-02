@@ -7,13 +7,14 @@ import {
 } from 'electron';
 import { detectLanguage, isLang, setLanguage, t } from '../src/i18n';
 import { buildCsp } from '../src/csp';
-import { mapOrigin, resolveMapStyle } from '../src/map-config';
+import { mapOrigins, resolveMapStyles } from '../src/map-config';
 import { mimeFor } from '../src/mime';
 import { isNewerVersion } from '../src/version';
 
 declare const __GITHUB_REPO__: string;
-/** The raw build setting WALKFLOW_MAP_STYLE; resolved here the same way as for the renderer (vite.config.ts) */
+/** The raw build settings WALKFLOW_MAP_STYLE and WALKFLOW_MAP_STYLE_DARK; resolved here the same way as for the renderer (vite.config.ts) */
 declare const __MAP_STYLE_RAW__: string;
+declare const __MAP_STYLE_DARK_RAW__: string;
 
 const SCHEME = 'app';
 const HOST = 'walkflow';
@@ -25,9 +26,9 @@ const STOP_ACCELERATOR = 'CommandOrControl+Shift+Space';
 const BACKGROUND = { dark: '#12141a', light: '#f3f4f7' };
 const background = () => (nativeTheme.shouldUseDarkColors ? BACKGROUND.dark : BACKGROUND.light);
 
-const MAP_STYLE = resolveMapStyle(__MAP_STYLE_RAW__);
-const MAP_ORIGIN = MAP_STYLE ? mapOrigin(MAP_STYLE) : null;
-const CSP = buildCsp({ mapOrigin: MAP_ORIGIN, header: true });
+const MAP_STYLES = resolveMapStyles(__MAP_STYLE_RAW__, __MAP_STYLE_DARK_RAW__);
+const MAP_ORIGINS = MAP_STYLES ? mapOrigins(MAP_STYLES) : [];
+const CSP = buildCsp({ mapOrigins: MAP_ORIGINS, header: true });
 
 /** Allowed permission requests. Everything else (camera, microphone, location, notifications …) is denied. */
 const ALLOWED_PERMISSIONS = new Set(['screen-wake-lock', 'fullscreen']);
@@ -255,9 +256,9 @@ if (!app.requestSingleInstanceLock()) {
       if (!ok) console.log(`Permission denied: ${permission}`);
       callback(ok);
     });
-    // No requests to remote hosts from the renderer, except the map server of this build (only used once the map is on)
+    // No requests to remote hosts from the renderer, except the map servers of this build (only used once the map is on)
     session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
-      const ok = [`${ORIGIN}/`, 'devtools://', 'data:', 'blob:', ...(MAP_ORIGIN ? [`${MAP_ORIGIN}/`] : [])].some(p => details.url.startsWith(p));
+      const ok = [`${ORIGIN}/`, 'devtools://', 'data:', 'blob:', ...MAP_ORIGINS.map(o => `${o}/`)].some(p => details.url.startsWith(p));
       if (!ok) console.log(`Blocked: ${details.url}`);
       callback({ cancel: !ok });
     });

@@ -1,8 +1,8 @@
 // The Content-Security-Policy of the web app (meta tag) and of the desktop app (response header). Nothing from outside
-// is allowed, except the map server for data (tiles, style, sprites, fonts) and images, and only if the build has a map.
+// is allowed, except the map servers for data (tiles, style, sprites, fonts) and images, and only if the build has a map.
 
-export function buildCsp({ mapOrigin, header }: { mapOrigin: string | null; header: boolean }): string {
-  const remote = mapOrigin ? [mapOrigin] : [];
+export function buildCsp({ mapOrigins, header }: { mapOrigins: readonly string[]; header: boolean }): string {
+  const remote = mapOrigins;
   return [
     "default-src 'self'",
     "script-src 'self'",

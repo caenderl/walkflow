@@ -1,4 +1,4 @@
-// Menus that open from a header button (connection; language and theme). No library: a button with
+// Menus that open from a header button (the connection menu), and the language and theme choice of the settings dialog. No library: a button with
 // aria-expanded and a panel below it. Closes on a click outside, Esc, Tab out of it, or when another menu
 // opens. A click outside is never swallowed, so a Stop button elsewhere works on the first click.
 // Esc keeps its global meaning as well: while connected it also stops the belt (main.ts).
@@ -84,11 +84,8 @@ function option(label: string, checked: boolean, onPick: () => void): HTMLButton
   return b;
 }
 
-/** Language list and theme switch; both follow changes made elsewhere (e.g. the first-run dialog). */
-export function setupPrefsMenu(
-  trigger: HTMLButtonElement, panel: HTMLElement, langBox: HTMLElement, themeBox: HTMLElement,
-  keepClear?: () => readonly (Element | null)[],
-): Menu {
+/** Language list and theme switch (in the settings dialog); both follow changes made elsewhere (e.g. the first-run dialog). */
+export function setupPrefs(langBox: HTMLElement, themeBox: HTMLElement) {
   const render = () => {
     langBox.replaceChildren(...LANGS.map(l => {
       const b = option(messagesFor(l).name, l === lang, () => {
@@ -107,10 +104,8 @@ export function setupPrefsMenu(
       b.dataset.themeChoice = c;
       return b;
     }));
-    trigger.title = t.prefs.label;
   };
   render();
   onLanguageChange(render);
   onThemeChange(render);
-  return setupMenu(trigger, panel, keepClear);
 }

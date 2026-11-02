@@ -3,7 +3,7 @@ import type { Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { buildCsp } from './src/csp.ts';
-import { mapOrigin, resolveMapStyle } from './src/map-config.ts';
+import { mapOrigins, resolveMapStyles } from './src/map-config.ts';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
@@ -11,11 +11,12 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 const githubRepo = process.env.GITHUB_REPOSITORY ?? '';
 const desktop = process.env.VITE_TARGET === 'desktop';
 
-// WALKFLOW_MAP_STYLE: URL of the map style (https), or "off" for a build without a map. Empty = OpenFreeMap.
-const mapStyle = resolveMapStyle(process.env.WALKFLOW_MAP_STYLE);
+// WALKFLOW_MAP_STYLE (light theme) and WALKFLOW_MAP_STYLE_DARK (dark theme): URL of a map style (https), or "off" for a build
+// without a map. Empty = OpenFreeMap. A light style alone is used for both themes.
+const mapStyles = resolveMapStyles(process.env.WALKFLOW_MAP_STYLE, process.env.WALKFLOW_MAP_STYLE_DARK);
 
 /** Strict CSP only in the build: the dev server injects styles it would forbid. */
-const CSP = buildCsp({ mapOrigin: mapStyle && mapOrigin(mapStyle), header: false });
+const CSP = buildCsp({ mapOrigins: mapStyles ? mapOrigins(mapStyles) : [], header: false });
 
 function csp(): Plugin {
   return {
@@ -30,10 +31,20 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __GITHUB_REPO__: JSON.stringify(githubRepo),
-    __MAP_STYLE__: JSON.stringify(mapStyle),
+    __MAP_STYLES__: JSON.stringify(mapStyles),
   },
   // The map chunk is large on purpose: it is loaded only when the map is switched on
-  build: { target: 'es2022', chunkSizeWarningLimit: 1200 },
+  build: {
+    target: 'es2022',
+    chunkSizeWarningLimit: 1200,
+    // The flags stay separate files (no data: addresses in the page), in their own folder so the offline cache can leave them out
+    assetsInlineLimit: file => (file.includes('/flags/') ? false : undefined),
+    rollupOptions: {
+      output: {
+        assetFileNames: asset => (asset.originalFileNames?.some(f => f.includes('/flags/')) ? 'assets/flags/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
+      },
+    },
+  },
   plugins: [
     csp(),
     VitePWA({
@@ -61,8 +72,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png}'],
-        // The map (loaded only on request, needs the network anyway) stays out of the offline cache
-        globIgnores: ['**/map-view-*', '**/maplibre-gl-*'],
+        // The map (loaded only on request, needs the network anyway) and the country data stay out of the offline cache
+        globIgnores: ['**/map-view-*', '**/maplibre-gl-*', '**/countries-*', '**/assets/flags/**'],
+        // Flags are fetched when shown and kept after that
+        runtimeCaching: [{ urlPattern: ({ url }) => url.pathname.includes('/assets/flags/'), handler: 'CacheFirst', options: { cacheName: 'flags', expiration: { maxEntries: 80 } } }],
         cleanupOutdatedCaches: true,
       },
     }),

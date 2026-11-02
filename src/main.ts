@@ -11,9 +11,11 @@ import {
   OP, parseMachineStatus, parseTrainingStatus, type Range, type TreadmillData,
 } from './ftms';
 import { setupHistory } from './history';
-import { onLanguageChange, t, type Text } from './i18n';
+import { lang, onLanguageChange, t, type Text } from './i18n';
+import { routeDescription } from './route-examples';
 import { bindText, initLanguage } from './i18n-dom';
-import { setupMenu, setupPrefsMenu } from './menus';
+import { setupMenu, setupPrefs } from './menus';
+import { setupInterval } from './interval-ui';
 import { fmtDistance, fmtLength, fmtTime, ProgramRunner, programLength, type ProgramStep } from './program';
 import { setupPwa } from './pwa';
 import type { RunSource, RunTag } from './runs';
@@ -23,11 +25,13 @@ import {
   loadLimit, MAX_STEP_MAX, MAX_STEP_MIN, MAX_STEP_STORAGE_KEY, parseHexBytes, parseMaxStep, RAMP_INTERVAL_MS,
   serializeLimit, SpeedGovernor, StandstillDetector,
 } from './safety';
+import { ACTIVE_STORAGE_KEY, readActive, type Active } from './selection';
+import { setupSettings } from './settings-ui';
 import { SimulatorAdapter } from './sim';
 import { initTheme, onThemeChange } from './theme';
 import { $, $button, $input, download, log, store } from './ui';
+import { askBeforeStart } from './quiet';
 import { setupRoutes } from './route-ui';
-import type { Route } from './routes';
 import { setupViews, stopPlacement, type View } from './views';
 import { setupWorkouts } from './workout-ui';
 
@@ -60,6 +64,10 @@ let lastSample = 0;
 let runSource: RunSource = 'ble';
 let view: View = 'training';
 let uiConnected = false;
+/** What the training view is about: a workout, a route, or nothing (free training). Chosen in the workouts and routes views. */
+let active: Active = readActive(store.get(ACTIVE_STORAGE_KEY));
+/** The stage can only be drawn once everything it reads has been set up */
+let booted = false;
 
 // Saved runs. The recorder never throws and saves asynchronously, so it cannot hold up the control path.
 const history = setupHistory({
@@ -68,10 +76,20 @@ const history = setupHistory({
   onRestored: () => { void workouts.reload(); void routes.reload(); },
 });
 const recorder = history.recorder;
-const workouts = setupWorkouts({ maxSpeed: () => effectiveMax(), useRoute: id => routes.use(id) });
+const interval = setupInterval();
+const settings = setupSettings();
+const workouts = setupWorkouts({
+  maxSpeed: () => effectiveMax(),
+  useRoute: id => { routes.use(id); setActive('route'); },
+  useWorkout: () => setActive('workout'),
+  wanted: () => active === 'workout',
+  changed: () => { if (booted) renderStage(); },
+});
 const routes = setupRoutes({
   maxSpeed: () => effectiveMax(),
-  walk: (route, steps, kmh) => runRoute(route, steps, kmh),
+  changed: () => { if (booted) renderStage(); },
+  chosen: () => setActive('route'),
+  wanted: () => active === 'route',
 });
 
 const connected = () => !!client?.connected;
@@ -92,7 +110,7 @@ const runner = new ProgramRunner({
   setTarget: kmh => { governor.request(kmh); standstill.arm(); },
   currentTarget: () => governor.target,
   distance: () => cur.dist,
-  status: text => { bindText($('progStatus'), text); bindText($('routeStatus'), text); },
+  status: text => { bindText($('progStatus'), text); renderStage(); },
   log,
 });
 
@@ -280,12 +298,63 @@ async function doStart(): Promise<boolean> {
   return a && b;
 }
 
-function confirmStart(intro?: string): Promise<boolean> {
-  return confirmDialog(t.start.title, [
+/** The question before a start. Quiet mode (settings) skips it, except for a raw Start in the experiment console. */
+function confirmStart(intro?: string, opts?: { always?: boolean }): Promise<boolean> {
+  return askBeforeStart(settings.quiet, () => confirmDialog(t.start.title, [
     ...(intro ? [intro] : []),
     t.start.sideRails,
     t.start.safetyKey,
-  ], t.start.confirm);
+  ], t.start.confirm), opts);
+}
+
+/** What the Start button starts, if what was chosen still exists */
+function effectiveActive(): Active {
+  if (active === 'workout' && workouts.selectedInfo()) return 'workout';
+  if (active === 'route' && routes.current()) return 'route';
+  return null;
+}
+
+function setActive(kind: Active) {
+  active = kind;
+  store.set(ACTIVE_STORAGE_KEY, kind ?? '');
+  routes.refresh();
+  workouts.refresh();
+  renderStage();
+}
+
+/** What the training view shows (the stage in index.html): the chosen workout or route with its details, and as the main
+ *  element the steps of a workout, the map of a route (if the map is on) or the speed chart. Display only. */
+let activeRun: { kind: RunTag['kind']; name: string } | null = null;
+function renderStage() {
+  const kind = effectiveActive();
+  const p = runner.progress();
+  const runningSteps = p !== null && activeRun?.kind === 'workout';
+  const mode = runningSteps || kind === 'workout' ? 'interval' : kind === 'route' && routes.mapActive() ? 'map' : 'chart';
+  const stage = $('stage');
+  const was = stage.dataset.mode;
+  stage.dataset.mode = mode;
+
+  const workout = kind === 'workout' ? workouts.selectedInfo() : null;
+  const route = kind === 'route' ? routes.current() : null;
+  $('stageHead').hidden = $('stageInfo').hidden = !kind;
+  $('shKind').textContent = kind === 'workout' ? t.history.tagWorkout : t.history.tagRoute;
+  $('shName').textContent = workout?.name ?? route?.route.name ?? '';
+  $('shInfo').textContent = workout ? t.program.summary(workout.steps.length, fmtLength(programLength(workout.steps))) : route?.info ?? '';
+  const desc = route ? routeDescription(route.route, lang) : null;
+  $('shDesc').textContent = desc?.text ?? '';
+  $('shDesc').hidden = !desc;
+  if (desc?.lang) $('shDesc').lang = desc.lang; else $('shDesc').removeAttribute('lang');
+  const clear = $button('shClear');
+  clear.textContent = t.stage.clear;
+  clear.disabled = runner.active;
+
+  $('stageInterval').hidden = mode !== 'interval';
+  if (runningSteps) interval.render(p, governor.target);
+  else if (workout) interval.renderPreview(workout.steps);
+  $('stageChart').hidden = mode !== 'chart';
+  $('stageFreeHint').hidden = kind !== null;
+  $('startLabel').textContent = kind === 'workout' ? t.program.start : kind === 'route' ? t.routes.walk : t.control.start;
+  if (mode === 'chart' && was !== 'chart') redrawChart();
 }
 
 /**
@@ -299,7 +368,12 @@ async function runSteps(steps: ProgramStep[], tag: Omit<RunTag, 'completed'>, in
   if (!connected()) return;
   onStart?.();
   const token = recorder.begin(tag);
+  const mine = activeRun = { kind: tag.kind, name: tag.name };
+  interval.reset();
   const result = await runner.run(steps);
+  // A newer run may have replaced this one in the meantime
+  if (activeRun === mine) activeRun = null;
+  renderStage();
   recorder.complete(token, result === 'finished');
   standstill.disarm();
   // The run is saved by now (or has failed): today's goal in the route card may have moved
@@ -313,10 +387,12 @@ async function runProgram() {
     t.program.confirm(selected.steps.length, fmtLength(programLength(selected.steps))));
 }
 
-async function runRoute(route: Route, steps: ProgramStep[], kmh: number) {
-  const shown = Math.min(kmh, effectiveMax());
-  await runSteps(steps, { kind: 'route', id: route.id, name: route.name },
-    t.routes.walkConfirm(route.name, fmtDistance(steps[0]?.meters ?? 0), shown), () => routes.restart());
+async function runRoute() {
+  const walk = routes.walkRequest();
+  if (!walk) { bindText($('progStatus'), () => t.routes.cannotWalk); return; }
+  const shown = Math.min(walk.kmh, effectiveMax());
+  await runSteps(walk.steps, { kind: 'route', id: walk.route.id, name: walk.route.name },
+    t.routes.walkConfirm(walk.route.name, fmtDistance(walk.steps[0]?.meters ?? 0), shown), () => routes.restart());
 }
 
 // ---------- Export ----------
@@ -472,6 +548,7 @@ function setUi(isConnected: boolean) {
   uiConnected = isConnected;
   document.documentElement.classList.toggle('connected', isConnected);
   applyStopPlacement();
+  renderSettingsLock();
   $button('connect').disabled = isConnected || !$('unsupported').hidden;
   $button('demo').disabled = isConnected;
   $button('disconnect').disabled = !isConnected;
@@ -551,7 +628,7 @@ async function rawSend() {
   if (check.action === 'block') { log(`❌ ${check.reason}`); return; }
   const data = new Uint8Array(bytes);
   if (check.action === 'confirm-start') {
-    if (!(await confirmStart())) return;
+    if (!(await confirmStart(undefined, { always: true }))) return;
     governor.reset();
     if (await c.send(data)) beltStarted = true;
     return;
@@ -644,7 +721,12 @@ function link(href: string, text: string) {
 // The header menus never cover the controls (Start/Pause/Stop, ±)
 const controls = () => [document.querySelector('.dock')];
 const connMenu = setupMenu($button('statusBtn'), $('connMenu'), controls);
-setupPrefsMenu($button('prefsBtn'), $('prefsMenu'), $('langOptions'), $('themeOptions'), controls);
+setupPrefs($('langOptions'), $('themeOptions'));
+$button('openData').onclick = () => settings.open('data');
+// The belt runs: settings are locked (the dialog itself checks this when it opens)
+const renderSettingsLock = () => settings.setLocked(connected() && maybeRunning());
+setInterval(renderSettingsLock, 500);
+onLanguageChange(() => { settings.relabel(); renderStage(); });
 onThemeChange(redrawChart);
 
 $button('connect').onclick = () => { connMenu.close(); void connect('ble'); };
@@ -658,9 +740,15 @@ $button('simLoss').onclick = () => sim?.simulateConnectionLoss();
 $button('simKey').onclick = () => sim?.pullSafetyKey();
 
 $button('start').onclick = async () => {
+  // A program that is running is not started again; stop it first
+  if (runner.active) return;
+  const kind = effectiveActive();
+  if (kind === 'workout') { await runProgram(); return; }
+  if (kind === 'route') { await runRoute(); return; }
   if (!(await confirmStart())) return;
   if (connected()) await doStart();
 };
+$button('shClear').onclick = () => setActive(null);
 $button('pause').onclick = () => void doPause();
 $button('stop').onclick = () => void doStop();
 
@@ -681,9 +769,6 @@ $<HTMLSelectElement>('hiddenMode').onchange = e => store.set(HIDDEN_MODE_KEY, (e
 $input('inclSlider').oninput = e => { $('inclTarget').textContent = t.incline.value(parseFloat((e.target as HTMLInputElement).value)); };
 $input('inclSlider').onchange = e => void setIncline(parseFloat((e.target as HTMLInputElement).value));
 
-$button('progStart').onclick = () => void runProgram();
-$button('progStop').onclick = () => void doStop();
-$button('routeStop').onclick = () => void doStop();
 
 $button('csv').onclick = exportCsv;
 $button('tcx').onclick = exportTcx;
@@ -722,7 +807,8 @@ onLanguageChange(() => {
 
 // ---------- Init ----------
 setStatus(() => t.connection.notConnected);
-bindText($('progStatus'), () => t.program.idle);
+booted = true;
+renderStage();
 setupViews(v => {
   view = v;
   applyStopPlacement();

@@ -2,6 +2,7 @@
 // it. Everything here is display only. A failure only shows a message; it never touches the treadmill's control path.
 
 import { t } from './i18n';
+import { isDefaultMapStyle } from './map-config';
 import type { RouteMap } from './map-view';
 import type { Route } from './routes';
 
@@ -11,8 +12,8 @@ export interface MapSlot {
   /** The current position on the route; null = none */
   mark(pos: { lat: number; lon: number } | null): void;
   setEnabled(on: boolean): void;
-  /** The language changed: the map's own texts are set when it is created */
-  relocalize(): void;
+  /** The language or the theme changed: the map's own texts and its style are set when it is created */
+  rebuild(): void;
 }
 
 /** Texts of the map library's controls, in the language of the app */
@@ -30,10 +31,10 @@ function mapLocale(): Record<string, string> {
 
 /**
  * @param box where the map goes; shown while a route is drawn and the map is on
- * @param style URL of the map style (the build's, see src/map-config.ts)
+ * @param style the map style for the current theme (the build's, see src/map-config.ts), asked for whenever a map is made
  * @param onProblem a message to show, or null when there is nothing to report
  */
-export function createMapSlot(box: HTMLElement, style: string, onProblem: (message: string | null) => void): MapSlot {
+export function createMapSlot(box: HTMLElement, style: () => { url: string; dark: boolean }, onProblem: (message: string | null) => void): MapSlot {
   let enabled = false;
   let route: Route | null = null;
   let pos: { lat: number; lon: number } | null = null;
@@ -62,7 +63,8 @@ export function createMapSlot(box: HTMLElement, style: string, onProblem: (messa
     try {
       const { createRouteMap } = await import('./map-view');
       if (gen !== generation || !wanted()) return;
-      map = createRouteMap(box, { style, locale: mapLocale(), onError: () => onProblem(t.routes.mapFailed) });
+      const chosen = style();
+      map = createRouteMap(box, { style: chosen.url, dark: chosen.dark, tint: isDefaultMapStyle(chosen.url, chosen.dark), locale: mapLocale(), onError: () => onProblem(t.routes.mapFailed) });
       map.show(route!);
       shown = key(route!);
       map.mark(pos);
@@ -99,6 +101,6 @@ export function createMapSlot(box: HTMLElement, style: string, onProblem: (messa
       try { map?.mark(p); } catch { /* display only */ }
     },
     setEnabled(on) { enabled = on; sync(); },
-    relocalize() { if (map) { drop(); sync(); } },
+    rebuild() { if (map) { drop(); sync(); } },
   };
 }

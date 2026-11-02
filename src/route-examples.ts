@@ -1,14 +1,24 @@
-// Example routes that come with the app, so the routes view is not empty on the first start. They are copied into the
-// person's own library on request (with a new id), like a GPX import; nothing here is shared or changed afterwards.
+// Example routes that come with the app, so the routes view is not empty on the first start. Each one is put into the
+// person's own library once (with a new id, like a GPX import) and is an ordinary route from then on: it can be
+// deleted, and a deleted one does not come back.
 // Track data is from OpenStreetMap, so it carries the attribution the licence asks for. A track in OpenStreetMap has no
 // elevations, so these routes have none either.
 
-import type { Route } from './routes';
+import type { Lang } from './i18n';
+import { analyzeRoute, type Route } from './routes';
 
 export interface RouteExample {
   key: string;
   name: string;
   place: string;
+  /** ISO 3166-1 alpha-2 */
+  country: string;
+  /** Walking speed in km/h; the duration of the route follows from it */
+  defaultSpeed: number;
+  /** A line or two about the route, in each language of the app. The route keeps only the key; the text is shown in the language of the app (routeDescription). */
+  description: Record<Lang, string>;
+  /** Texts this example was saved with in earlier versions, so a copy that still has one counts as unchanged */
+  previousDescriptions: readonly string[];
   /** Where the track comes from, shown next to it */
   source: string;
   /** [latitude, longitude] */
@@ -22,6 +32,18 @@ export const ROUTE_EXAMPLES: readonly RouteExample[] = [
     key: 'central-park-reservoir',
     name: 'Central Park Reservoir Loop',
     place: 'New York, USA',
+    country: 'US',
+    defaultSpeed: 4,
+    description: {
+      en: 'The Stephanie and Fred Shuman Running Track, 2.54 km (1.58 miles) around the Jacqueline Kennedy Onassis Reservoir in Central Park, between 86th and 96th Street. The reservoir was built from 1858 to 1862 and taken out of service as a water supply in 1993. It was renamed in 1994 after Jacqueline Kennedy Onassis, who jogged here.',
+      de: 'Die Stephanie and Fred Shuman Running Track, 2,54 km (1,58 Meilen) rund um das Jacqueline Kennedy Onassis Reservoir im Central Park, zwischen der 86. und der 96. Straße. Das Becken wurde von 1858 bis 1862 gebaut und 1993 als Wasserspeicher außer Betrieb genommen. 1994 wurde es nach Jacqueline Kennedy Onassis benannt, die hier joggte.',
+      fr: 'Le Stephanie and Fred Shuman Running Track, 2,54 km (1,58 mile) autour du réservoir Jacqueline Kennedy Onassis, dans Central Park, entre la 86e et la 96e Rue. Le réservoir a été construit de 1858 à 1862 et mis hors service comme réserve d’eau en 1993. Il porte depuis 1994 le nom de Jacqueline Kennedy Onassis, qui y faisait son jogging.',
+    },
+    previousDescriptions: [
+      'The well-known loop around the Jacqueline Kennedy Onassis Reservoir in Central Park, New York, about 2.5 km.',
+      'Die bekannte Runde um das Jacqueline Kennedy Onassis Reservoir im Central Park in New York, rund 2,5 km.',
+      'Le célèbre tour du réservoir Jacqueline Kennedy Onassis dans Central Park, à New York, environ 2,5 km.',
+    ],
     // OpenStreetMap way 179679714 "Stephanie and Fred Shuman Reservoir Running Track", simplified to within 1 m
     source: OSM,
     points: [
@@ -49,7 +71,66 @@ export const ROUTE_EXAMPLES: readonly RouteExample[] = [
   },
 ];
 
-/** A route for the library: its own copy of the points, a new id */
+/** A route for the library: its own copy of the points, a new id. Its description is the example's, in the language of the app, until the person writes their own. */
 export function exampleRoute(example: RouteExample, id: string, now: number): Route {
-  return { id, name: example.name, updated: now, points: example.points.map(([lat, lon]) => ({ lat, lon })) };
+  return { id, name: example.name, updated: now, country: example.country, defaultSpeed: example.defaultSpeed, example: example.key, points: example.points.map(([lat, lon]) => ({ lat, lon })) };
+}
+
+/**
+ * The text to show for a route. A text the person wrote is shown as it is (it has no language we know); the text of an
+ * example route follows the language of the app, and says which one it is, for the lang attribute of the element.
+ */
+export function routeDescription(r: Route, lang: Lang, examples: readonly RouteExample[] = ROUTE_EXAMPLES): { text: string; lang: Lang | null } | null {
+  if (r.description) return { text: r.description, lang: null };
+  const ex = r.example ? examples.find(e => e.key === r.example) : undefined;
+  return ex ? { text: ex.description[lang], lang } : null;
+}
+
+/**
+ * What to store after the description was edited. An example route whose field was left as shown stays an example (its
+ * text keeps following the language); any other text, or an empty one, is the person's own from then on.
+ */
+export function descriptionAfterEdit(r: Route, typed: string, lang: Lang, examples: readonly RouteExample[] = ROUTE_EXAMPLES): { description?: string; example?: string } {
+  const shown = r.example && !r.description ? routeDescription(r, lang, examples) : null;
+  if (shown && typed.trim() === shown.text.trim()) return { example: r.example! };
+  return typed.trim() ? { description: typed } : {};
+}
+
+/**
+ * A route in the library that is a copy of an example made before routes knew their example (the person copied it by
+ * hand, or an earlier version saved it with a text): it becomes that example, so its text follows the language and it
+ * has the example's walking speed. Recognised by name, start and length. A text the person wrote stays; one speed the
+ * person has set stays. null = nothing to change.
+ */
+export function adoptExample(r: Route, example: RouteExample): Route | null {
+  if (r.example !== undefined || r.name !== example.name) return null;
+  const first = example.points[0]!, start = r.points[0]!;
+  if (Math.abs(start.lat - first[0]) > 0.001 || Math.abs(start.lon - first[1]) > 0.001) return null;
+  const total = analyzeRoute(exampleRoute(example, r.id, r.updated)).total;
+  if (Math.abs(analyzeRoute(r).total - total) > total * 0.02) return null;
+  const own = r.description !== undefined && ![...Object.values(example.description), ...example.previousDescriptions].includes(r.description);
+  const { description: _old, ...rest } = r;
+  return { ...rest, ...(own ? { description: r.description } : {}), example: example.key, defaultSpeed: r.defaultSpeed ?? example.defaultSpeed };
+}
+
+/** localStorage key: the keys of the examples that were put into the library already */
+export const SEEDED_STORAGE_KEY = 'walkflow.exampleRoutes';
+
+/** The stored list of keys; anything else (missing, damaged) counts as empty */
+export function readSeeded(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const v: unknown = JSON.parse(raw);
+    return Array.isArray(v) ? v.filter((k): k is string => typeof k === 'string') : [];
+  } catch { return []; }
+}
+
+/** The examples to put into the library now: not seeded before, and not already there under the same name */
+export function examplesToSeed(seeded: readonly string[], existingNames: readonly string[], examples: readonly RouteExample[] = ROUTE_EXAMPLES): RouteExample[] {
+  return examples.filter(e => !seeded.includes(e.key) && !existingNames.includes(e.name));
+}
+
+/** The list to store afterwards: every current example counts as seeded, whether it was added or already there */
+export function markSeeded(seeded: readonly string[], examples: readonly RouteExample[] = ROUTE_EXAMPLES): string[] {
+  return [...new Set([...seeded, ...examples.map(e => e.key)])];
 }
