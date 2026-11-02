@@ -87,6 +87,20 @@ npm run dev
 
 Without a treadmill: click “Demo (no treadmill)”. The simulator speaks real FTMS bytes and can simulate a connection loss and the safety key.
 
+### Map
+
+The map of a route is optional and off by default. Nothing is requested from the map server until a person switches it on; the choice is kept in the browser. The map is [MapLibre GL JS](https://maplibre.org/) (BSD 3-Clause), loaded on demand as a separate chunk, with the free vector tiles of [OpenFreeMap](https://openfreemap.org/). It only shows the route and the position; it sends nothing to the treadmill.
+
+The style is chosen when the app is built, not in the running app, because the Content-Security-Policy lets the app talk to exactly one map server. Set `WALKFLOW_MAP_STYLE` for `npm run build` or `npm run dist`:
+
+| Value | Effect |
+| --- | --- |
+| unset | OpenFreeMap (`https://tiles.openfreemap.org/styles/liberty`) |
+| an `https://` URL | That style. Everything it refers to (tiles, sprites, fonts) has to be on the same host, otherwise the policy blocks it. |
+| `off` | No map in this build; the policy allows no outside host |
+
+An invalid value stops the build. The privacy texts name the default server; change them if you change the style.
+
 ### Structure
 
 | File | Contents |

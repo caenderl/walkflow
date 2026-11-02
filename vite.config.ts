@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import type { Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
+import { buildCsp } from './src/csp.ts';
+import { mapOrigin, resolveMapStyle } from './src/map-config.ts';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
@@ -9,20 +11,11 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 const githubRepo = process.env.GITHUB_REPOSITORY ?? '';
 const desktop = process.env.VITE_TARGET === 'desktop';
 
+// WALKFLOW_MAP_STYLE: URL of the map style (https), or "off" for a build without a map. Empty = OpenFreeMap.
+const mapStyle = resolveMapStyle(process.env.WALKFLOW_MAP_STYLE);
+
 /** Strict CSP only in the build: the dev server injects styles it would forbid. */
-const CSP = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self'",
-  "img-src 'self' data:",
-  "font-src 'self'",
-  "connect-src 'self'",
-  "manifest-src 'self'",
-  "worker-src 'self'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'none'",
-].join('; ');
+const CSP = buildCsp({ mapOrigin: mapStyle && mapOrigin(mapStyle), header: false });
 
 function csp(): Plugin {
   return {
@@ -37,8 +30,10 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __GITHUB_REPO__: JSON.stringify(githubRepo),
+    __MAP_STYLE__: JSON.stringify(mapStyle),
   },
-  build: { target: 'es2022' },
+  // The map chunk is large on purpose: it is loaded only when the map is switched on
+  build: { target: 'es2022', chunkSizeWarningLimit: 1200 },
   plugins: [
     csp(),
     VitePWA({
@@ -66,6 +61,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png}'],
+        // The map (loaded only on request, needs the network anyway) stays out of the offline cache
+        globIgnores: ['**/map-view-*', '**/maplibre-gl-*'],
         cleanupOutdatedCaches: true,
       },
     }),

@@ -12,5 +12,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["electron", "src/version.ts", "src/i18n.ts", "src/locales"]
+  "include": ["electron", "src/version.ts", "src/i18n.ts", "src/locales", "src/csp.ts", "src/map-config.ts"]
 }

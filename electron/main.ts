@@ -6,9 +6,13 @@ import {
   type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions,
 } from 'electron';
 import { detectLanguage, isLang, setLanguage, t } from '../src/i18n';
+import { buildCsp } from '../src/csp';
+import { mapOrigin, resolveMapStyle } from '../src/map-config';
 import { isNewerVersion } from '../src/version';
 
 declare const __GITHUB_REPO__: string;
+/** The raw build setting WALKFLOW_MAP_STYLE; resolved here the same way as for the renderer (vite.config.ts) */
+declare const __MAP_STYLE_RAW__: string;
 
 const SCHEME = 'app';
 const HOST = 'walkflow';
@@ -20,10 +24,9 @@ const STOP_ACCELERATOR = 'CommandOrControl+Shift+Space';
 const BACKGROUND = { dark: '#12141a', light: '#f3f4f7' };
 const background = () => (nativeTheme.shouldUseDarkColors ? BACKGROUND.dark : BACKGROUND.light);
 
-const CSP = [
-  "default-src 'self'", "script-src 'self'", "style-src 'self'", "img-src 'self' data:", "font-src 'self'",
-  "connect-src 'self'", "object-src 'none'", "base-uri 'self'", "form-action 'none'", "frame-ancestors 'none'",
-].join('; ');
+const MAP_STYLE = resolveMapStyle(__MAP_STYLE_RAW__);
+const MAP_ORIGIN = MAP_STYLE ? mapOrigin(MAP_STYLE) : null;
+const CSP = buildCsp({ mapOrigin: MAP_ORIGIN, header: true });
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -256,9 +259,9 @@ if (!app.requestSingleInstanceLock()) {
       if (!ok) console.log(`Permission denied: ${permission}`);
       callback(ok);
     });
-    // No requests to remote hosts from the renderer
+    // No requests to remote hosts from the renderer, except the map server of this build (only used once the map is on)
     session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
-      const ok = [`${ORIGIN}/`, 'devtools://', 'data:', 'blob:'].some(p => details.url.startsWith(p));
+      const ok = [`${ORIGIN}/`, 'devtools://', 'data:', 'blob:', ...(MAP_ORIGIN ? [`${MAP_ORIGIN}/`] : [])].some(p => details.url.startsWith(p));
       if (!ok) console.log(`Blocked: ${details.url}`);
       callback({ cancel: !ok });
     });

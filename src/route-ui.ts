@@ -5,6 +5,7 @@
 import { confirmDialog } from './dialogs';
 import { GPX_MAX_CHARS, parseGpx, serializeGpx } from './gpx';
 import { onLanguageChange, t } from './i18n';
+import { createMapSlot, type MapSlot } from './route-map';
 import { fmtDistance, type ProgramStep } from './program';
 import { getRouteStore, type RouteStore } from './route-store';
 import {
@@ -18,6 +19,7 @@ import { todayGoal, type DayGoal } from './workouts';
 
 export const SELECTED_STORAGE_KEY = 'walkflow.route';
 const SPEED_STORAGE_KEY = 'walkflow.routeSpeed';
+const MAP_STORAGE_KEY = 'walkflow.map';
 const DEFAULT_SPEED = 3;
 /** How often the standing against today's goal is read again while data keeps coming in */
 const GOAL_REFRESH_MS = 60_000;
@@ -102,6 +104,39 @@ export function setupRoutes(host: RoutesHost) {
 
   const selectedRoute = () => routes.find(r => r.id === selectedId) ?? null;
 
+  // ---------- Map (optional, loaded only when switched on) ----------
+  // One switch for both places that can show one: the card in the training view (with the position) and the preview
+  // in the routes view. Until it is switched on, nothing is loaded and no request leaves the device.
+  const mapStyle = __MAP_STYLE__;
+  let mapOn = mapStyle !== null && store.get(MAP_STORAGE_KEY) === '1';
+  const maps: { slot: MapSlot; toggle: HTMLButtonElement; note: HTMLElement; problem: string | null }[] = [];
+  if (mapStyle) {
+    for (const [box, toggle, note] of [['routeMap', 'routeMapToggle', 'routeMapNote'], ['rtMap', 'rtMapToggle', 'rtMapNote']] as const) {
+      const m = { slot: null as unknown as MapSlot, toggle: $button(toggle), note: $(note), problem: null as string | null };
+      m.slot = createMapSlot($(box), mapStyle, message => { m.problem = message; renderMaps(); });
+      m.slot.setEnabled(mapOn);
+      m.toggle.onclick = () => setMapOn(!mapOn);
+      maps.push(m);
+    }
+  }
+
+  function renderMaps() {
+    const host = mapStyle ? new URL(mapStyle).hostname : '';
+    for (const m of maps) {
+      m.toggle.hidden = m.note.hidden = !analysed;
+      m.toggle.textContent = mapOn ? t.routes.mapHide : t.routes.mapShow;
+      m.toggle.setAttribute('aria-pressed', String(mapOn));
+      m.note.textContent = [...(m.problem && mapOn ? [m.problem] : []), t.routes.mapNote(host)].join(' ');
+    }
+  }
+
+  function setMapOn(on: boolean) {
+    mapOn = on;
+    store.set(MAP_STORAGE_KEY, on ? '1' : '0');
+    for (const m of maps) m.slot.setEnabled(on);
+    renderMaps();
+  }
+
   function select(id: string) {
     selectedId = id;
     store.set(SELECTED_STORAGE_KEY, id);
@@ -162,7 +197,7 @@ export function setupRoutes(host: RoutesHost) {
   function renderProgress() {
     const live = $('routeLive');
     live.hidden = !analysed;
-    if (!analysed) return;
+    if (!analysed) { maps[0]?.slot.mark(null); return; }
     const { route, stats } = analysed;
     const pos = pointAt(route, stats, tracker.covered);
     const bar = $<HTMLProgressElement>('routeBar');
@@ -176,6 +211,7 @@ export function setupRoutes(host: RoutesHost) {
       ? t.routes.noElevation
       : [t.routes.elevation(pos.ele), ...(grade === undefined ? [] : [t.routes.grade(grade)])].join(' · ');
     trainingProfile.mark(stats.hasElevation ? pos.fraction : null);
+    maps[0]?.slot.mark({ lat: pos.lat, lon: pos.lon });
   }
 
   /** From the live data of the treadmill (distance in metres) */
@@ -288,6 +324,8 @@ export function setupRoutes(host: RoutesHost) {
     if (statusText) $('rtStatus').textContent = statusText();
     trainingProfile.draw(analysed);
     renderProgress();
+    for (const m of maps) m.slot.setRoute(analysed?.route ?? null);
+    renderMaps();
   }
 
   // ---------- Events ----------
@@ -315,6 +353,7 @@ export function setupRoutes(host: RoutesHost) {
     if (file) void importFile(file);
   };
   onLanguageChange(renderAll);
+  onLanguageChange(() => { for (const m of maps) m.slot.relocalize(); });
 
   void reload();
   void refreshGoal();

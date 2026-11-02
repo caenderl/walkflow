@@ -179,7 +179,12 @@
             <div id="routeText" class="route-text"></div>
             <div class="hint" id="routeDetail"></div>
             <div id="routeProfile" class="profile"></div>
-            <div class="row"><button id="routeRestart" type="button" data-i18n="routes.restart">Restart route</button></div>
+            <div id="routeMap" class="route-map" role="region" hidden></div>
+            <div class="row">
+              <button id="routeRestart" type="button" data-i18n="routes.restart">Restart route</button>
+              <button id="routeMapToggle" type="button" class="map-toggle" aria-pressed="false" hidden></button>
+            </div>
+            <div class="hint map-note" id="routeMapNote" role="status" hidden></div>
           </div>
           <div class="hint" data-i18n="routes.trainingHint">Progress follows the treadmill’s own distance counter.</div>
           <p class="hint"><a href="#routes" data-i18n="routes.manage">Manage routes</a></p>
@@ -232,7 +237,7 @@
           <p id="infoTested"></p>
           <p id="infoAffiliation"></p>
           <h3 data-i18n="info.privacyTitle">Privacy</h3>
-          <p data-i18n="info.privacy">No accounts, no server, no tracking, no external scripts or fonts. Settings (limit, ramp, language, theme, accepted notice) are stored only locally in this browser. The saved runs stay on this device too.</p>
+          <p data-i18n="info.privacy">No accounts, no server, no tracking, no external scripts or fonts. Only if you switch on the optional route map, it loads map data from a map server (named on the route card). Settings (limit, ramp, language, theme, accepted notice) are stored only locally in this browser. The saved runs stay on this device too.</p>
           <div id="infoDesktopPrivacy" hidden>
             <p data-i18n="info.desktopPrivacy">On startup, the desktop app asks GitHub whether there is a newer version. You can turn this off here:</p>
             <label class="check"><input type="checkbox" id="updateCheck" checked> <span data-i18n="info.updateCheck">check for updates</span></label>
@@ -352,6 +357,9 @@
         <h2 id="rtPreviewTitle"></h2>
         <div id="rtProfile" class="profile big"></div>
         <p class="hint" id="rtNoEle" hidden></p>
+        <div id="rtMap" class="route-map big" role="region" hidden></div>
+        <div class="row"><button id="rtMapToggle" type="button" class="map-toggle" aria-pressed="false" hidden></button></div>
+        <div class="hint map-note" id="rtMapNote" role="status" hidden></div>
         <dl class="records" id="rtFacts"></dl>
       </section>
     </div>

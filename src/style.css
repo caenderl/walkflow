@@ -305,6 +305,11 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
 .profile-area { fill:var(--accent); fill-opacity:.18; stroke:none; }
 .profile-line { fill:none; stroke:var(--accent); stroke-width:2; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
 .profile-marker { stroke:var(--fg); stroke-width:2; vector-effect:non-scaling-stroke; }
+.route-map { position:relative; width:100%; height:260px; border-radius:12px; overflow:hidden; border:1px solid var(--card-border); background:var(--input-bg); }
+.route-map.big { height:340px; }
+.route-map[hidden], .map-toggle[hidden], .map-note[hidden] { display:none; }
+.map-dot { width:16px; height:16px; border-radius:50%; background:var(--accent); border:3px solid #fff; box-shadow:0 0 0 2px #15803d, 0 1px 4px rgba(0, 0, 0, .4); }
+@media (max-width: 719px) { .route-map { height:220px; } .route-map.big { height:260px; } }
 
 /* Dialogs */
 .dlg { background:var(--card); color:var(--fg); border:1px solid var(--card-border); border-radius:18px; padding:22px; max-width:min(520px, calc(100vw - 32px)); box-shadow:0 20px 50px rgba(0, 0, 0, .3); }

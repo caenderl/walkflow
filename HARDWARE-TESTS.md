@@ -74,6 +74,14 @@ The route’s progress follows the treadmill’s own distance counter. The route
 - [ ] After a complete walk of more than a minute the run shows “completed”, and its minutes count toward today’s goal in **Workouts → week plan**. Check that the minutes match the treadmill’s time (they are moving seconds without pauses).
 - [ ] Walk a route while today has a target in the week plan: the card says how many minutes are left and whether this route reaches the goal. It refreshes after a run was saved.
 
+### Map (optional)
+
+The map only draws. It reads the position the route card already has and sends nothing to the treadmill.
+
+- [ ] Switch the map on in the route card, then walk a route (with or without the map the log must look the same: same commands, same spacing, no extra writes). The blue-green dot should move along the line together with “km of km”.
+- [ ] With the map on, press Space/Esc and **Cancel & stop** during a walk: the belt stops as fast as without the map.
+- [ ] Take the computer offline while the map is on: the route card keeps counting, the map shows a hint, the belt is not affected.
+
 ## Desktop app
 
 - [ ] macOS: on the first “Connect”, macOS asks for Bluetooth. Does the chooser with the treadmill appear afterwards? Is the prompt text in the system language?

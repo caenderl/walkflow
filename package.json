@@ -24,6 +24,7 @@
     "electron": "44.9.3",
     "electron-builder": "26.18.0",
     "esbuild": "0.28.2",
+    "maplibre-gl": "6.15.0",
     "typescript": "7.0.2",
     "vite": "8.3.5",
     "vite-plugin-pwa": "2.0.0",
