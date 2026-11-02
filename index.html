@@ -158,6 +158,18 @@
           <label class="hint field"><span data-i18n="routes.choose">Route</span>
             <select id="routeSelect"></select>
           </label>
+          <div class="grid" id="routeWalk" hidden>
+            <label class="hint field"><span data-i18n="routes.speed">Walking speed (km/h)</span>
+              <input type="number" id="routeSpeed" min="0.5" max="20" step="0.1" inputmode="decimal" value="3">
+            </label>
+            <div class="hint" id="routeEstimate"></div>
+            <div class="row">
+              <button id="routeStart" type="button" class="primary needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><span data-i18n="routes.walk">Walk this route</span></button>
+              <button id="routeStop" type="button" class="needs-conn" disabled data-i18n="program.stop">Cancel &amp; stop</button>
+            </div>
+            <div class="hint" id="routeStatus"></div>
+            <div class="hint" data-i18n="routes.walkHint">A route is walked as a workout.</div>
+          </div>
           <div class="grid" id="routeLive" hidden>
             <progress id="routeBar" max="1000" value="0"></progress>
             <div id="routeText" class="route-text"></div>

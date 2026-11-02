@@ -190,6 +190,7 @@ export function setupHistory(host: HistoryHost) {
     head.append(el('span', 'run-when', t.history.when(r.start)));
     if (isCurrent) head.append(el('span', 'badge rec', t.history.recording));
     if (r.source === 'demo') head.append(el('span', 'badge', t.history.demo));
+    if (r.tag) head.append(el('span', 'badge tag', r.tag.name));
     sum.append(head, el('span', 'run-line', t.history.line(r.dist, r.movingSec, r.avgKmh)));
     det.append(sum);
     det.addEventListener('toggle', () => {
@@ -222,6 +223,7 @@ export function setupHistory(host: HistoryHost) {
     fact(t.history.distance, t.history.distValue(r.dist));
     fact(t.history.moving, t.history.clock(r.movingSec));
     fact(t.history.duration, t.history.clock((r.end - r.start) / 1000));
+    if (r.tag) fact(t.history.tagLabel, t.history.tagValue(r.tag.kind === 'route' ? t.history.tagRoute : t.history.tagWorkout, r.tag.name, r.tag.completed));
     fact(t.history.avgSpeed, t.history.speedValue(r.avgKmh));
     fact(t.history.maxSpeed, t.history.speedValue(r.maxKmh));
     if (r.kcal !== undefined) fact(t.history.kcal, t.number(r.kcal, 0));

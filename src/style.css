@@ -262,6 +262,7 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
 .run-body .row > * { flex:0 1 auto; }
 .badge { font-size:.75rem; font-weight:600; padding:2px 8px; border-radius:999px; background:var(--btn); color:var(--fg); }
 .badge.rec { background:var(--ok-bg); }
+.badge.tag { max-width:12em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* Workouts */
 .head-row { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }

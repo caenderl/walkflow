@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Sample } from './export';
 import {
   buildRun, decodeTrack, encodeTrack, parseBackup, RUN_CHECKPOINT_MS, RUN_END_IDLE_MS, RUN_MAX_SAMPLES,
-  RUN_MIN_MOVING_SEC, RunRecorder, serializeBackup, summarize, type Run, type RunSource,
+  RUN_MIN_MOVING_SEC, RunRecorder, readTag, serializeBackup, summarize, type Run, type RunSource, type RunTag,
 } from './runs';
 
 const T0 = new Date(2026, 9, 26, 7, 30, 0).getTime();
@@ -406,6 +406,149 @@ describe('backup file', () => {
         routes: [route, { ...route, id: 'r2', points: [{ lat: 99, lon: 0 }, { lat: 0, lon: 0 }] }, 'x'],
       });
       expect(parseBackup(text)).toMatchObject({ ok: true, routes: [route], invalidRoutes: 2 });
+    });
+  });
+});
+
+describe('run tag (what the run was: a workout or a route)', () => {
+  const tag: RunTag = { kind: 'route', id: 'r1', name: 'Park loop', completed: true };
+
+  it('readTag keeps the known fields of a valid tag', () => {
+    expect(readTag({ ...tag, extra: 1 })).toEqual(tag);
+    expect(readTag({ ...tag, kind: 'workout', id: 'tpl:intervals' })).toEqual({ ...tag, kind: 'workout', id: 'tpl:intervals' });
+  });
+
+  it('readTag rejects what is not a tag', () => {
+    for (const bad of [
+      null, 'x', [], {}, { ...tag, kind: 'other' }, { ...tag, id: '' }, { ...tag, id: 'x'.repeat(65) }, { ...tag, id: 5 },
+      { ...tag, name: ' ' }, { ...tag, name: 'x'.repeat(81) }, { ...tag, name: 5 }, { ...tag, completed: 'yes' }, { ...tag, completed: undefined },
+    ]) expect(readTag(bad)).toBeNull();
+  });
+
+  it('trims the name', () => {
+    expect(readTag({ ...tag, name: '  Park loop ' })?.name).toBe('Park loop');
+  });
+
+  it('buildRun puts the tag on the summary and leaves it out otherwise', () => {
+    const pts = [s(0, 3, { dist: 0 }), s(60, 3, { dist: 50 })];
+    expect(buildRun(pts, 'ble', tag)!.summary.tag).toEqual(tag);
+    expect('tag' in buildRun(pts, 'ble')!.summary).toBe(false);
+  });
+
+  describe('RunRecorder', () => {
+    const planned = { kind: 'route', id: 'r1', name: 'Park loop' } as const;
+
+    it('tags the run that starts after begin(), not yet completed', async () => {
+      const h = harness();
+      h.rec.begin(planned);
+      walk(h.rec, 0, 120, 3);
+      h.rec.finish();
+      await h.rec.settled();
+      expect(h.runs()[0]!.summary.tag).toEqual({ ...planned, completed: false });
+    });
+
+    it('complete() marks the run as completed and saves it right away', async () => {
+      const h = harness();
+      const token = h.rec.begin(planned);
+      walk(h.rec, 0, 120, 3);
+      h.rec.complete(token, true);
+      await h.rec.settled();
+      expect(h.runs()[0]!.summary.tag?.completed).toBe(true);
+      expect(h.rec.recording).toBe(true);
+    });
+
+    it('complete(false) keeps the tag with completed false', async () => {
+      const h = harness();
+      const token = h.rec.begin(planned);
+      walk(h.rec, 0, 120, 3);
+      h.rec.complete(token, false);
+      h.rec.finish();
+      await h.rec.settled();
+      expect(h.runs()[0]!.summary.tag).toEqual({ ...planned, completed: false });
+    });
+
+    it('closes a run that is already going, so the tagged run is a run of its own', async () => {
+      const h = harness();
+      walk(h.rec, 0, 120, 3);
+      h.rec.begin(planned);
+      walk(h.rec, 130, 250, 3);
+      h.rec.finish();
+      await h.rec.settled();
+      const runs = h.runs();
+      expect(runs).toHaveLength(2);
+      expect(runs[0]!.summary.tag).toBeUndefined();
+      expect(runs[1]!.summary.tag?.id).toBe('r1');
+    });
+
+    it('a walk that never started moving leaves no tag behind for the next run', async () => {
+      const h = harness();
+      const token = h.rec.begin(planned);
+      walk(h.rec, 0, 30, 0);
+      h.rec.complete(token, false);
+      walk(h.rec, 40, 160, 3);
+      h.rec.finish();
+      await h.rec.settled();
+      expect(h.runs()[0]!.summary.tag).toBeUndefined();
+    });
+
+    it('the tag ends with its run', async () => {
+      const h = harness();
+      h.rec.begin(planned);
+      walk(h.rec, 0, 120, 3);
+      h.rec.tick(at(120) + RUN_END_IDLE_MS);
+      walk(h.rec, 10_000, 10_120, 3);
+      h.rec.finish();
+      await h.rec.settled();
+      const runs = h.runs();
+      expect(runs).toHaveLength(2);
+      expect(runs[0]!.summary.tag).toBeDefined();
+      expect(runs[1]!.summary.tag).toBeUndefined();
+    });
+
+    it('a late complete() of an earlier walk does not touch the walk that replaced it', async () => {
+      const h = harness();
+      const first = h.rec.begin(planned);
+      const second = h.rec.begin({ kind: 'workout', id: 'w1', name: 'Intervals' });
+      h.rec.complete(first, false);
+      walk(h.rec, 0, 120, 3);
+      h.rec.complete(second, true);
+      h.rec.finish();
+      await h.rec.settled();
+      expect(h.runs()[0]!.summary.tag).toEqual({ kind: 'workout', id: 'w1', name: 'Intervals', completed: true });
+    });
+
+    it('shortens a name that is too long instead of losing the tag', async () => {
+      const h = harness();
+      h.rec.begin({ ...planned, name: 'x'.repeat(200) });
+      walk(h.rec, 0, 120, 3);
+      h.rec.finish();
+      await h.rec.settled();
+      expect(h.runs()[0]!.summary.tag?.name).toHaveLength(80);
+    });
+  });
+
+  describe('in the backup file', () => {
+    const base = buildRun([s(0, 3, { dist: 0 }), s(60, 3.5, { dist: 55 }), s(120, 4, { dist: 120 })], 'ble')!;
+    const tagged: Run = { ...base, summary: { ...base.summary, tag } };
+
+    it('round trip: the tag comes back', () => {
+      const r = parseBackup(serializeBackup([tagged], new Date(T0)));
+      expect(r.ok && r.runs).toEqual([tagged]);
+    });
+
+    it('a run without a tag is written without one, and files from before tags still read', () => {
+      expect(JSON.parse(serializeBackup([base], new Date(T0))).runs[0]).not.toHaveProperty('tag');
+      const r = parseBackup(serializeBackup([base], new Date(T0)));
+      expect(r.ok && r.runs).toEqual([base]);
+    });
+
+    it('a damaged tag costs the tag, not the run', () => {
+      const data = JSON.parse(serializeBackup([tagged], new Date(T0)));
+      data.runs[0].tag = { kind: 'route', id: '', name: 'x', completed: true };
+      const r = parseBackup(JSON.stringify(data));
+      expect(r.ok && r.invalid).toBe(0);
+      expect(r.ok && r.runs[0]!.summary.tag).toBeUndefined();
+      expect(r.ok && r.runs[0]!.summary.dist).toBe(base.summary.dist);
     });
   });
 });

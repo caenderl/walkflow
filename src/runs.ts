@@ -8,6 +8,17 @@ import { readPlan, readWorkouts, type WeekPlan, type Workout } from './workouts'
 
 export type RunSource = 'ble' | 'demo';
 
+/** What a run was, when it was started from a saved workout or a route. A snapshot: the name stays if the original is deleted. */
+export interface RunTag {
+  kind: 'workout' | 'route';
+  id: string;
+  name: string;
+  /** The workout or route reached its end (a run that was stopped early is false) */
+  completed: boolean;
+}
+
+export const RUN_TAG_NAME_MAX = 80;
+
 export interface RunSummary {
   /** Start time as a string; the same run from a backup gets the same id */
   id: string;
@@ -25,6 +36,7 @@ export interface RunSummary {
   maxKmh: number;
   avgHr?: number;
   maxHr?: number;
+  tag?: RunTag;
 }
 
 /** Samples as integers in the FTMS resolution. Columns the treadmill never reported are left out. */
@@ -117,11 +129,21 @@ export function summarize(id: string, source: RunSource, pts: readonly Sample[])
   return run;
 }
 
+export function readTag(v: unknown): RunTag | null {
+  if (!isObject(v)) return null;
+  const { kind, id, name, completed } = v;
+  if (kind !== 'workout' && kind !== 'route') return null;
+  if (typeof id !== 'string' || !id || id.length > 64) return null;
+  if (typeof name !== 'string' || typeof completed !== 'boolean') return null;
+  const trimmed = name.trim();
+  return trimmed && trimmed.length <= RUN_TAG_NAME_MAX ? { kind, id, name: trimmed, completed } : null;
+}
+
 /**
  * From the first to the last sample with movement; pauses in between stay. The summary is computed from the
  * stored (rounded) form, so a run read back from a backup gets exactly the same numbers.
  */
-export function buildRun(samples: readonly Sample[], source: RunSource): Run | null {
+export function buildRun(samples: readonly Sample[], source: RunSource, tag?: RunTag): Run | null {
   const first = samples.findIndex(moving);
   if (first === -1) return null;
   let last = samples.length - 1;
@@ -129,7 +151,9 @@ export function buildRun(samples: readonly Sample[], source: RunSource): Run | n
   const pts = samples.slice(first, last + 1);
   const start = Math.round(pts[0]!.ts);
   const track = encodeTrack(pts.map(p => ({ ...p, ts: p.ts - pts[0]!.ts + start })));
-  return { summary: summarize(String(start), source, decodeTrack(start, track)), track };
+  const summary = summarize(String(start), source, decodeTrack(start, track));
+  if (tag) summary.tag = tag;
+  return { summary, track };
 }
 
 // ---------- Recorder ----------
@@ -163,6 +187,9 @@ export class RunRecorder {
   private savedId: string | null = null;
   private enabled = true;
   private chain: Promise<void> = Promise.resolve();
+  /** Tag for the run being recorded or the next one, with the token of the walk that set it */
+  private tag: { value: RunTag; token: number } | null = null;
+  private tokens = 0;
   private readonly o: Required<RecorderOptions>;
 
   constructor(private readonly host: RecorderHost, opts: RecorderOptions = {}) {
@@ -196,6 +223,32 @@ export class RunRecorder {
     });
   }
 
+  /**
+   * A workout or route is about to start: the run being recorded is closed, and the next one gets this tag, so a
+   * program is always a run of its own. Returns the token that complete() needs; a walk that has been replaced by a
+   * newer one can no longer change the tag.
+   */
+  begin(tag: Omit<RunTag, 'completed'>): number {
+    this.finish();
+    const token = ++this.tokens;
+    const name = tag.name.trim().slice(0, RUN_TAG_NAME_MAX).trim();
+    this.tag = name ? { value: { ...tag, name, completed: false }, token } : null;
+    return token;
+  }
+
+  /**
+   * The walk is over: completed = it reached its end. The tag stays on the run (which goes on until it ends by itself);
+   * a walk during which the belt never moved leaves nothing behind for the next run.
+   */
+  complete(token: number, completed: boolean): void {
+    this.guard(() => {
+      if (!this.tag || this.tag.token !== token) return;
+      if (!this.samples.length) { this.tag = null; return; }
+      this.tag = { ...this.tag, value: { ...this.tag.value, completed } };
+      this.save();
+    });
+  }
+
   /** Call regularly (about once a second): ends the run when the treadmill has stopped sending data. */
   tick(now: number): void {
     this.guard(() => {
@@ -211,6 +264,7 @@ export class RunRecorder {
       this.movingMs = 0;
       this.lastSaved = -Infinity;
       this.savedId = null;
+      this.tag = null;
     });
   }
 
@@ -231,7 +285,7 @@ export class RunRecorder {
 
   private save(final = false) {
     if (this.movingMs / 1000 < this.o.minMovingSec) return;
-    const run = buildRun(this.samples, this.source);
+    const run = buildRun(this.samples, this.source, this.tag?.value);
     if (!run) return;
     this.lastSaved = this.samples.at(-1)!.ts;
     this.savedId = run.summary.id;
@@ -263,7 +317,7 @@ export interface BackupExtras {
 }
 
 /**
- * Only start, source and samples are written; the summary is computed again when reading.
+ * Start, source, samples and the tag (what the run was) are written; the rest of the summary is computed again when reading.
  * Workouts, routes and the week plan are optional additions to version 1: older files simply do not have them.
  */
 export function serializeBackup(runs: readonly Run[], exported: Date, extras: BackupExtras = {}): string {
@@ -271,7 +325,7 @@ export function serializeBackup(runs: readonly Run[], exported: Date, extras: Ba
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exported: exported.toISOString(),
-    runs: runs.map(r => ({ start: r.summary.start, source: r.summary.source, track: r.track })),
+    runs: runs.map(r => ({ start: r.summary.start, source: r.summary.source, track: r.track, ...(r.summary.tag ? { tag: r.summary.tag } : {}) })),
     ...(extras.workouts?.length ? { workouts: extras.workouts } : {}),
     ...(extras.routes?.length ? { routes: extras.routes } : {}),
     ...(extras.plan ? { plan: extras.plan } : {}),
@@ -315,7 +369,8 @@ function readRun(v: unknown): Run | null {
     if (!col) return null;
     out[key] = col;
   }
-  return buildRun(decodeTrack(start, out), source);
+  // A damaged tag costs the tag, not the run
+  return buildRun(decodeTrack(start, out), source, (v.tag === undefined ? null : readTag(v.tag)) ?? undefined);
 }
 
 export function parseBackup(text: string): BackupResult {

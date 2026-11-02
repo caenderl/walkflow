@@ -146,3 +146,23 @@ export function weekProgress(plan: WeekPlan, runs: readonly RunSummary[], now: n
     };
   });
 }
+
+export interface DayGoal {
+  /** Minutes planned for today */
+  target: number;
+  /** Whole minutes of moving time so far today */
+  doneMin: number;
+  /** Whole minutes still missing, 0 once the target is met */
+  leftMin: number;
+}
+
+/** Where today stands against its target; null on a day without one */
+export function todayGoal(plan: WeekPlan, runs: readonly RunSummary[], now: number): DayGoal | null {
+  const day = weekProgress(plan, runs, now).find(p => p.today);
+  if (!day || day.target <= 0) return null;
+  return {
+    target: day.target,
+    doneMin: Math.floor(day.doneSec / 60),
+    leftMin: Math.max(0, Math.ceil(day.target - day.doneSec / 60)),
+  };
+}

@@ -54,13 +54,24 @@ Time steps work as before. A distance step ends when the treadmill’s own dista
 
 ## Routes
 
-A route only displays progress. It follows the treadmill’s own distance counter and sends nothing to the treadmill: no speed, no incline. Nothing in this section can move the belt.
+The route’s progress follows the treadmill’s own distance counter. The route itself sends nothing to the treadmill: no incline, and no speed from the file. The checks up to “Restart route” only display; **Walk this route** starts a workout (see below), so the belt moves only after the usual confirmation.
 
 - [ ] Import a real GPX file (**Routes → Import GPX file**) and choose it in the **Training** route card. Start the belt and walk 100 m: does “km of km” advance together with the distance shown on the treadmill’s display? Note how far apart the two are after 100 m.
 - [ ] Press **Restart route**: the progress goes back to 0 and counts on from there, the belt is not affected.
 - [ ] Stop the belt and start it again: does the route continue where it was, or did the treadmill’s counter reset and the route lose or double distance? (The app adds up only increases; a counter that goes back adds nothing.)
 - [ ] Disconnect and reconnect in the middle of a route: does the progress carry on without a jump?
 - [ ] The slope shown for the next 100 m is only information about the file. Check that the treadmill’s incline did not change at all while you walked.
+
+### Walk this route (route as a workout)
+
+**Walk this route** is one workout step: the whole route as a distance step at the speed typed in the card. Ramp, limit, confirmation and stop work as for every workout. Please check in the log:
+
+- [ ] Start a short route (about 200 m) at a low speed (3 km/h). The confirmation names the route, its length and the speed. After confirming, the log shows Request Control and Start, then speed commands that follow the ramp (0.5 km/h per command, at least 1.5 s apart). There is no incline command at all.
+- [ ] Type a speed above your limit: the confirmation says it is capped, and the belt never goes above the limit.
+- [ ] Let it run to the end: the belt stops by itself, the status says the program is done, and the route card says “Route completed”. How far apart are the route progress and the end of the program on the treadmill’s display? (Both use the distance counter, a few metres are expected.)
+- [ ] Press **Cancel & stop** or Space halfway: the belt stops at once. The run appears in the history as “Started from: Route: …, stopped early”.
+- [ ] After a complete walk of more than a minute the run shows “completed”, and its minutes count toward today’s goal in **Workouts → week plan**. Check that the minutes match the treadmill’s time (they are moving seconds without pauses).
+- [ ] Walk a route while today has a target in the week plan: the card says how many minutes are left and whether this route reaches the goal. It refreshes after a run was saved.
 
 ## Desktop app
 

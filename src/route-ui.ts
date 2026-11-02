@@ -5,15 +5,22 @@
 import { confirmDialog } from './dialogs';
 import { GPX_MAX_CHARS, parseGpx, serializeGpx } from './gpx';
 import { onLanguageChange, t } from './i18n';
-import { fmtDistance } from './program';
+import { fmtDistance, type ProgramStep } from './program';
 import { getRouteStore, type RouteStore } from './route-store';
 import {
   analyzeRoute, DistanceTracker, elevationSeries, gradeAhead, newRouteId, pointAt, readRoute, ROUTE_NAME_MAX,
-  type Route, type RouteStats,
+  walkSeconds, walkSteps, type Route, type RouteStats,
 } from './routes';
-import { $, $button, button, download, el, store } from './ui';
+import { getRunStore } from './run-store';
+import { $, $button, $input, button, download, el, store } from './ui';
+import { getWorkoutStore } from './workout-store';
+import { todayGoal, type DayGoal } from './workouts';
 
 export const SELECTED_STORAGE_KEY = 'walkflow.route';
+const SPEED_STORAGE_KEY = 'walkflow.routeSpeed';
+const DEFAULT_SPEED = 3;
+/** How often the standing against today's goal is read again while data keeps coming in */
+const GOAL_REFRESH_MS = 60_000;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const PROFILE_W = 300;
@@ -72,7 +79,14 @@ function safeFileName(name: string): string {
 /** The name a route gets when the file has none: the file name without its extension */
 export const nameFromFile = (fileName: string) => fileName.replace(/\.(gpx|xml)$/i, '').replace(/[_-]+/g, ' ').trim().slice(0, ROUTE_NAME_MAX).trim();
 
-export function setupRoutes() {
+export interface RoutesHost {
+  /** Effective speed limit in km/h: the estimate is made at the speed the belt will really run */
+  maxSpeed(): number;
+  /** Walk the route as a workout. Confirmation, connection check and the runner are the app's, not this file's. */
+  walk(route: Route, steps: ProgramStep[], kmh: number): Promise<void>;
+}
+
+export function setupRoutes(host: RoutesHost) {
   const ready: Promise<RouteStore> = getRouteStore();
   const tracker = new DistanceTracker();
   const trainingProfile = createProfile($('routeProfile'));
@@ -83,6 +97,8 @@ export function setupRoutes() {
   let selectedId = store.get(SELECTED_STORAGE_KEY) ?? '';
   /** Analysed once per selection, not on every update from the treadmill */
   let analysed: { route: Route; stats: RouteStats } | null = null;
+  let goal: DayGoal | null = null;
+  let goalAt = 0;
 
   const selectedRoute = () => routes.find(r => r.id === selectedId) ?? null;
 
@@ -106,6 +122,41 @@ export function setupRoutes() {
     // A route that no longer exists is no selection
     if (selectedId && !selectedRoute()) selectedId = '';
     sel.value = selectedId;
+  }
+
+  const speedInput = $input('routeSpeed');
+  speedInput.value = store.get(SPEED_STORAGE_KEY) ?? String(DEFAULT_SPEED);
+
+  /** The walking speed typed in, NaN if it is not a usable one */
+  function typedSpeed(): number {
+    const v = speedInput.valueAsNumber;
+    return Number.isFinite(v) && v > 0 ? v : NaN;
+  }
+
+  /** Duration at the speed the belt will really run, and what it means for today's goal */
+  function renderEstimate() {
+    $('routeWalk').hidden = !analysed;
+    if (!analysed) return;
+    const kmh = typedSpeed();
+    if (Number.isNaN(kmh)) { $('routeEstimate').textContent = t.routes.speedInvalid; return; }
+    const max = host.maxSpeed();
+    const sec = walkSeconds(analysed.stats.total, Math.min(kmh, max));
+    const left = goal?.leftMin ?? 0;
+    $('routeEstimate').textContent = [
+      t.routes.estimate(Math.max(1, Math.round(sec / 60)), Math.min(kmh, max)),
+      ...(kmh > max ? [t.program.capped(max)] : []),
+      ...(!goal ? [] : left === 0 ? [t.routes.goalDone] : sec / 60 >= left ? [t.routes.goalCompletes(left)] : [t.routes.goalLeft(left)]),
+    ].join(' ');
+  }
+
+  /** Reads the plan and the saved runs again. Display only, so a failure just leaves the old text. */
+  async function refreshGoal() {
+    goalAt = Date.now();
+    try {
+      const plan = await (await getWorkoutStore()).plan();
+      goal = plan ? todayGoal(plan, await (await getRunStore()).list(), Date.now()) : null;
+    } catch { goal = null; }
+    renderEstimate();
   }
 
   function renderProgress() {
@@ -133,6 +184,7 @@ export function setupRoutes() {
     try {
       tracker.update(distance);
       if (analysed) renderProgress();
+      if (analysed && Date.now() - goalAt >= GOAL_REFRESH_MS) void refreshGoal();
     } catch { /* display only */ }
   }
 
@@ -232,6 +284,7 @@ export function setupRoutes() {
     renderPicker();
     renderList();
     renderPreview();
+    renderEstimate();
     if (statusText) $('rtStatus').textContent = statusText();
     trainingProfile.draw(analysed);
     renderProgress();
@@ -240,6 +293,20 @@ export function setupRoutes() {
   // ---------- Events ----------
   $<HTMLSelectElement>('routeSelect').onchange = e => select((e.target as HTMLSelectElement).value);
   $button('routeRestart').onclick = () => { tracker.reset(); renderProgress(); };
+  speedInput.oninput = () => {
+    if (!Number.isNaN(typedSpeed())) store.set(SPEED_STORAGE_KEY, String(typedSpeed()));
+    renderEstimate();
+  };
+  $button('routeStart').onclick = () => {
+    if (!analysed) return;
+    const kmh = typedSpeed();
+    const steps = Number.isNaN(kmh) ? null : walkSteps(analysed.stats, kmh);
+    if (!steps) {
+      $('routeEstimate').textContent = Number.isNaN(kmh) ? t.routes.speedInvalid : t.routes.cannotWalk;
+      return;
+    }
+    void host.walk(analysed.route, steps, kmh);
+  };
   const fileInput = $<HTMLInputElement>('rtFile');
   $button('rtImport').onclick = () => fileInput.click();
   fileInput.onchange = () => {
@@ -250,9 +317,14 @@ export function setupRoutes() {
   onLanguageChange(renderAll);
 
   void reload();
+  void refreshGoal();
 
   return {
     update,
+    /** A walk starts: the route begins at its start, wherever the counter is now */
+    restart() { tracker.reset(); renderProgress(); },
+    /** A run was saved: today's goal may have moved */
+    refreshGoal,
     setVisible(on: boolean) {
       const was = visible;
       visible = on;

@@ -14,9 +14,9 @@ import { setupHistory } from './history';
 import { onLanguageChange, t, type Text } from './i18n';
 import { bindText, initLanguage } from './i18n-dom';
 import { setupMenu, setupPrefsMenu } from './menus';
-import { fmtLength, fmtTime, ProgramRunner, programLength } from './program';
+import { fmtDistance, fmtLength, fmtTime, ProgramRunner, programLength, type ProgramStep } from './program';
 import { setupPwa } from './pwa';
-import type { RunSource } from './runs';
+import type { RunSource, RunTag } from './runs';
 import {
   beltMaybeRunning, checkConsoleCommand, decideLimitChange, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION,
   effectiveMax as calcEffectiveMax, isDisclaimerAccepted, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE, LIMIT_STORAGE_KEY,
@@ -27,6 +27,7 @@ import { SimulatorAdapter } from './sim';
 import { initTheme, onThemeChange } from './theme';
 import { $, $button, $input, download, log, store } from './ui';
 import { setupRoutes } from './route-ui';
+import type { Route } from './routes';
 import { setupViews, stopPlacement, type View } from './views';
 import { setupWorkouts } from './workout-ui';
 
@@ -68,7 +69,10 @@ const history = setupHistory({
 });
 const recorder = history.recorder;
 const workouts = setupWorkouts({ maxSpeed: () => effectiveMax() });
-const routes = setupRoutes();
+const routes = setupRoutes({
+  maxSpeed: () => effectiveMax(),
+  walk: (route, steps, kmh) => runRoute(route, steps, kmh),
+});
 
 const connected = () => !!client?.connected;
 const maybeRunning = () => beltMaybeRunning({ startedByApp: beltStarted, lastMeasuredKmh: lastMeasured });
@@ -88,7 +92,7 @@ const runner = new ProgramRunner({
   setTarget: kmh => { governor.request(kmh); standstill.arm(); },
   currentTarget: () => governor.target,
   distance: () => cur.dist,
-  status: text => bindText($('progStatus'), text),
+  status: text => { bindText($('progStatus'), text); bindText($('routeStatus'), text); },
   log,
 });
 
@@ -284,16 +288,35 @@ function confirmStart(intro?: string): Promise<boolean> {
   ], t.start.confirm);
 }
 
-async function runProgram() {
-  const steps = workouts.selectedSteps();
-  if (!steps?.length) { bindText($('progStatus'), () => t.program.empty); return; }
+/**
+ * Workouts and routes start the same way: confirmation, connection check, then the runner with its ramp, limit and
+ * stop rules. `tag` says what the run was, so the history can show it. A route is a workout of one distance step.
+ */
+async function runSteps(steps: ProgramStep[], tag: Omit<RunTag, 'completed'>, intro: string, onStart?: () => void) {
   const max = effectiveMax();
-  const intro = t.program.confirm(steps.length, fmtLength(programLength(steps)))
-    + (steps.some(s => s.speed > max) ? ` ${t.program.capped(max)}` : '');
-  if (!(await confirmStart(intro))) return;
+  const text = intro + (steps.some(s => s.speed > max) ? ` ${t.program.capped(max)}` : '');
+  if (!(await confirmStart(text))) return;
   if (!connected()) return;
-  await runner.run(steps);
+  onStart?.();
+  const token = recorder.begin(tag);
+  const result = await runner.run(steps);
+  recorder.complete(token, result === 'finished');
   standstill.disarm();
+  // The run is saved by now (or has failed): today's goal in the route card may have moved
+  void recorder.settled().then(() => routes.refreshGoal());
+}
+
+async function runProgram() {
+  const selected = workouts.selectedInfo();
+  if (!selected?.steps.length) { bindText($('progStatus'), () => t.program.empty); return; }
+  await runSteps(selected.steps, { kind: 'workout', id: selected.id, name: selected.name },
+    t.program.confirm(selected.steps.length, fmtLength(programLength(selected.steps))));
+}
+
+async function runRoute(route: Route, steps: ProgramStep[], kmh: number) {
+  const shown = Math.min(kmh, effectiveMax());
+  await runSteps(steps, { kind: 'route', id: route.id, name: route.name },
+    t.routes.walkConfirm(route.name, fmtDistance(steps[0]?.meters ?? 0), shown), () => routes.restart());
 }
 
 // ---------- Export ----------
@@ -660,6 +683,7 @@ $input('inclSlider').onchange = e => void setIncline(parseFloat((e.target as HTM
 
 $button('progStart').onclick = () => void runProgram();
 $button('progStop').onclick = () => void doStop();
+$button('routeStop').onclick = () => void doStop();
 
 $button('csv').onclick = exportCsv;
 $button('tcx').onclick = exportTcx;
@@ -705,6 +729,8 @@ setupViews(v => {
   history.setVisible(v === 'history');
   workouts.setVisible(v === 'workouts');
   routes.setVisible(v === 'routes');
+  // The plan or the runs may have changed in another view
+  if (v === 'training') void routes.refreshGoal();
 });
 loadSettings();
 renderInfo();

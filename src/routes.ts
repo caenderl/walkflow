@@ -2,6 +2,7 @@
 // A route only shows progress: it follows the treadmill's own distance counter and never writes to the treadmill,
 // neither speed nor incline. What comes from a file or a backup is checked point by point (readRoute).
 
+import type { ProgramStep } from './program';
 import { newWorkoutId } from './workouts';
 
 export interface RoutePoint {
@@ -191,4 +192,24 @@ export class DistanceTracker {
 
   /** Back to 0 at the current reading */
   reset(): void { this.sum = 0; }
+}
+
+// ---------- Walking a route ----------
+
+/** The most a single workout step may cover (the same bound as for saved workouts) */
+const WALK_MAX_METERS = 100_000;
+
+/**
+ * A route walk is a workout of one distance step over the whole route at the speed the person chose. The speed never
+ * comes from the file. null = no usable speed or a route too long for a step.
+ */
+export function walkSteps(stats: RouteStats, kmh: number): ProgramStep[] | null {
+  if (!Number.isFinite(kmh) || kmh <= 0) return null;
+  const meters = Math.round(stats.total);
+  return meters > 0 && meters <= WALK_MAX_METERS ? [{ meters, speed: kmh }] : null;
+}
+
+/** Seconds a distance takes at a constant speed; 0 without a usable speed */
+export function walkSeconds(meters: number, kmh: number): number {
+  return Number.isFinite(kmh) && kmh > 0 ? meters / (kmh / 3.6) : 0;
 }

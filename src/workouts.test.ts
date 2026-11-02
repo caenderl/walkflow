@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RunSummary } from './runs';
 import {
-  newWorkoutId, planFromMinutes, readPlan, readWorkout, readWorkouts, TEMPLATES, weekProgress, WORKOUT_MAX_STEPS,
+  newWorkoutId, planFromMinutes, readPlan, readWorkout, readWorkouts, TEMPLATES, todayGoal, weekProgress, WORKOUT_MAX_STEPS,
 } from './workouts';
 
 const good = { id: 'w1', name: 'Easy', steps: [{ sec: 120, speed: 2 }, { meters: 400, speed: 3.5 }], updated: 1 };
@@ -110,5 +110,29 @@ describe('weekProgress', () => {
   it('marks which day is today', () => {
     const p = weekProgress(plan, [], at(28, 15));
     expect(p.map(d => d.today)).toEqual([false, false, true, false, false, false, false]);
+  });
+});
+
+describe('todayGoal', () => {
+  const at = (d: number, h = 8) => new Date(2026, 9, d, h, 0, 0).getTime();
+  const run = (start: number, movingSec: number, source: 'ble' | 'demo' = 'ble'): RunSummary =>
+    ({ id: String(start), source, start, end: start + movingSec * 1000, movingSec, dist: 1000, avgKmh: 4, maxKmh: 4 });
+  const plan = { minutes: [30, 0, 30, 0, 30, 0, 0] };
+
+  it('is what is left of today\'s target, in whole minutes rounded up', () => {
+    expect(todayGoal(plan, [run(at(26, 7), 600 + 20)], at(26, 12))).toEqual({ target: 30, doneMin: 10, leftMin: 20 });
+  });
+
+  it('is 0 left once the target is met, and never negative', () => {
+    expect(todayGoal(plan, [run(at(26, 7), 3600)], at(26, 12))).toEqual({ target: 30, doneMin: 60, leftMin: 0 });
+  });
+
+  it('is null on a rest day', () => {
+    expect(todayGoal(plan, [], at(27, 12))).toBeNull();
+    expect(todayGoal({ minutes: [0, 0, 0, 0, 0, 0, 0] }, [run(at(27, 7), 600)], at(27, 12))).toBeNull();
+  });
+
+  it('ignores demo runs', () => {
+    expect(todayGoal(plan, [run(at(26, 7), 1800, 'demo')], at(26, 12))).toEqual({ target: 30, doneMin: 0, leftMin: 30 });
   });
 });

@@ -70,6 +70,14 @@ export function setupWorkouts(host: WorkoutsHost) {
     return workouts.find(w => w.id === selected)?.steps ?? null;
   }
 
+  /** The selected workout with the name it is known by, for the tag of the run */
+  function selectedInfo(): { id: string; name: string; steps: ProgramStep[] } | null {
+    const steps = selectedSteps();
+    if (!steps) return null;
+    const name = selected.startsWith(TEMPLATE_PREFIX) ? exampleName(selected.slice(TEMPLATE_PREFIX.length)) : workouts.find(w => w.id === selected)?.name;
+    return name ? { id: selected, name, steps } : null;
+  }
+
   function select(id: string) {
     selected = id;
     store.set(SELECTED_STORAGE_KEY, id);
@@ -311,7 +319,7 @@ export function setupWorkouts(host: WorkoutsHost) {
   void reload();
 
   return {
-    selectedSteps,
+    selectedInfo,
     /** The limit changed: the note in the editor depends on it */
     refreshLimit: renderTotals,
     setVisible(on: boolean) {

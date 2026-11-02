@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   analyzeRoute, DistanceTracker, distanceBetween, elevationSeries, gradeAhead, newRouteId, pointAt, readRoute, readRoutes,
-  ROUTE_MAX_POINTS, type Route, type RoutePoint,
+  ROUTE_MAX_POINTS, walkSeconds, walkSteps, type Route, type RoutePoint,
 } from './routes';
 
 /** 0.001° of longitude at the equator, in metres */
@@ -247,5 +247,44 @@ describe('DistanceTracker', () => {
     t.reset();
     expect(t.covered).toBe(0);
     expect(t.update(150)).toBe(30);
+  });
+});
+
+// Walking a route is a workout like any other: one distance step at a speed the person chooses. The speed never
+// comes from the file, so a route can not make the belt faster than what was typed and confirmed.
+describe('walkSteps', () => {
+  const r = route(line(6, i => i));
+  const stats = analyzeRoute(r);
+
+  it('is one distance step over the whole route at the chosen speed', () => {
+    expect(walkSteps(stats, 4.5)).toEqual([{ meters: Math.round(stats.total), speed: 4.5 }]);
+  });
+
+  it('does not depend on elevations or on the number of points', () => {
+    const flat = analyzeRoute(route(line(2)));
+    expect(walkSteps(flat, 3)).toEqual([{ meters: Math.round(flat.total), speed: 3 }]);
+  });
+
+  it('refuses a speed that is not a positive number, since a distance step without speed never ends', () => {
+    for (const bad of [0, -1, NaN, Infinity]) expect(walkSteps(stats, bad)).toBeNull();
+  });
+
+  it('refuses a route that is longer than a workout step may be', () => {
+    const huge = analyzeRoute(route([{ lat: 0, lon: 0 }, { lat: 0, lon: 1.5 }]));
+    expect(huge.total).toBeGreaterThan(100_000);
+    expect(walkSteps(huge, 4)).toBeNull();
+  });
+});
+
+describe('walkSeconds', () => {
+  it('is distance over speed', () => {
+    expect(walkSeconds(5000, 5)).toBe(3600);
+    expect(walkSeconds(1000, 3.6)).toBe(1000);
+  });
+
+  it('is 0 without a usable speed', () => {
+    expect(walkSeconds(1000, 0)).toBe(0);
+    expect(walkSeconds(1000, NaN)).toBe(0);
+    expect(walkSeconds(1000, -2)).toBe(0);
   });
 });
