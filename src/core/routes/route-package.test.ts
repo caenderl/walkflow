@@ -228,3 +228,28 @@ describe('packageFileName', () => {
     expect(packageFileName('///')).toBe('route.walkflow');
   });
 });
+
+describe('a package the app wrote comes out byte for byte the same when it is read and written again', () => {
+  // This is what lets an item taken from the community be offered again with the same hash (docs/P2P.md)
+  const again = (text: string) => {
+    const read = readPackage(text, 'id', 1);
+    return read.ok ? serializePackage(packageFromRoute(read.route)) : null;
+  };
+
+  it('for every example route', () => {
+    for (const ex of ROUTE_EXAMPLES) {
+      const text = serializePackage(packageFromRoute(exampleRoute(ex, 'x', 0), [ex]));
+      expect(again(text), ex.key).toBe(text);
+    }
+  });
+
+  it('for a route with a name and a description of the person, elevation and credit', () => {
+    const route: Route = {
+      id: 'r', name: 'Mein Weg', updated: 1, defaultSpeed: 4.5, country: 'DE', description: 'Frei',
+      points: [{ lat: 53.5, lon: 10, ele: 5.1 }, { lat: 53.501, lon: 10.001, ele: 6.2 }, { lat: 53.502, lon: 10.002, ele: 7 }],
+      meta: { author: 'Ann', license: 'CC0-1.0', source: 'Own', tags: ['park'], place: { de: 'Hamburg' } },
+    };
+    const text = serializePackage(packageFromRoute(route));
+    expect(again(text)).toBe(text);
+  });
+});

@@ -135,6 +135,25 @@ describe('a workout through a package and back', () => {
   });
 });
 
+describe('a package the app wrote comes out byte for byte the same when it is read and written again', () => {
+  // This is what lets an item taken from the community be offered again with the same hash (docs/P2P.md)
+  it('with names, descriptions, credit and every kind of step', () => {
+    const w: Workout = {
+      id: 'x', name: 'Bergblöcke', updated: 5, steps: [{ sec: 120, speed: 2 }, { meters: 800, speed: 5, incline: 3 }, { sec: 75, speed: 3.5, incline: -1 }],
+      names: { en: 'Hill blocks', de: 'Bergblöcke' }, texts: { en: 'Hard.', und: 'Hart.' }, meta: { author: 'Ann', license: 'CC0-1.0', source: 'Own', tags: ['hills', 'hard'] },
+    };
+    const text = serializeWorkoutPackage(workoutPackage(w));
+    const read = readWorkoutPackage(text, 'y', 6);
+    expect(read.ok && serializeWorkoutPackage(workoutPackage(read.workout))).toBe(text);
+  });
+
+  it('for a workout with only a plain name', () => {
+    const text = serializeWorkoutPackage(workoutPackage(mine));
+    const read = readWorkoutPackage(text, 'y', 6);
+    expect(read.ok && serializeWorkoutPackage(workoutPackage(read.workout))).toBe(text);
+  });
+});
+
 describe('workoutPackageFileName', () => {
   it('keeps letters and digits of any language and ends in .walkflow', () => {
     expect(workoutPackageFileName('Bergblöcke 4 × 400 m')).toBe('Bergblöcke-4-400-m.walkflow');

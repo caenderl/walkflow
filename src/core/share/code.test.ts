@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CODE_ALPHABET, newShareCode, readShareCode, roomFromCode } from './code';
+import { CODE_ALPHABET, CODE_KDF_ITERATIONS, newShareCode, readShareCode, roomFromCode } from './code';
 
 const fixed = (values: number[]) => (bytes: Uint8Array<ArrayBuffer>) => { for (let i = 0; i < bytes.length; i++) bytes[i] = values[i % values.length]!; };
 
@@ -56,6 +56,18 @@ describe('roomFromCode', () => {
     expect(room).toMatch(/^[0-9a-f]{32}$/);
     expect(password).toMatch(/^[0-9a-f]{64}$/);
     expect(password.startsWith(room)).toBe(false);
+  });
+
+  it('is stretched: a slow key derivation stands between the room a relay sees and the code', async () => {
+    // A known answer, worked out once with PBKDF2-HMAC-SHA256 (600,000 rounds, salt "walkflow-share-v1") in another implementation
+    expect(await roomFromCode('abcde fghjk')).toEqual({
+      room: '8ef362dca2aa80df5c53a9c1ca50e20a',
+      password: 'a962bf9f0d9fe31c94e01d965c6ff9454c48295a22bbb2a57b4151f604f2aa37',
+    });
+  });
+
+  it('uses a number of iterations that makes guessing the code expensive', () => {
+    expect(CODE_KDF_ITERATIONS).toBeGreaterThanOrEqual(600_000);
   });
 
   it('refuses something that is not a code', async () => {

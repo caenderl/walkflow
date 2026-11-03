@@ -25,7 +25,7 @@ point** where they first notice each other. That is the job of public relays; th
 could not: a package can be 2 MB, the relays allow 64–128 KB per message).
 
 1. **Opt-in.** Community is off. Switching it on says in one sentence who sees what (see "What the others learn").
-2. **One room per language**, e.g. `walkflow/community/de`. Everyone who has switched Community on joins the room of the
+2. **One room per language**, e.g. `walkflow/1/community/de` (the `1` is the protocol version). Everyone who has switched Community on joins the room of the
    language they chose (default: the language of the app). The library announces each device through the relays and the
    devices connect directly (WebRTC).
 3. **Offers.** Over every connection each side sends what it shares: kind, name, place, size, SHA-256 of the file (the
@@ -34,15 +34,32 @@ could not: a package can be 2 MB, the relays allow 64–128 KB per message).
 4. **Taking.** You pick an offer; the app asks one device that has it. The package arrives as text, is read by the reader
    of its kind (`readPackage`, `readWorkoutPackage`), its SHA-256 is compared with the one that was offered, and you confirm
    before it is saved. Nothing is ever saved on its own.
-5. **Only while the view is open.** The app joins the room when the Community view opens and leaves when it closes, so it
-   does not hold connections in the background.
+5. **Present while it is on.** Because what you take is passed on, the device has to be in the room for that to mean anything:
+   it joins when Community is switched on and the app is open, and leaves when you switch it off or close the app. It does
+   not need the Community view to be open. The switch says so, and the number of connections is limited. (Open to decide:
+   the alternative is to be in the room only while the Community view is open, which exposes you less but means almost
+   nothing is passed on.)
 
 ### Offering
 
-Nothing is offered by default. In the list of your routes and workouts each item has a switch *Share with the community*.
-A second switch, *Pass on what I have taken*, offers packages you have imported from others, so they stay available
-when the first person is offline. Both are off until you turn them on, and an offer is only visible while your device is
-online (most useful with the desktop app).
+Nothing of your own is offered by default: in the list of your routes and workouts each item has a switch *Share with the
+community*, off until you turn it on.
+
+**What you take from the community is passed on automatically** while Community is switched on, so every device that
+takes something becomes one more place to get it from, and an item stays available when the first person is offline. The
+notice at the Community switch says so: *what you take, you pass on*. The rules:
+
+- **Only what came from the community.** A package from a file or from a code is private; it is never offered on its own.
+- **Identity is the bytes.** The hash of an item is the hash of the file as it is stored. If a device offered a file that
+  differs from what everyone else has, it would be a different item. An item is saved with the hash it arrived with and is
+  offered only while the file the app would write is byte-identical to it (the app writes a package the same way every time;
+  a package that was made by another tool and would come out differently is saved, but not passed on).
+- **Editing makes it your own.** Once you change a route or workout from the community, the file differs and it is no
+  longer offered, unless you switch it on yourself.
+- **Deleting stops it.** A deleted item is withdrawn from the offer at once (`update`; one that is asked for in the
+  meantime is answered with `gone`).
+- **It can be seen.** Another device that is connected to you can see that you have an item. That is the price of passing
+  things on, and the reason it is only while Community is on.
 
 ### Size of a room
 
@@ -54,8 +71,8 @@ filter. A device limits itself to a fixed number of connections and ignores the 
 
 *Share* on an item shows a code such as `K7M2Q-XR4NT`; the receiver types it. Ten characters from an alphabet without
 look-alikes (no `I L O 0 1`), about 49 bits. It is a one-time secret: not stored, valid while the dialog is open. From it
-the app derives the **room** (a hash, what the relay sees) and the **password** that protects the set-up of the
-connection, with different prefixes, so the room says nothing about the password.
+the app derives, in one slow step (PBKDF2, 600,000 rounds), the **room** (what the relay sees) and the **password** that
+protects the set-up of the connection, with different prefixes, so the room says nothing about the password.
 
 ## The connection
 
@@ -78,9 +95,41 @@ WebRTC data channel, encrypted end to end.
 - **The relays** see the room name, your IP address and when you connected, not what you share. In Community the room name
   is public, so a relay can tell that a device is looking at the Walkflow community.
 - **The STUN servers** see your IP address.
+- **Everything you took** from the community is offered again, so the devices you are connected to can tell what you have taken.
 
 The switch for Community says this in one sentence, and the share dialog says it before the first connection.
 The id the other devices see is random for each session, so a device cannot be followed from one visit to the next.
+
+## Who can connect, and what protects what
+
+**Can it be made sure that only Walkflow apps connect? No.** The app is open source and a web page has no way to prove to
+another device what program it is: anyone can write a client that speaks WebRTC and the relay protocol, and say it is
+Walkflow. So the design does not trust the other device at all. It is safe against whatever connects, and that is stronger
+than checking who it is.
+
+What keeps it tidy:
+
+- **Own namespace.** The app id and the room names carry the protocol version (`walkflow/1/community/de`), so other apps that
+  use the same library and relays do not end up in the room, and a later incompatible version gets its own rooms.
+- **Handshake.** A device that is connected but does not say a valid `hello` within 10 seconds is dropped. A device that
+  breaks a rule (unknown message, wrong order, over a limit, a hash that does not match) gets a `bye` and is ignored for the
+  rest of the session. A device keeps only a fixed number of connections.
+- **Strict reading of everything**, so a program that speaks something else can only fail.
+
+What protects what:
+
+| Threat | What stands against it |
+| --- | --- |
+| Someone listens to the data | A WebRTC data channel is encrypted (DTLS) between the two devices. The relay never sees an item. |
+| Someone alters the connection set-up (a relay or a device in between) | **With a code:** the set-up is encrypted and authenticated with a key from the code (AES-GCM, by the library), which the relay does not have, so it cannot swap the connection's fingerprint. The code is stretched (PBKDF2, 600,000 rounds), so the room a relay sees is no shortcut to guessing it; 49 bits and a few minutes of validity make a live attack unrealistic. **In the community** there is no secret and the set-up can be intercepted: the community is for public data and does not rely on the channel. |
+| Data is damaged or mixed up | The hash of what arrived is compared with the one that was offered. |
+| A device offers something harmful | It is only ever text that goes through the reader of its format, with limits, with no path to the belt, and you confirm before it is saved. The hash does not help here: a hostile device offers the hash of its own file. |
+| A device floods or blocks | The limits per connection and device (see below), a limit of connections, and ignoring those who break a rule. |
+| Who made it | **Not proven.** `author` in a package is free text that anyone can write. Later: signatures of the author (Ed25519 in the browser's crypto) and a list of hashes in a catalogue that is signed by the project, which would mark an item as *verified*. Not part of the first version. |
+| The app itself is tampered with | The content security policy allows connections to the pinned relays only; the library is pinned and in the lock file; nothing is loaded from elsewhere. |
+
+What remains, and is said to the person: the devices you are connected to see your IP address, the relays see that you
+connected, and in the community everyone can see what you offer and what you took.
 
 ## The messages (`core/share/protocol.ts`)
 
@@ -145,10 +194,14 @@ check by hash), both package formats.
    Pure and tested.
 2. **Connection** in `src/net/`: a thin adapter around Trystero that turns the protocol's messages into data channel
    messages, with the pinned relay list; a room for a language and a room for a code. The library is loaded on demand.
-3. **Screens**: the Community view (switch with the one-sentence notice, list with filters, take), *Share with the
+   The handshake timeout, dropping and ignoring devices that break a rule, and the limit of connections belong here.
+3. **What was taken from the community**: a route or workout is saved with the hash it arrived with and a mark that it came
+   from the community; the offer is the marked items whose file is still byte-identical (a package written by the app comes out
+   byte for byte the same when it is read and written again; this is tested for routes and workouts).
+4. **Screens**: the Community view (switch with the one-sentence notice, list with filters, take), *Share with the
    community* on routes and workouts, *Share with a code* and *Receive with a code*. Texts in German, English and French.
-4. **CSP** for the pinned relays in `src/platform/csp.ts` and a test for it; the script that checks the relays.
-5. **Checks without hardware**: two browser tabs on one machine see each other in the room and exchange a route; a wrong
+5. **CSP** for the pinned relays in `src/platform/csp.ts` and a test for it; the script that checks the relays.
+6. **Checks without hardware**: two browser tabs on one machine see each other in the room and exchange a route; a wrong
    code, a closed view and a stopped sender end cleanly.
 
 ## Later, maybe
