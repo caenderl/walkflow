@@ -5,6 +5,7 @@ import { countryAt } from '../../core/routes/country';
 import { GPX_MAX_CHARS, parseGpx } from '../../core/routes/gpx';
 import { nameFromFile } from '../../core/routes/route-files';
 import { readPackage } from '../../core/routes/route-package';
+import { packageKind } from '../../core/share/package-kind';
 import { routeName } from '../../core/routes/route-examples';
 import { analyzeRoute, newRouteId, readRoute, type Route } from '../../core/routes/routes';
 import { fmtDistance } from '../../core/training/program';
@@ -25,11 +26,12 @@ type Failure = 'unreadable' | 'packageTooLarge' | 'packageNewer' | 'packageInval
 export function setupRouteImport(host: RouteImportHost) {
   const { setStatus } = host;
   async function importFile(file: File) {
-    const fail = (key: 'unreadable' | 'tooLarge' | 'unsafe' | 'noPoints' | 'packageTooLarge' | 'packageNewer' | 'packageInvalid') => setStatus(() => t.routes[key]);
+    const fail = (key: 'unreadable' | 'tooLarge' | 'unsafe' | 'noPoints' | 'packageTooLarge' | 'packageNewer' | 'packageInvalid' | 'isWorkoutPackage') => setStatus(() => t.routes[key]);
     if (file.size > GPX_MAX_CHARS) { fail('tooLarge'); return; }
     let text: string;
     try { text = await file.text(); } catch { fail('unreadable'); return; }
-    // A route package is JSON, a GPX file is XML
+    // A route package is JSON, a GPX file is XML; a workout package belongs in the workouts view
+    if (packageKind(text) === 'workout') { fail('isWorkoutPackage'); return; }
     if (text.trimStart().startsWith('{')) { await importPackage(text, fail); return; }
     const parsed = parseGpx(text);
     if (!parsed.ok) { fail(parsed.reason); return; }
@@ -58,6 +60,7 @@ export function setupRouteImport(host: RouteImportHost) {
   async function openPackage(file: { name: string; text?: string; error?: 'unreadable' | 'tooLarge' }) {
     location.hash = '#routes';
     if (file.text === undefined) { setStatus(() => (file.error === 'tooLarge' ? t.routes.packageTooLarge : t.routes.unreadable)); return; }
+    if (packageKind(file.text) === 'workout') { setStatus(() => t.routes.isWorkoutPackage); return; }
     const read = readPackage(file.text, newRouteId(Date.now()), Date.now());
     if (!read.ok) { setStatus(() => t.routes[packageFailure(read.reason)]); return; }
     const total = analyzeRoute(read.route).total;

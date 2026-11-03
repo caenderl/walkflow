@@ -80,7 +80,7 @@ export function setupStage(host: StageHost) {
     $('shKind').textContent = kind === 'workout' ? t.history.tagWorkout : t.history.tagRoute;
     $('shName').textContent = workout?.name ?? (route ? routeName(route.route, lang) : '');
     $('shInfo').textContent = workout ? t.program.summary(workout.steps.length, fmtLength(programLength(workout.steps))) : route?.info ?? '';
-    const desc = route ? routeDescription(route.route, lang) : null;
+    const desc = route ? routeDescription(route.route, lang) : workout?.description ?? null;
     $('shDesc').textContent = desc?.text ?? '';
     $('shDesc').hidden = !desc;
     if (desc?.lang) $('shDesc').lang = desc.lang; else $('shDesc').removeAttribute('lang');

@@ -30,6 +30,7 @@ import { initTheme, onThemeChange } from './ui/theme';
 import { BeltBanner } from './core/safety/belt-banner';
 import { $, $button, log } from './ui/ui';
 import { store } from './ui/store';
+import { packageKind } from './core/share/package-kind';
 import { onUnitsChange, parseUnits, setUnits, toDist, toSpeed, UNITS_STORAGE_KEY } from './i18n/units';
 import { askBeforeStart } from './core/safety/quiet';
 import { setupRoutes } from './ui/routes/route-ui';
@@ -567,7 +568,8 @@ setUi(false);
 setupPwa(connected);
 setupDesktop({
   onGlobalStop: () => { if (connected()) { log(t.stop.globalShortcutLog); void doStop(() => t.stop.globalShortcut); } },
-  onOpenPackage: f => void routes.openPackage(f),
+  // A file opened from outside goes to the view that fits what is in it; anything else gets the routes' message
+  onOpenPackage: f => void (f.text !== undefined && packageKind(f.text) === 'workout' ? workouts.openPackage(f) : routes.openPackage(f)),
   log,
 });
 

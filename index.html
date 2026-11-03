@@ -234,8 +234,13 @@
       <section class="card grid workouts-part">
         <div class="head-row">
           <h2 data-i18n="workouts.mineTitle">My workouts</h2>
-          <button id="wkNew" type="button" data-i18n="workouts.create">New workout</button>
+          <div class="row">
+            <button id="wkImport" type="button" data-i18n="workouts.import">Import workout package</button>
+            <button id="wkNew" type="button" data-i18n="workouts.create">New workout</button>
+          </div>
         </div>
+        <input type="file" id="wkFile" accept=".walkflow,application/json" aria-label="Workout package" data-i18n-aria="workouts.fileLabel" hidden>
+        <p class="hint" id="wkImportStatus" role="status"></p>
         <p class="hint" id="wkEmpty" data-i18n="workouts.empty" hidden>No saved workouts yet.</p>
         <ul id="wkList" class="wk-list"></ul>
         <p class="hint" id="wkStorage" hidden></p>

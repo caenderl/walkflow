@@ -6,7 +6,7 @@ import { routeName } from '../../core/routes/route-examples';
 import type { Route } from '../../core/routes/routes';
 import type { RunSummary } from '../../core/history/runs';
 import {
-  decodeSuggestion, encodeSuggestion, planFromMinutes, todaySuggestion, weekProgress,
+  decodeSuggestion, encodeSuggestion, planFromMinutes, todaySuggestion, weekProgress, workoutName,
   type PlanSuggestion, type WeekPlan, type Workout,
 } from '../../core/training/workouts';
 import { el } from '../components/elements';
@@ -49,7 +49,7 @@ export function setupWeekPlan(host: WeekPlanHost) {
       ...routes.map((r): PlanSuggestion => ({ kind: 'route', id: r.id })),
     ];
     sel.append(el('option', { value: '', textContent: t.workouts.suggestNone }));
-    if (workouts.length) sel.append(group(t.program.mine, workouts.map(w => [encodeSuggestion({ kind: 'workout', id: w.id }), w.name])));
+    if (workouts.length) sel.append(group(t.program.mine, workouts.map(w => [encodeSuggestion({ kind: 'workout', id: w.id }), workoutName(w, lang)])));
     sel.append(group(t.program.examples, examples.map(([id, name]) => [encodeSuggestion({ kind: 'workout', id }), name])));
     if (routes.length) sel.append(group(t.routes.mineTitle, routes.map(r => [encodeSuggestion({ kind: 'route', id: r.id }), routeName(r, lang)])));
     // A target that is gone keeps its place, so changing another day does not silently drop it

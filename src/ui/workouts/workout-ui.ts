@@ -3,23 +3,26 @@
 // here: "Use" just selects it. What the editor produces is checked by readWorkout before it is saved.
 
 import { confirmDialog } from '../components/dialogs';
-import { onLanguageChange, t } from '../../i18n/i18n';
+import { lang, onLanguageChange, t } from '../../i18n/i18n';
 import { fmtLength, formatProgram, parseProgram, programLength, type ProgramStep } from '../../core/training/program';
 import { toRow, toStep, type Row } from '../../core/training/workout-rows';
 import { getRouteStore } from '../../data/route-store';
 import type { Route } from '../../core/routes/routes';
 import { getRunStore } from '../../data/run-store';
 import type { RunSummary } from '../../core/history/runs';
-import { $, $button, $input } from '../ui';
+import { $, $button, $input, download } from '../ui';
 import { button, el, iconButton } from '../components/elements';
+import { overflowMenu } from '../components/overflow-menu';
+import { setupWorkoutImport } from './workout-import';
 import { stepRow } from './step-row';
 import { setupWeekPlan } from './week-plan';
 import { store } from '../store';
 import { getWorkoutStore, type WorkoutStore } from '../../data/workout-store';
 import {
-  newWorkoutId, readWorkout, TEMPLATES, WORKOUT_NAME_MAX,
+  nameAfterEdit, newWorkoutId, readWorkout, TEMPLATES, workoutDescription, workoutName, WORKOUT_NAME_MAX,
   type WeekPlan, type Workout,
 } from '../../core/training/workouts';
+import { serializeWorkoutPackage, workoutPackage, workoutPackageFileName } from '../../core/training/workout-package';
 
 export const SELECTED_STORAGE_KEY = 'walkflow.workout';
 const TEMPLATE_PREFIX = 'tpl:';
@@ -43,6 +46,8 @@ interface Draft {
   id: string | null;
   name: string;
   rows: Row[];
+  /** The workout being edited, for what the editor does not show: names in other languages, description, credit */
+  source?: Workout;
 }
 
 const templateSteps = (id: string): ProgramStep[] | undefined => TEMPLATES.find(tpl => tpl.id === id)?.steps;
@@ -66,12 +71,13 @@ export function setupWorkouts(host: WorkoutsHost) {
     return workouts.find(w => w.id === selected)?.steps ?? null;
   }
 
-  /** The selected workout with the name it is known by, for the tag of the run */
-  function selectedInfo(): { id: string; name: string; steps: ProgramStep[] } | null {
+  /** The selected workout with the name it is known by, for the tag of the run, and its description if it has one */
+  function selectedInfo(): { id: string; name: string; steps: ProgramStep[]; description: { text: string; lang: string | null } | null } | null {
     const steps = selectedSteps();
     if (!steps) return null;
-    const name = selected.startsWith(TEMPLATE_PREFIX) ? exampleName(selected.slice(TEMPLATE_PREFIX.length)) : workouts.find(w => w.id === selected)?.name;
-    return name ? { id: selected, name, steps } : null;
+    const own = selected.startsWith(TEMPLATE_PREFIX) ? undefined : workouts.find(w => w.id === selected);
+    const name = selected.startsWith(TEMPLATE_PREFIX) ? exampleName(selected.slice(TEMPLATE_PREFIX.length)) : own && workoutName(own, lang);
+    return name ? { id: selected, name, steps, description: own ? workoutDescription(own, lang) : null } : null;
   }
 
   function select(id: string) {
@@ -108,10 +114,13 @@ export function setupWorkouts(host: WorkoutsHost) {
     $('wkEmpty').hidden = workouts.length > 0;
     $('wkStorage').hidden = persistent;
     $('wkStorage').textContent = t.workouts.memoryOnly;
-    $('wkList').replaceChildren(...workouts.map(w => listItem(w.name, w.steps, w.id, [
+    $('wkList').replaceChildren(...workouts.map(w => listItem(workoutName(w, lang), w.steps, w.id, [
       useButton(w.id),
-      button(t.workouts.edit, () => startEdit({ id: w.id, name: w.name, rows: w.steps.map(toRow) })),
-      button(t.workouts.delete, () => void remove(w)),
+      button(t.workouts.edit, () => startEdit({ id: w.id, name: workoutName(w, lang), rows: w.steps.map(toRow), source: w })),
+      overflowMenu(t.routes.moreActions, [
+        { icon: 'package', label: t.workouts.exportPackage, run: () => download(serializeWorkoutPackage(workoutPackage(w)), 'application/json', workoutPackageFileName(workoutName(w, lang))) },
+        { icon: 'trash', label: t.workouts.delete, run: () => void remove(w), danger: true },
+      ]),
     ])));
     $('wkExamples').replaceChildren(...TEMPLATES.map(tpl => listItem(exampleName(tpl.id), tpl.steps, TEMPLATE_PREFIX + tpl.id, [
       useButton(TEMPLATE_PREFIX + tpl.id),
@@ -120,7 +129,7 @@ export function setupWorkouts(host: WorkoutsHost) {
   }
 
   async function remove(w: Workout) {
-    if (!(await confirmDialog(t.workouts.deleteTitle, [t.workouts.deleteText(w.name)], t.workouts.delete, 'stop'))) return;
+    if (!(await confirmDialog(t.workouts.deleteTitle, [t.workouts.deleteText(workoutName(w, lang))], t.workouts.delete, 'stop'))) return;
     try { await (await ready).delete(w.id); } catch (e) { setStatus(() => t.workouts.failed(String(e))); return; }
     if (draft?.id === w.id) draft = null;
     await reload();
@@ -182,13 +191,17 @@ export function setupWorkouts(host: WorkoutsHost) {
       if (!step || !readWorkout({ id: 'x', name: 'x', steps: [step], updated: 0 })) { setStatus(() => t.workouts.stepInvalid(i + 1)); return; }
       steps.push(step);
     }
-    const w = readWorkout({ id: d.id ?? newWorkoutId(Date.now()), name, steps, updated: Date.now() });
+    // A workout with names in several languages keeps them while the name is left as shown
+    const w = readWorkout({
+      id: d.id ?? newWorkoutId(Date.now()), ...(d.source ? nameAfterEdit(d.source, name, lang) : { name }),
+      texts: d.source?.texts, meta: d.source?.meta, steps, updated: Date.now(),
+    });
     if (!w) { setStatus(() => t.workouts.stepsMissing); return; }
     try { await (await ready).put(w); } catch (e) { setStatus(() => t.workouts.failed(String(e))); return; }
     draft = null;
     setStatus(null);
     await reload();
-    setStatus(() => t.workouts.saved(w.name));
+    setStatus(() => t.workouts.saved(workoutName(w, lang)));
     // A new workout becomes the selection, so "save, then start" is one step less
     if (!d.id) select(w.id);
   }
@@ -201,10 +214,16 @@ export function setupWorkouts(host: WorkoutsHost) {
     examples: () => TEMPLATES.map(tpl => [TEMPLATE_PREFIX + tpl.id, exampleName(tpl.id)]),
     workoutName: id => id.startsWith(TEMPLATE_PREFIX)
       ? (templateSteps(id.slice(TEMPLATE_PREFIX.length)) ? exampleName(id.slice(TEMPLATE_PREFIX.length)) : undefined)
-      : workouts.find(w => w.id === id)?.name,
+      : (w => w && workoutName(w, lang))(workouts.find(w => w.id === id)),
     savePlan: async next => { plan = next; await (await ready).setPlan(next); },
     useRoute: id => host.useRoute(id),
     useWorkout: id => { select(id); host.useWorkout(); },
+  });
+
+  const importer = setupWorkoutImport({
+    store: () => ready,
+    setStatus: text => { $('wkImportStatus').textContent = text ? text() : ''; },
+    added: async w => { await reload(); select(w.id); },
   });
 
   // ---------- Loading ----------
@@ -228,6 +247,13 @@ export function setupWorkouts(host: WorkoutsHost) {
   }
 
   // ---------- Events ----------
+  const fileInput = $input('wkFile');
+  $button('wkImport').onclick = () => fileInput.click();
+  fileInput.onchange = () => {
+    const file = fileInput.files?.[0];
+    fileInput.value = '';
+    if (file) void importer.importFile(file);
+  };
   $button('wkNew').onclick = () => startEdit({ id: null, name: '', rows: [{ unit: 'min', amount: 5, speed: 3 }] });
   $button('wkAdd').onclick = () => {
     if (!draft) return;
@@ -264,5 +290,7 @@ export function setupWorkouts(host: WorkoutsHost) {
     },
     /** After a backup restore */
     reload,
+    /** A package opened from outside (double click in the Finder or Explorer) */
+    openPackage: importer.openPackage,
   };
 }
