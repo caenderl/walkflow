@@ -24,7 +24,9 @@ src/
   ui/                 everything that draws or listens
     components/         reusable parts: dialogs, the "⋯" menu, the speed chart
     settings/           settings dialog, header menus
-    routes/ workouts/ history/   one folder per feature view
+    live/               the training view's live parts: speed and limits (owns the governor), incline card
+    routes/ workouts/ history/ settings/   one folder per feature view (history also has the export buttons)
+    background.ts       wake lock, tab in the background, leaving the page
     desktop.ts pwa.ts theme.ts views.ts i18n-dom.ts ui.ts   integration and helpers of the page
 electron/             main process and preload of the desktop app
 tests/                tests about the project itself
@@ -82,8 +84,11 @@ tests/                tests about the project itself
 
 ## Known debt (small, on purpose not done in one go)
 
-- `src/main.ts` is large: it holds the app state (connection, live values, program) and many handlers. It should be split into
-  modules per concern (connection, training view, controls) that main only wires together.
+- `src/main.ts` (about 690 lines) was a thousand-line script; info, export buttons, background handling, the incline card
+  and the speed controls now live in their own modules and main only wires them. What is left is the treadmill session
+  (connect, start, stop, live data, the program runner), the stage of the training view and the experiment console. They share
+  mutable state (client, live values, the belt state), so the next step is a small session object that holds it, and then
+  modules for the session, the stage and the console that main only wires together.
 - `ui/ui.ts` mixes DOM helpers (`el`, `button`), the storage wrapper (`store`) and the log. The storage wrapper belongs in
   its own module.
 - `ui/routes/route-ui.ts` and `ui/workouts/workout-ui.ts` are long; their editors can become components.

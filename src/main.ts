@@ -7,10 +7,7 @@ import { desktop, setupDesktop } from './ui/desktop';
 import { choose, confirmDialog } from './ui/components/dialogs';
 import type { Sample, TcxSport } from './core/history/export';
 import { setupExportControls } from './ui/history/export-controls';
-import {
-  cmdPause, cmdRequestControl, cmdSetSpeed, cmdStart, cmdStop, describeMachineStatus, hex,
-  OP, parseMachineStatus, parseTrainingStatus, type TreadmillData,
-} from './core/protocol/ftms';
+import { cmdPause, cmdRequestControl, cmdStart, cmdStop, describeMachineStatus, hex, OP, parseMachineStatus, parseTrainingStatus, type TreadmillData } from './core/protocol/ftms';
 import { setupHistory } from './ui/history/history';
 import { lang, onLanguageChange, retranslate, t, type Text } from './i18n/i18n';
 import { routeDescription, routeName } from './core/routes/route-examples';
@@ -20,22 +17,18 @@ import { setupInterval } from './ui/workouts/interval-ui';
 import { fmtDistance, fmtLength, fmtTime, ProgramRunner, programLength, type ProgramStep } from './core/training/program';
 import { setupPwa } from './ui/pwa';
 import type { RunSource, RunTag } from './core/history/runs';
-import {
-  beltMaybeRunning, checkConsoleCommand, controlAvailability, decideLimitChange, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION,
-  effectiveMax as calcEffectiveMax, isDisclaimerAccepted, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE, LIMIT_MAX, LIMIT_MIN, LIMIT_STORAGE_KEY,
-  loadLimit, MAX_STEP_MAX, MAX_STEP_MIN, MAX_STEP_STORAGE_KEY, parseHexBytes, parseMaxStep, RAMP_INTERVAL_MS,
-  serializeLimit, SpeedGovernor, StandstillDetector,
-} from './core/safety/safety';
+import { beltMaybeRunning, checkConsoleCommand, controlAvailability, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION, isDisclaimerAccepted, parseHexBytes, StandstillDetector } from './core/safety/safety';
 import { ACTIVE_STORAGE_KEY, readActive, type Active } from './core/training/selection';
 import { setupBackground } from './ui/background';
 import { setupInclineCard } from './ui/live/incline-card';
+import { setupSpeedControls } from './ui/live/speed-controls';
 import { renderInfo } from './ui/settings/info';
 import { setupSettings } from './ui/settings/settings-ui';
 import { SimulatorAdapter } from './device/sim';
 import { initTheme, onThemeChange } from './ui/theme';
 import { BeltBanner } from './core/safety/belt-banner';
 import { $, $button, $input, log, store } from './ui/ui';
-import { fromSpeed, onUnitsChange, parseUnits, setUnits, speedFromInput, speedPresets, speedStep, toDist, toSpeed, UNITS_STORAGE_KEY } from './i18n/units';
+import { onUnitsChange, parseUnits, setUnits, toDist, toSpeed, UNITS_STORAGE_KEY } from './i18n/units';
 import { askBeforeStart } from './core/safety/quiet';
 import { setupRoutes } from './ui/routes/route-ui';
 import { setupViews, stopPlacement, type View } from './ui/views';
@@ -52,8 +45,6 @@ const now = () => performance.now();
 const webAdapter = new WebBluetoothAdapter();
 let sim: SimulatorAdapter | null = null;
 let client: TreadmillClient | null = null;
-let devMin = 1.0, devMax = 12.0;
-let limit = 6;
 /** Started by the app or according to Machine Status, and not stopped since */
 let beltStarted = false;
 /** The banner over the live figures: ready to start, stopping, not connected. Display only. */
@@ -62,7 +53,6 @@ let lastMeasured: number | undefined;
 /** When the speed was last reported (performance.now), to tell a fresh reading from an old one */
 let lastMeasuredAt = 0;
 let controlLost = false;
-let sliderDragging = false;
 const cur: Omit<Sample, 'ts'> = {};   // latest measured values
 const samples: Sample[] = [];          // recording since the page was opened (1 Hz), for the chart and export
 let lastSample = 0;
@@ -84,6 +74,17 @@ const recorder = history.recorder;
 const interval = setupInterval();
 const settings = setupSettings();
 settings.onDevMode(on => desktop?.setDevMode(on));
+// The speed and its limits; it owns the governor, the only sender of speed commands
+const speed = setupSpeedControls({
+  send: bytes => (client ? client.send(bytes) : Promise.resolve(false)),
+  connected: () => connected(),
+  now,
+  limitsChanged: () => workouts.refreshLimit(),
+  limitSet: () => redrawChart(),
+});
+const governor = speed.governor;
+function effectiveMax() { return speed.effectiveMax(); }
+
 const workouts = setupWorkouts({
   maxSpeed: () => effectiveMax(),
   useRoute: id => { routes.use(id); setActive('route'); },
@@ -100,13 +101,6 @@ const routes = setupRoutes({
 
 const connected = () => !!client?.connected;
 const maybeRunning = () => beltMaybeRunning({ startedByApp: beltStarted, lastMeasuredKmh: lastMeasured });
-
-const governor = new SpeedGovernor({
-  send: kmh => client ? client.send(cmdSetSpeed(kmh)) : Promise.resolve(false),
-  now,
-  log,
-  onChange: renderSpeed,
-});
 
 const standstill = new StandstillDetector();
 
@@ -257,48 +251,6 @@ function onMachineStatus(dv: DataView) {
 
 function redrawChart() {
   drawChart($<HTMLCanvasElement>('chart'), samples, { now: Date.now(), limit: effectiveMax(), target: governor.target ?? 0 });
-}
-
-// ---------- Speed & incline ----------
-function effectiveMax() { return calcEffectiveMax(devMax, limit); }
-
-function applyLimits() {
-  const sl = $input('slider');
-  sl.min = String(devMin); sl.max = String(effectiveMax());
-  if (parseFloat(sl.value) > parseFloat(sl.max)) sl.value = sl.max;
-  if (parseFloat(sl.value) < parseFloat(sl.min)) sl.value = sl.min;
-  renderRangeInfo();
-  const before = governor.target;
-  governor.setRange({ min: devMin, max: effectiveMax() });
-  if (connected() && governor.target !== before && governor.target !== null) log(t.limit.lowered(governor.target));
-  renderSpeed();
-}
-
-function renderRangeInfo() {
-  $('rangeInfo').textContent = t.settings.range(devMin, devMax, effectiveMax(), governor.maxStep, RAMP_INTERVAL_MS);
-  $('deviceInfo').textContent = t.connection.deviceInfo(devMin, devMax, effectiveMax());
-  workouts.refreshLimit();
-}
-
-function renderSpeed() {
-  const sl = $input('slider');
-  const target = governor.target;
-  if (target !== null && !sliderDragging) sl.value = String(target);
-  $('target').textContent = t.control.speed(target ?? parseFloat(sl.value));
-  const lc = governor.lastCommand;
-  $('rampInfo').textContent = governor.ramping && target !== null && lc && lc.kmh !== target
-    ? t.control.ramping(lc.kmh, target)
-    : ' ';
-}
-
-function requestSpeed(kmh: number) {
-  if (!connected() || !Number.isFinite(kmh)) return;
-  governor.request(kmh);
-  renderSpeed();
-}
-
-function stepSpeed(delta: number) {
-  requestSpeed((governor.target ?? governor.base()) + delta);
 }
 
 // ---------- Start / stop / program ----------
@@ -472,18 +424,18 @@ async function connect(kind: 'ble' | 'demo') {
     const c = new TreadmillClient(adapter, events);
     client = c;
     runSource = kind === 'demo' ? 'demo' : 'ble';
-    devMin = 1.0; devMax = 12.0;
+    speed.setDeviceRange(1.0, 12.0);
     incline.reset();
     const info = await c.connect();
 
-    if (info.speedRange) { devMin = info.speedRange.min; devMax = info.speedRange.max; }
+    if (info.speedRange) speed.setDeviceRange(info.speedRange.min, info.speedRange.max);
     incline.onConnected(info, runSource === 'ble');
     renderStats();
 
     beltStarted = false; lastMeasured = undefined; controlLost = false;
     governor.reset();
     await background.acquireWakeLock();
-    applyLimits();
+    speed.applyLimits();
     setUi(true);
     $('alarm').hidden = true;
     $('demoBanner').hidden = kind !== 'demo';
@@ -621,60 +573,6 @@ async function rawSend() {
   void c.send(data);
 }
 
-// ---------- Settings ----------
-/** The limit and step fields and the quick-select buttons, in the units of the settings. The values stay km/h inside. */
-function renderLimitFields() {
-  const shown = (kmh: number) => String(Math.round(toSpeed(kmh) * 100) / 100);
-  const metric = toSpeed(1) === 1;
-  const cap = $input('cap'), step = $input('maxStep');
-  cap.min = shown(LIMIT_MIN); cap.max = shown(LIMIT_MAX); cap.step = metric ? '0.5' : '0.1'; cap.value = shown(limit);
-  step.min = shown(MAX_STEP_MIN); step.max = shown(MAX_STEP_MAX); step.step = metric ? '0.1' : '0.01'; step.value = shown(governor.maxStep);
-  const presets = speedPresets();
-  document.querySelectorAll<HTMLButtonElement>('.preset').forEach((b, i) => {
-    const v = presets[i];
-    if (v === undefined) return;
-    b.dataset.speed = String(v);
-    b.textContent = t.number(v);
-  });
-}
-
-function loadSettings() {
-  const l = loadLimit(store.get(LIMIT_STORAGE_KEY), store.get(LEGACY_LIMIT_KEY));
-  limit = l.value;
-  if (l.note) log(l.note);
-  const ms = parseMaxStep(store.get(MAX_STEP_STORAGE_KEY) ?? '');
-  if (ms !== null) governor.maxStep = ms;
-  renderLimitFields();
-}
-
-async function limitChanged() {
-  const input = $input('cap');
-  const d = decideLimitChange(speedFromInput(input.value), limit);
-  if (!d.ok) { log(`❌ ${d.reason}`); renderLimitFields(); return; }
-  if (d.needsConfirmation) {
-    const ok = await confirmDialog(t.limit.confirmTitle(d.value), [
-      t.limit.risk(LIMIT_CONFIRM_ABOVE),
-      t.limit.onlyIf,
-    ], t.limit.allow(d.value));
-    if (!ok) { renderLimitFields(); return; }
-  }
-  limit = d.value;
-  renderLimitFields();
-  store.set(LIMIT_STORAGE_KEY, serializeLimit(limit, limit > LIMIT_CONFIRM_ABOVE));
-  applyLimits();
-  redrawChart();
-}
-
-function maxStepChanged() {
-  const input = $input('maxStep');
-  const v = parseMaxStep(speedFromInput(input.value));
-  if (v === null) { log(t.limit.maxStepRange(MAX_STEP_MIN, MAX_STEP_MAX)); renderLimitFields(); return; }
-  governor.maxStep = v;
-  renderLimitFields();
-  store.set(MAX_STEP_STORAGE_KEY, String(v));
-  applyLimits();
-}
-
 // ---------- Events ----------
 // The header menus never cover the controls (Start/Pause/Stop, ±)
 const controls = () => [document.querySelector('.dock')];
@@ -710,19 +608,6 @@ $button('shClear').onclick = () => setActive(null);
 $button('pause').onclick = () => void doPause();
 $button('stop').onclick = () => void doStop();
 
-const slider = $input('slider');
-slider.addEventListener('pointerdown', () => { sliderDragging = true; });
-window.addEventListener('pointerup', () => { sliderDragging = false; });
-slider.oninput = () => { $('target').textContent = t.control.speed(parseFloat(slider.value)); };
-slider.onchange = () => { sliderDragging = false; requestSpeed(parseFloat(slider.value)); };
-$button('minus').onclick = () => stepSpeed(-speedStep());
-$button('plus').onclick = () => stepSpeed(speedStep());
-document.querySelectorAll<HTMLButtonElement>('.preset').forEach(b => {
-  b.onclick = () => requestSpeed(fromSpeed(parseFloat(b.dataset.speed ?? '')));
-});
-$input('cap').onchange = () => void limitChanged();
-$input('maxStep').onchange = maxStepChanged;
-
 setupExportControls(samples, redrawChart);
 
 $button('rawSend').onclick = () => void rawSend();
@@ -739,9 +624,9 @@ document.addEventListener('keydown', e => {
     (document.activeElement as HTMLElement | null)?.blur?.();
     void doStop();
   } else if (tag !== 'INPUT' && e.key === 'ArrowUp') {
-    e.preventDefault(); stepSpeed(speedStep());
+    e.preventDefault(); speed.step(1);
   } else if (tag !== 'INPUT' && e.key === 'ArrowDown') {
-    e.preventDefault(); stepSpeed(-speedStep());
+    e.preventDefault(); speed.step(-1);
   }
 });
 
@@ -751,10 +636,8 @@ onUnitsChange(u => {
 });
 
 onLanguageChange(() => {
-  renderLimitFields();
+  speed.relabel();
   renderInfo();
-  renderRangeInfo();
-  renderSpeed();
   incline.relabel();
   renderStats();
   redrawChart();
@@ -775,11 +658,11 @@ setupViews(v => {
   // The chart is not drawn while it is hidden, so it is drawn now, before the first frame of the view
   if (v === 'training') { void routes.refreshGoal(); void workouts.reload(); redrawChart(); }
 });
-loadSettings();
+speed.load();
 renderInfo();
 incline.render();
 renderStats();
-applyLimits();
+speed.applyLimits();
 redrawChart();
 setInterval(() => { redrawChart(); recorder.tick(Date.now()); }, 1000);
 setInterval(() => { renderBanner(); renderControls(); }, 100);
