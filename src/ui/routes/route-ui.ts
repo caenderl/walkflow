@@ -10,9 +10,10 @@ import { overflowMenu } from '../components/overflow-menu';
 import { GPX_MAX_CHARS, parseGpx, serializeGpx } from '../../core/routes/gpx';
 import { packageFileName, packageFromRoute, readPackage, serializePackage } from '../../core/routes/route-package';
 import { lang, onLanguageChange, t } from '../../i18n/i18n';
-import { adoptExample, descriptionAfterEdit, exampleRoute, examplesToSeed, markSeeded, readSeeded, routeDescription, routeName, ROUTE_EXAMPLES, SEEDED_STORAGE_KEY } from '../../core/routes/route-examples';
+import { descriptionAfterEdit, routeDescription, routeName } from '../../core/routes/route-examples';
 import { nameFromFile, safeFileName } from '../../core/routes/route-files';
 import { createProfile, svgEl } from './route-profile';
+import { backfillCountries, seedExamples } from './library-upkeep';
 import { createMapSlot, type MapSlot } from './route-map';
 import { isDark, onThemeChange } from '../theme';
 import { fromSpeed, toSpeed } from '../../i18n/units';
@@ -398,43 +399,6 @@ export function setupRoutes(host: RoutesHost) {
   }
 
   // ---------- Loading ----------
-  /** Once per start: the examples that come with the app go into a library that has never had them */
-  let seeding = false;
-  async function seedExamples(s: RouteStore) {
-    if (seeding || !s.persistent) return;
-    seeding = true;
-    try {
-      const seeded = readSeeded(store.get(SEEDED_STORAGE_KEY));
-      const library = await s.list();
-      // A copy of an example from before routes knew their example becomes that example
-      for (const r of library) {
-        for (const ex of ROUTE_EXAMPLES) {
-          const adopted = adoptExample(r, ex);
-          if (adopted) { await s.put(adopted); break; }
-        }
-      }
-      const have = library.map(r => r.name);
-      for (const ex of examplesToSeed(seeded, have)) {
-        const route = readRoute(exampleRoute(ex, newRouteId(Date.now()), Date.now()));
-        if (route) await s.put(route);
-      }
-      store.set(SEEDED_STORAGE_KEY, JSON.stringify(markSeeded(seeded)));
-    } catch { /* the library just stays as it is; the next start tries again */ }
-  }
-
-  /** Once per start: routes that have no country yet (imported before flags, or restored from an old backup) get one */
-  let backfilling = false;
-  async function backfillCountries(s: RouteStore) {
-    if (backfilling) return;
-    backfilling = true;
-    try {
-      for (const r of (await s.list()).filter(x => x.country === undefined)) {
-        const start = r.points[0]!;
-        await s.put({ ...r, country: await countryAt(start.lat, start.lon) });
-      }
-    } catch { /* the flags are only decoration; the next start tries again */ }
-  }
-
   async function reload() {
     const s = await ready;
     persistent = s.persistent;
