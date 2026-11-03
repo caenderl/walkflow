@@ -1,4 +1,4 @@
-// What the connected treadmill can do with the incline, and the levels the person has set for it.
+// What the connected treadmill can do with the incline, and the number of levels the person has set for it.
 // The treadmill is asked (FTMS features and the supported inclination range); nothing here is assumed.
 
 import type { Features, Range } from './ftms';
@@ -8,9 +8,8 @@ const MACHINE_INCLINATION = 0x0008;
 /** Target Setting Feature bit 1: the treadmill accepts a target incline. */
 const TARGET_INCLINATION = 0x0002;
 
-export const INCLINE_LEVEL_MIN = -10;
-export const INCLINE_LEVEL_MAX = 40;
-export const INCLINE_LEVELS_MAX = 20;
+/** The most levels the settings offer */
+export const INCLINE_LEVELS_MAX = 10;
 
 export interface InclineSupport {
   /** Set Inclination is accepted: the incline can be controlled from the app */
@@ -35,26 +34,21 @@ export function inclineSupport(features: Features | undefined, range: Range | un
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
 
-/** "0 2.5 5; 7,5" → [0, 2.5, 5, 7.5], sorted, without repeats and without what the app does not allow. */
-export function parseLevels(text: string): number[] {
-  const out = new Set<number>();
-  for (const token of text.split(/[\s;]+/)) {
-    const v = Number(token.replace(/,$/, '').replace(',', '.'));
-    if (token === '' || !Number.isFinite(v)) continue;
-    const r = round1(v);
-    if (r >= INCLINE_LEVEL_MIN && r <= INCLINE_LEVEL_MAX) out.add(r);
-  }
-  return [...out].sort((a, b) => a - b).slice(0, INCLINE_LEVELS_MAX);
+/** The number of levels from the settings (a whole number from 0 to INCLINE_LEVELS_MAX); anything else counts as none */
+export function parseLevelCount(raw: string | null | undefined): number {
+  if (typeof raw !== 'string' || !/^\d{1,2}$/.test(raw)) return 0;
+  const n = Number(raw);
+  return n <= INCLINE_LEVELS_MAX ? n : 0;
 }
 
-export function formatLevels(levels: readonly number[]): string {
-  return levels.join(' ');
-}
-
-/** The levels the treadmill can reach: those outside its reported range are left out. */
-export function usableLevels(levels: readonly number[], range: Range | undefined): { levels: number[]; dropped: number } {
-  const ok = range ? levels.filter(l => l >= range.min && l <= range.max) : [...levels];
-  return { levels: ok, dropped: levels.length - ok.length };
+/**
+ * The levels of a treadmill with `count` of them: spread evenly over the range the treadmill reported, both ends
+ * included (a single level is the top of the range). Always inside that range; none without a count or a range.
+ */
+export function levelsFromCount(count: number, range: Range | undefined): number[] {
+  if (!Number.isInteger(count) || count < 1 || count > INCLINE_LEVELS_MAX || !range || !(range.max > range.min)) return [];
+  if (count === 1) return [round1(range.max)];
+  return Array.from({ length: count }, (_, i) => round1(Math.min(range.max, Math.max(range.min, range.min + ((range.max - range.min) * i) / (count - 1)))));
 }
 
 /** The value that is sent: inside the reported range, with the 0.1 % resolution of the protocol. */

@@ -356,8 +356,8 @@
           <div id="unitsOptions" class="seg" role="radiogroup" aria-labelledby="unitsLabel"></div>
         </div>
         <div class="incl-only">
-          <label class="hint field"><span data-i18n="incline.levelsLabel">Incline levels (%)</span>
-            <input type="text" id="inclLevelsInput" inputmode="decimal" autocomplete="off" placeholder="0 2.5 5 7.5 10">
+          <label class="hint field"><span data-i18n="incline.levelsLabel">Incline levels</span>
+            <span class="range-row"><input type="range" id="inclLevelsInput" min="0" max="10" step="1" value="0"><output id="inclLevelsValue" for="inclLevelsInput"></output></span>
           </label>
           <div class="hint" data-i18n="incline.levelsHint"></div>
         </div>

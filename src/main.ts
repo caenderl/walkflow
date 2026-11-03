@@ -29,7 +29,7 @@ import { ACTIVE_STORAGE_KEY, readActive, type Active } from './selection';
 import { setupSettings } from './settings-ui';
 import { SimulatorAdapter } from './sim';
 import { initTheme, onThemeChange } from './theme';
-import { clampIncline, formatLevels, inclineSupport, parseLevels, usableLevels, type InclineSupport } from './incline';
+import { clampIncline, inclineSupport, levelsFromCount, parseLevelCount, type InclineSupport } from './incline';
 import { $, $button, $input, download, log, store } from './ui';
 import { fromSpeed, onUnitsChange, parseUnits, setUnits, speedFromInput, speedPresets, speedStep, toDist, toSpeed, UNITS_STORAGE_KEY } from './units';
 import { askBeforeStart } from './quiet';
@@ -44,7 +44,7 @@ setUnits(parseUnits(store.get(UNITS_STORAGE_KEY)));
 
 const HIDDEN_MODE_KEY = 'walkflow.hiddenMode';
 const TCX_SPORT_KEY = 'walkflow.tcxSport';
-const INCLINE_LEVELS_KEY = 'walkflow.inclineLevels';
+const INCLINE_LEVELS_KEY = 'walkflow.inclineLevelCount';
 /** 'no' once a real treadmill reported no incline: then nothing about the incline is shown */
 const INCLINE_SEEN_KEY = 'walkflow.inclineSupport';
 const now = () => performance.now();
@@ -66,8 +66,8 @@ let sliderDragging = false;
 let inclRange: Range | null = null;
 let inclShown = 0;
 let inclSupport: InclineSupport = { settable: false, reported: false };
-/** The levels the person set for the treadmill's incline; empty = the slider over the range the treadmill reports */
-let inclLevels: number[] = [];
+/** How many levels the person says the treadmill's incline has; 0 = the slider over the range the treadmill reports */
+let inclLevelCount = 0;
 const cur: Omit<Sample, 'ts'> = {};   // latest measured values
 const samples: Sample[] = [];          // recording since the page was opened (1 Hz), for the chart and export
 let lastSample = 0;
@@ -255,26 +255,32 @@ function stepSpeed(delta: number) {
   requestSpeed((governor.target ?? governor.base()) + delta);
 }
 
+/** The setting "incline levels": the slider and the number beside it */
+function renderLevelCountField() {
+  $input('inclLevelsInput').value = String(inclLevelCount);
+  $('inclLevelsValue').textContent = inclLevelCount === 0 ? t.incline.levelsNone : String(inclLevelCount);
+}
+
 function renderIncline() {
   $('inclCard').hidden = !inclSupport.settable;
   $('inclTarget').textContent = t.incline.value(inclShown);
-  const { levels, dropped } = usableLevels(inclLevels, inclRange ?? undefined);
+  const levels = levelsFromCount(inclLevelCount, inclRange ?? undefined);
   const box = $('inclLevels');
   box.hidden = levels.length === 0;
   $input('inclSlider').hidden = levels.length > 0;
-  box.replaceChildren(...levels.map(l => {
+  box.replaceChildren(...levels.map((l, i) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'needs-conn';
     b.disabled = !uiConnected;
     b.setAttribute('role', 'radio');
     b.setAttribute('aria-checked', String(Math.abs(l - inclShown) < 0.05));
-    b.textContent = t.incline.value(l);
+    b.textContent = String(i + 1);
+    b.title = b.ariaLabel = t.incline.levelButton(i + 1, l);
     b.onclick = () => void setIncline(l);
     return b;
   }));
-  const info = inclRange ? t.incline.range(inclRange.min, inclRange.max, inclRange.step) : t.incline.unknown;
-  $('inclInfo').textContent = dropped > 0 ? `${info} ${t.incline.levelsDropped(dropped)}` : info;
+  $('inclInfo').textContent = inclRange ? t.incline.range(inclRange.min, inclRange.max, inclRange.step) : t.incline.unknown;
 }
 
 function setIncline(requested: number) {
@@ -716,8 +722,8 @@ function loadSettings() {
   renderLimitFields();
   const hm = store.get(HIDDEN_MODE_KEY);
   if (hm === 'warn' || hm === 'pause') $<HTMLSelectElement>('hiddenMode').value = hm;
-  inclLevels = parseLevels(store.get(INCLINE_LEVELS_KEY) ?? '');
-  $input('inclLevelsInput').value = formatLevels(inclLevels);
+  inclLevelCount = parseLevelCount(store.get(INCLINE_LEVELS_KEY));
+  renderLevelCountField();
   applyInclineSeen();
   const sp = store.get(TCX_SPORT_KEY);
   if (sp === 'Running' || sp === 'Other') $<HTMLSelectElement>('tcxSport').value = sp;
@@ -830,11 +836,10 @@ $input('cap').onchange = () => void limitChanged();
 $input('maxStep').onchange = maxStepChanged;
 $<HTMLSelectElement>('hiddenMode').onchange = e => store.set(HIDDEN_MODE_KEY, (e.target as HTMLSelectElement).value);
 
-$input('inclLevelsInput').onchange = e => {
-  const input = e.target as HTMLInputElement;
-  inclLevels = parseLevels(input.value);
-  store.set(INCLINE_LEVELS_KEY, formatLevels(inclLevels));
-  input.value = formatLevels(inclLevels);
+$input('inclLevelsInput').oninput = e => {
+  inclLevelCount = parseLevelCount((e.target as HTMLInputElement).value);
+  store.set(INCLINE_LEVELS_KEY, String(inclLevelCount));
+  renderLevelCountField();
   renderIncline();
 };
 $input('inclSlider').oninput = e => { $('inclTarget').textContent = t.incline.value(parseFloat((e.target as HTMLInputElement).value)); };
@@ -873,6 +878,7 @@ onUnitsChange(u => {
 
 onLanguageChange(() => {
   renderLimitFields();
+  renderLevelCountField();
   renderInfo();
   renderRangeInfo();
   renderSpeed();

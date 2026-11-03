@@ -132,7 +132,10 @@ button.big { min-height:52px; font-size:1.05rem; }
 .menu-list button[aria-checked="true"]::after { content:""; width:6px; height:11px; margin:-3px 6px 0 0; border:solid var(--primary); border-width:0 2.5px 2.5px 0; transform:rotate(45deg); }
 .menu hr { border:0; border-top:1px solid var(--card-border); margin:10px 0; }
 .seg { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:2px; padding:3px; background:var(--btn); border:1px solid var(--btn-border); border-radius:12px; }
-.seg-auto { grid-template-columns:repeat(auto-fit, minmax(64px, 1fr)); }
+.seg-auto { grid-template-columns:repeat(auto-fit, minmax(48px, 1fr)); }
+.range-row { display:flex; align-items:center; gap:12px; }
+.range-row input { flex:1; min-width:0; }
+.range-row output { min-width:4em; text-align:right; color:var(--fg); font-variant-numeric:tabular-nums; }
 .seg button { min-height:36px; padding:6px 4px; border:0; border-radius:9px; background:transparent; font-size:.875rem; }
 .seg button[aria-checked="true"] { background:var(--card); font-weight:600; box-shadow:0 1px 2px var(--shadow); }
 /* View switch (src/views.ts): a segmented control */
