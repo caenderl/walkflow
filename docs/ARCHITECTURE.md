@@ -16,10 +16,12 @@ src/
     safety/             speed limit and ramp, standstill, incline rules, banner and button state, modes
     training/           workouts, the program runner, step panel logic, what the training view is about
     routes/             routes, GPX, route packages, example routes, countries, map settings
+    share/              the share code and the messages and rules of an exchange with another device
     history/            runs, statistics, CSV/TCX export
     id.ts               ids of things the person creates
   platform/           pure helpers around the shell: build settings, version, CSP, MIME types, dev server address, opened files
   device/             the treadmill: Web Bluetooth adapter, simulator
+  net/                the connection to other people's devices for sharing (not there yet, see docs/P2P.md); never the treadmill
   data/               IndexedDB storage (workouts, routes, runs)
   ui/                 everything that draws or listens
     components/         reusable parts: dialogs, the "⋯" menu, the speed chart, element builders (el, button, iconButton)
@@ -39,8 +41,9 @@ tests/                tests about the project itself
 | `i18n`, `platform` | itself |
 | `core` | `i18n` |
 | `device` | `core`, `i18n` |
+| `net` | `core`, `i18n` (never `device`, `ui`, or the FTMS commands) |
 | `data` | `core` |
-| `ui` | `core`, `i18n`, `device`, `data`, `platform` |
+| `ui` | `core`, `i18n`, `device`, `data`, `platform`, `net` |
 | `electron/` | pure code of `src/` only: `i18n`, `platform`, `core` |
 
 `main.ts` may import from everything.

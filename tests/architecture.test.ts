@@ -17,13 +17,18 @@ const MAY_IMPORT: Record<string, readonly string[]> = {
   core: ['i18n'],
   device: ['core', 'i18n'],
   data: ['core'],
-  ui: ['core', 'i18n', 'device', 'data', 'platform'],
+  /** The connection to other people's devices (sharing). Never the treadmill: no device, no ui. */
+  net: ['core', 'i18n'],
+  ui: ['core', 'i18n', 'device', 'data', 'platform', 'net'],
 };
 /** Without the browser: no DOM, no storage. device and data are where those belong. */
 const PURE = ['i18n', 'core', 'platform'];
 /** What the main process of the desktop app may use of src/: pure code only */
 const ELECTRON_MAY_IMPORT = ['i18n', 'platform', 'core'];
 const ROOT_FILES = ['main.ts', 'env.d.ts', 'style.css'];
+/** What reaches other people's devices must never be able to drive the belt: no FTMS commands, no treadmill connection */
+const SHARING = ['src/net/', 'src/core/share/'];
+const BELT = ['src/core/protocol/', 'src/device/'];
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
@@ -75,6 +80,17 @@ describe('project structure', () => {
       }
     }
     expect(violations).toEqual([]);
+  });
+
+  it('keeps sharing away from the belt: nothing from other devices can reach the treadmill commands', () => {
+    const bad: string[] = [];
+    for (const file of sources.filter(f => SHARING.some(s => rel(f).startsWith(s)))) {
+      for (const { spec } of importsOf(readFileSync(file, 'utf8'))) {
+        const target = resolveTs(file, spec);
+        if (target && BELT.some(b => rel(target).startsWith(b))) bad.push(`${rel(file)} → ${rel(target)}`);
+      }
+    }
+    expect(bad).toEqual([]);
   });
 
   it('keeps the browser out of the pure layers: no DOM, no storage, no window', () => {
