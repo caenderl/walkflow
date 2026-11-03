@@ -8,8 +8,9 @@ import { flagUrl } from './flags';
 import { routeOutline } from './map-geo';
 import { overflowMenu } from './overflow-menu';
 import { GPX_MAX_CHARS, parseGpx, serializeGpx } from './gpx';
+import { packageFileName, packageFromRoute, readPackage, serializePackage } from './route-package';
 import { lang, onLanguageChange, t } from './i18n';
-import { adoptExample, descriptionAfterEdit, exampleRoute, examplesToSeed, markSeeded, readSeeded, routeDescription, ROUTE_EXAMPLES, SEEDED_STORAGE_KEY } from './route-examples';
+import { adoptExample, descriptionAfterEdit, exampleRoute, examplesToSeed, markSeeded, readSeeded, routeDescription, routeName, ROUTE_EXAMPLES, SEEDED_STORAGE_KEY } from './route-examples';
 import { createMapSlot, type MapSlot } from './route-map';
 import { isDark, onThemeChange } from './theme';
 import { fromSpeed, toSpeed } from './units';
@@ -248,7 +249,7 @@ export function setupRoutes(host: RoutesHost) {
     const raw = editor.speed.value.trim().replace(',', '.');
     const kmh = raw ? Math.round(fromSpeed(Number(raw)) * 100) / 100 : undefined;
     if (kmh !== undefined && !(kmh >= ROUTE_SPEED_MIN && kmh <= ROUTE_SPEED_MAX)) { editor.status.textContent = t.routes.speedInvalid(ROUTE_SPEED_MIN, ROUTE_SPEED_MAX); return; }
-    const next = readRoute({ ...route, defaultSpeed: kmh, description: undefined, example: undefined, ...descriptionAfterEdit(route, editor.text.value, lang) });
+    const next = readRoute({ ...route, defaultSpeed: kmh, description: undefined, example: undefined, texts: undefined, ...descriptionAfterEdit(route, editor.text.value, lang) });
     if (!next) return;
     try { await (await ready).put(next); } catch (e) { editor.status.textContent = t.routes.failed(String(e)); return; }
     editor = null;
@@ -357,7 +358,7 @@ export function setupRoutes(host: RoutesHost) {
         outlineEl(r),
         el('div', { className: 'wk-info' },
           el('div', { className: 'wk-name' },
-            ...(flag ? [el('img', { className: 'flag', src: flag, alt: countryName(r.country!, lang), title: countryName(r.country!, lang) })] : []), r.name,
+            ...(flag ? [el('img', { className: 'flag', src: flag, alt: countryName(r.country!, lang), title: countryName(r.country!, lang) })] : []), routeName(r, lang),
             ...(r.id === selectedId && host.wanted() ? [' ', el('span', { className: 'badge rec', textContent: t.routes.useHint })] : [])),
           el('div', { className: 'rt-meta' },
             el('span', { className: 'rt-length', textContent: fmtDistance(stats.total) }),
@@ -369,8 +370,9 @@ export function setupRoutes(host: RoutesHost) {
           use,
           toggle,
           overflowMenu(t.routes.moreActions, [
-            { label: t.routes.export, run: () => download(serializeGpx(r), 'application/gpx+xml', safeFileName(r.name)) },
-            { label: t.routes.delete, run: () => void remove(r), danger: true },
+            { icon: 'route', label: t.routes.export, run: () => download(serializeGpx(r), 'application/gpx+xml', safeFileName(r.name)) },
+            { icon: 'package', label: t.routes.exportPackage, run: () => download(serializePackage(packageFromRoute(r)), 'application/json', packageFileName(r.name)) },
+            { icon: 'trash', label: t.routes.delete, run: () => void remove(r), danger: true },
           ])),
       );
       if (open && detail) { item.append(detail.el); fillDetail(r, stats); }
@@ -385,16 +387,18 @@ export function setupRoutes(host: RoutesHost) {
   }
 
   async function remove(r: Route) {
-    if (!(await confirmDialog(t.routes.deleteTitle, [t.routes.deleteText(r.name)], t.routes.delete, 'stop'))) return;
+    if (!(await confirmDialog(t.routes.deleteTitle, [t.routes.deleteText(routeName(r, lang))], t.routes.delete, 'stop'))) return;
     try { await (await ready).delete(r.id); } catch (e) { setStatus(() => t.routes.failed(String(e))); return; }
     await reload();
   }
 
   async function importFile(file: File) {
-    const fail = (key: 'unreadable' | 'tooLarge' | 'unsafe' | 'noPoints') => setStatus(() => t.routes[key]);
+    const fail = (key: 'unreadable' | 'tooLarge' | 'unsafe' | 'noPoints' | 'packageTooLarge' | 'packageNewer' | 'packageInvalid') => setStatus(() => t.routes[key]);
     if (file.size > GPX_MAX_CHARS) { fail('tooLarge'); return; }
     let text: string;
     try { text = await file.text(); } catch { fail('unreadable'); return; }
+    // A route package is JSON, a GPX file is XML
+    if (text.trimStart().startsWith('{')) { await importPackage(text, fail); return; }
     const parsed = parseGpx(text);
     if (!parsed.ok) { fail(parsed.reason); return; }
     const name = (parsed.name ?? nameFromFile(file.name)) || t.routes.cardTitle;
@@ -407,10 +411,29 @@ export function setupRoutes(host: RoutesHost) {
     select(route.id);
     const stats = analyzeRoute(route);
     setStatus(() => [
-      t.routes.imported(route.name, stats.total),
+      t.routes.imported(routeName(route, lang), stats.total),
       ...(parsed.skipped ? [t.routes.skippedPoints(parsed.skipped)] : []),
       ...(parsed.simplified ? [t.routes.simplified] : []),
     ].join(' '));
+  }
+
+  const packageFailure = (reason: 'unreadable' | 'tooLarge' | 'newer' | 'invalid') =>
+    reason === 'tooLarge' ? 'packageTooLarge' : reason === 'newer' ? 'packageNewer' : reason === 'invalid' ? 'packageInvalid' : 'unreadable';
+
+  /** A package always becomes a new route, with a new id: it never replaces one that is there already */
+  async function importPackage(text: string, fail: (key: 'unreadable' | 'packageTooLarge' | 'packageNewer' | 'packageInvalid') => void) {
+    const read = readPackage(text, newRouteId(Date.now()), Date.now());
+    if (!read.ok) { fail(packageFailure(read.reason)); return; }
+    let route = read.route;
+    // A package without a country gets the one of its start, worked out on the device
+    if (route.country === undefined) {
+      const country = await countryAt(route.points[0]!.lat, route.points[0]!.lon).catch(() => undefined);
+      route = readRoute({ ...route, country }) ?? route;
+    }
+    try { await (await ready).put(route); } catch (e) { setStatus(() => t.routes.failed(String(e))); return; }
+    await reload();
+    select(route.id);
+    setStatus(() => t.routes.imported(routeName(route, lang), analyzeRoute(route).total));
   }
 
   // ---------- Loading ----------

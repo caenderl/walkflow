@@ -25,6 +25,9 @@
   <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0M12 17l4-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v4.5M12 17.2v.1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="6" r="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-package" viewBox="0 0 24 24"><path d="M12 3l8 4v10l-8 4-8-4V7l8-4zM4 7l8 4 8-4M12 11v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M7 7l.8 12.2a1 1 0 0 0 1 .8h6.4a1 1 0 0 0 1-.8L17 7M10.5 11v5M13.5 11v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 <!-- Texts come from src/locales/*.ts (data-i18n*); the English text here is only the fallback. -->
 <div class="app">
@@ -265,9 +268,9 @@
       <section class="card grid routes-part">
         <div class="head-row">
           <h2 data-i18n="routes.mineTitle">My routes</h2>
-          <button id="rtImport" type="button" data-i18n="routes.import">Import GPX file</button>
+          <button id="rtImport" type="button" data-i18n="routes.import">Import GPX file or route package</button>
         </div>
-        <input type="file" id="rtFile" accept=".gpx,.xml,application/gpx+xml,application/xml,text/xml" aria-label="GPX file" data-i18n-aria="routes.fileLabel" hidden>
+        <input type="file" id="rtFile" accept=".gpx,.xml,.walkflow,application/gpx+xml,application/xml,text/xml" aria-label="GPX file or route package" data-i18n-aria="routes.fileLabel" hidden>
         <p class="hint" id="rtEmpty" data-i18n="routes.empty" hidden>No routes yet.</p>
         <ul id="rtList" class="wk-list"></ul>
         <p class="hint" id="rtStorage" hidden></p>

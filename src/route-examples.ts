@@ -11,8 +11,10 @@ import { analyzeRoute, type Route } from './routes';
 
 export interface RouteExample {
   key: string;
+  /** The plain name: the English one */
   name: string;
-  place: string;
+  names: Record<Lang, string>;
+  place: Record<Lang, string>;
   /** ISO 3166-1 alpha-2 */
   country: string;
   /** Walking speed in km/h; the duration of the route follows from it */
@@ -33,7 +35,8 @@ export const ROUTE_EXAMPLES: readonly RouteExample[] = [
   {
     key: 'central-park-reservoir',
     name: 'Central Park Reservoir Loop',
-    place: 'New York, USA',
+    names: { en: 'Central Park Reservoir Loop', de: 'Central-Park-Reservoir-Runde', fr: 'Tour du réservoir de Central Park' },
+    place: { en: 'New York, USA', de: 'New York, USA', fr: 'New York, États-Unis' },
     country: 'US',
     defaultSpeed: 4,
     description: {
@@ -74,7 +77,8 @@ export const ROUTE_EXAMPLES: readonly RouteExample[] = [
   {
     key: 'hamburg-aussenalster',
     name: 'Außenalster Loop',
-    place: 'Hamburg, Germany',
+    names: { en: 'Außenalster Loop', de: 'Außenalster-Runde', fr: 'Tour de l’Außenalster' },
+    place: { en: 'Hamburg, Germany', de: 'Hamburg, Deutschland', fr: 'Hambourg, Allemagne' },
     country: 'DE',
     defaultSpeed: 4,
     description: {
@@ -134,7 +138,8 @@ export const ROUTE_EXAMPLES: readonly RouteExample[] = [
   {
     key: 'vienna-ringstrasse',
     name: 'Vienna Ringstraße Loop',
-    place: 'Vienna, Austria',
+    names: { en: 'Vienna Ringstraße Loop', de: 'Wiener-Ringstraße-Runde', fr: 'Tour du Ring de Vienne' },
+    place: { en: 'Vienna, Austria', de: 'Wien, Österreich', fr: 'Vienne, Autriche' },
     country: 'AT',
     defaultSpeed: 4,
     description: {
@@ -179,7 +184,8 @@ export const ROUTE_EXAMPLES: readonly RouteExample[] = [
   {
     key: 'tokyo-imperial-palace',
     name: 'Imperial Palace Loop',
-    place: 'Tokyo, Japan',
+    names: { en: 'Imperial Palace Loop', de: 'Kaiserpalast-Runde Tokio', fr: 'Tour du palais impérial de Tokyo' },
+    place: { en: 'Tokyo, Japan', de: 'Tokio, Japan', fr: 'Tokyo, Japon' },
     country: 'JP',
     defaultSpeed: 4,
     description: {
@@ -226,23 +232,43 @@ export function exampleRoute(example: RouteExample, id: string, now: number): Ro
   return { id, name: example.name, updated: now, country: example.country, defaultSpeed: example.defaultSpeed, example: example.key, points: example.points.map(([lat, lon]) => ({ lat, lon })) };
 }
 
-/**
- * The text to show for a route. A text the person wrote is shown as it is (it has no language we know); the text of an
- * example route follows the language of the app, and says which one it is, for the lang attribute of the element.
- */
-export function routeDescription(r: Route, lang: Lang, examples: readonly RouteExample[] = ROUTE_EXAMPLES): { text: string; lang: Lang | null } | null {
-  if (r.description) return { text: r.description, lang: null };
-  const ex = r.example ? examples.find(e => e.key === r.example) : undefined;
-  return ex ? { text: ex.description[lang], lang } : null;
+/** The translations a route shows: those of its example, or those it brought with a package */
+function textsOf(r: Route, examples: readonly RouteExample[]): Readonly<Record<string, string>> | null {
+  if (r.example) return examples.find(e => e.key === r.example)?.description ?? null;
+  return r.texts ?? null;
+}
+
+/** The name of a route in the language of the app: an example's or a package's names, else its plain name */
+export function routeName(r: Route, lang: Lang, examples: readonly RouteExample[] = ROUTE_EXAMPLES): string {
+  const names = r.names ?? (r.example ? examples.find(e => e.key === r.example)?.names : undefined);
+  return (names && (names[lang] ?? names.en)) || r.name;
+}
+
+/** The language of the app, else English, else any language there is */
+function pickText(texts: Readonly<Record<string, string>>, lang: Lang): { text: string; lang: string } | null {
+  const key = [lang, 'en', ...Object.keys(texts).sort()].find(k => texts[k]);
+  return key ? { text: texts[key]!, lang: key } : null;
 }
 
 /**
- * What to store after the description was edited. An example route whose field was left as shown stays an example (its
- * text keeps following the language); any other text, or an empty one, is the person's own from then on.
+ * The text to show for a route. A text the person wrote is shown as it is (it has no language we know); the text of an
+ * example route or an installed package follows the language of the app, and says which one it is, for the lang
+ * attribute of the element.
  */
-export function descriptionAfterEdit(r: Route, typed: string, lang: Lang, examples: readonly RouteExample[] = ROUTE_EXAMPLES): { description?: string; example?: string } {
-  const shown = r.example && !r.description ? routeDescription(r, lang, examples) : null;
-  if (shown && typed.trim() === shown.text.trim()) return { example: r.example! };
+export function routeDescription(r: Route, lang: Lang, examples: readonly RouteExample[] = ROUTE_EXAMPLES): { text: string; lang: string | null } | null {
+  if (r.description) return { text: r.description, lang: null };
+  const texts = textsOf(r, examples);
+  return texts ? pickText(texts, lang) : null;
+}
+
+/**
+ * What to store after the description was edited. A route with translations (an example, a package) whose field was
+ * left as shown keeps them (its text keeps following the language); any other text, or an empty one, is the person's
+ * own from then on.
+ */
+export function descriptionAfterEdit(r: Route, typed: string, lang: Lang, examples: readonly RouteExample[] = ROUTE_EXAMPLES): { description?: string; example?: string; texts?: Record<string, string> } {
+  const shown = !r.description ? routeDescription(r, lang, examples) : null;
+  if (shown && typed.trim() === shown.text.trim()) return r.example ? { example: r.example } : { texts: r.texts! };
   return typed.trim() ? { description: typed } : {};
 }
 

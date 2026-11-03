@@ -360,3 +360,22 @@ describe('minutesLeft', () => {
     expect(minutesLeft(1000, NaN)).toBe(0);
   });
 });
+
+describe('readRoute: translations and credit', () => {
+  const base = { id: 'a', name: 'X', updated: 1, points: [{ lat: 0, lon: 0 }, { lat: 0, lon: 0.001 }] };
+
+  it('keeps texts in several languages and the credit fields', () => {
+    const r = readRoute({ ...base, names: { en: 'X', de: 'Y' }, texts: { en: 'A', de: 'B' }, meta: { author: 'Ada', license: 'CC0-1.0', source: 'S', place: { en: 'P', de: 'Q' }, tags: ['park'] } });
+    expect(r?.names).toEqual({ en: 'X', de: 'Y' });
+    expect(r?.texts).toEqual({ en: 'A', de: 'B' });
+    expect(r?.meta).toEqual({ author: 'Ada', license: 'CC0-1.0', source: 'S', place: { en: 'P', de: 'Q' }, tags: ['park'] });
+  });
+
+  it('drops damaged translations or credit and keeps the route', () => {
+    for (const bad of ['x', 5, [], { 'EN': 'x' }, { 'de-CH': 'x' }, { ch_fr: 'x' }, { en: 5 }]) {
+      expect(readRoute({ ...base, texts: bad })?.texts).toBeUndefined();
+      expect(readRoute({ ...base, names: bad })?.names).toBeUndefined();
+    }
+    for (const bad of ['x', 5, [], { author: 5 }, { tags: 'x' }, { place: 'Berlin' }]) expect(readRoute({ ...base, meta: bad })?.meta).toBeUndefined();
+  });
+});

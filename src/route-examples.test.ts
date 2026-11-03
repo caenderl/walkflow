@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adoptExample, descriptionAfterEdit, exampleRoute, examplesToSeed, markSeeded, readSeeded, routeDescription, ROUTE_EXAMPLES, type RouteExample } from './route-examples';
+import { adoptExample, descriptionAfterEdit, exampleRoute, examplesToSeed, markSeeded, readSeeded, routeDescription, routeName, ROUTE_EXAMPLES, type RouteExample } from './route-examples';
 import { analyzeRoute, distanceBetween, readRoute, ROUTE_NAME_MAX, type Route } from './routes';
 
 describe('ROUTE_EXAMPLES', () => {
@@ -29,7 +29,7 @@ describe('ROUTE_EXAMPLES', () => {
   it('names the place and where the data comes from', () => {
     for (const ex of ROUTE_EXAMPLES) {
       expect(ex.name.length, ex.key).toBeLessThanOrEqual(ROUTE_NAME_MAX);
-      expect(ex.place.trim(), ex.key).not.toBe('');
+      for (const l of ['en', 'de', 'fr'] as const) expect(ex.place[l].trim(), `${ex.key} place ${l}`).not.toBe('');
       expect(ex.source, ex.key).toContain('OpenStreetMap');
     }
   });
@@ -48,6 +48,14 @@ describe('ROUTE_EXAMPLES', () => {
     expect(route.example).toBe(ex.key);
     expect('description' in route).toBe(false);
     expect(readRoute(route)?.example).toBe(ex.key);
+  });
+
+  it('has its name in every language of the app, English being the plain name', () => {
+    for (const ex of ROUTE_EXAMPLES) {
+      for (const l of ['en', 'de', 'fr'] as const) expect(ex.names[l].trim(), `${ex.key} ${l}`).not.toBe('');
+      expect(ex.names.en, ex.key).toBe(ex.name);
+      expect(Object.values(ex.names).every(n => n.length <= ROUTE_NAME_MAX), ex.key).toBe(true);
+    }
   });
 
   it('has a description in every language of the app', () => {
@@ -81,7 +89,7 @@ describe('ROUTE_EXAMPLES', () => {
 });
 
 describe('seeding the library', () => {
-  const ex = (key: string, name = key): RouteExample => ({ key, name, place: 'p', country: 'US', defaultSpeed: 4, description: { en: 'a', de: 'b', fr: 'c' }, previousDescriptions: [], source: '© OpenStreetMap contributors', points: [[0, 0], [0, 0.01]] });
+  const ex = (key: string, name = key): RouteExample => ({ key, name, names: { en: name, de: name, fr: name }, place: { en: 'p', de: 'p', fr: 'p' }, country: 'US', defaultSpeed: 4, description: { en: 'a', de: 'b', fr: 'c' }, previousDescriptions: [], source: '© OpenStreetMap contributors', points: [[0, 0], [0, 0.01]] });
   const examples = [ex('a', 'Route A'), ex('b', 'Route B')];
 
   it('readSeeded reads a list of keys and nothing else', () => {
@@ -189,5 +197,49 @@ describe('adoptExample', () => {
     expect(adoptExample(copy({ points: ex.points.map(([lat, lon]) => ({ lat: lat + 1, lon, })) }), ex)).toBeNull();
     expect(adoptExample(copy({ example: ex.key }), ex)).toBeNull();
     expect(adoptExample(copy({ example: 'other' }), ex)).toBeNull();
+  });
+});
+
+
+describe('routes with their own translations (an installed package)', () => {
+  const ex = ROUTE_EXAMPLES[0]!;
+  const own: Route = { ...exampleRoute(ex, 'x', 0), example: undefined, texts: { en: 'English', fr: 'Français' } };
+
+  it('shows the text in the language of the app, then English, then any language there is', () => {
+    expect(routeDescription(own, 'fr')).toEqual({ text: 'Français', lang: 'fr' });
+    expect(routeDescription(own, 'de')).toEqual({ text: 'English', lang: 'en' });
+    expect(routeDescription({ ...own, texts: { fr: 'Seul' } }, 'de')).toEqual({ text: 'Seul', lang: 'fr' });
+  });
+
+  it('shows a text the person wrote before the translations', () => {
+    expect(routeDescription({ ...own, description: 'Mein Weg.' }, 'en')).toEqual({ text: 'Mein Weg.', lang: null });
+  });
+
+  it('keeps the translations when the field was left as shown, and replaces them once it was changed', () => {
+    expect(descriptionAfterEdit(own, 'English', 'en')).toEqual({ texts: own.texts });
+    expect(descriptionAfterEdit(own, 'Mein Weg.', 'en')).toEqual({ description: 'Mein Weg.' });
+    expect(descriptionAfterEdit(own, '', 'en')).toEqual({});
+  });
+});
+
+
+describe('routeName', () => {
+  const ex = ROUTE_EXAMPLES[0]!;
+
+  it('shows an example route\'s name in the language of the app', () => {
+    const r = exampleRoute(ex, 'x', 0);
+    expect(routeName(r, 'de')).toBe(ex.names.de);
+    expect(routeName(r, 'fr')).toBe(ex.names.fr);
+  });
+
+  it('shows the name of an installed package in the language of the app, then English, then its plain name', () => {
+    const r: Route = { ...exampleRoute(ex, 'x', 0), example: undefined, name: 'Plain', names: { en: 'English', fr: 'Français' } };
+    expect(routeName(r, 'fr')).toBe('Français');
+    expect(routeName(r, 'de')).toBe('English');
+    expect(routeName({ ...r, names: { fr: 'Seul' } }, 'de')).toBe('Plain');
+  });
+
+  it('shows the name as it is for any other route', () => {
+    expect(routeName({ ...exampleRoute(ex, 'x', 0), example: undefined, name: 'Mein Weg' }, 'fr')).toBe('Mein Weg');
   });
 });

@@ -12,7 +12,7 @@ import {
 } from './ftms';
 import { setupHistory } from './history';
 import { lang, onLanguageChange, retranslate, t, type Text } from './i18n';
-import { routeDescription } from './route-examples';
+import { routeDescription, routeName } from './route-examples';
 import { bindText, initLanguage } from './i18n-dom';
 import { setupMenu, setupPrefs } from './menus';
 import { setupInterval } from './interval-ui';
@@ -368,7 +368,7 @@ function renderStage() {
   const route = kind === 'route' ? routes.current() : null;
   $('stageHead').hidden = $('stageInfo').hidden = !kind;
   $('shKind').textContent = kind === 'workout' ? t.history.tagWorkout : t.history.tagRoute;
-  $('shName').textContent = workout?.name ?? route?.route.name ?? '';
+  $('shName').textContent = workout?.name ?? (route ? routeName(route.route, lang) : '');
   $('shInfo').textContent = workout ? t.program.summary(workout.steps.length, fmtLength(programLength(workout.steps))) : route?.info ?? '';
   const desc = route ? routeDescription(route.route, lang) : null;
   $('shDesc').textContent = desc?.text ?? '';
@@ -421,8 +421,8 @@ async function runRoute() {
   const walk = routes.walkRequest();
   if (!walk) { bindText($('progStatus'), () => t.routes.cannotWalk); return; }
   const shown = Math.min(walk.kmh, effectiveMax());
-  await runSteps(walk.steps, { kind: 'route', id: walk.route.id, name: walk.route.name },
-    t.routes.walkConfirm(walk.route.name, fmtDistance(walk.steps[0]?.meters ?? 0), shown), () => routes.restart());
+  await runSteps(walk.steps, { kind: 'route', id: walk.route.id, name: routeName(walk.route, lang) },
+    t.routes.walkConfirm(routeName(walk.route, lang), fmtDistance(walk.steps[0]?.meters ?? 0), shown), () => routes.restart());
 }
 
 // ---------- Export ----------

@@ -27,6 +27,75 @@ export interface Route {
   description?: string;
   /** Key of the example route this is (src/route-examples.ts). While it has no description of its own, the example's text is shown in the language of the app. */
   example?: string;
+  /** The name in several languages (language code → name), from a route package; `name` is the plain one for where no language fits (routeName). */
+  names?: Record<string, string>;
+  /** Texts in several languages (language code → text), from a route package. While it has no description of its own, the one in the language of the app is shown. */
+  texts?: Record<string, string>;
+  /** Where the route comes from and what it is about; travels with the route when it is exported again */
+  meta?: RouteMeta;
+}
+
+export interface RouteMeta {
+  /** Language code → where it is, for browsing */
+  place?: Record<string, string>;
+  author?: string;
+  /** Free text, e.g. an SPDX identifier */
+  license?: string;
+  /** Where the track comes from, e.g. the attribution of the data */
+  source?: string;
+  /** For filtering: lower-case words */
+  tags?: string[];
+}
+
+/** A bound only so that nothing stored or read is unbounded; a package holds as many languages as it likes below it */
+export const ROUTE_LANGS_MAX = 64;
+export const ROUTE_TAGS_MAX = 8;
+export const ROUTE_META_MAX = 80;
+export const ROUTE_SOURCE_MAX = 200;
+/** A language, as its ISO 639 code (en, de, fr, gsw …): no country or script (no de-CH, no ch_fr). "und" = not known. */
+export const LANG_KEY = /^[a-z]{2,3}$/;
+export const TAG_KEY = /^[a-z0-9-]{1,24}$/;
+
+/** Plain text: control characters out (a line break stays), cut to length; '' if nothing is left */
+export function cleanText(v: unknown, max: number): string {
+  return typeof v === 'string' ? v.replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, '').trim().slice(0, max).trim() : '';
+}
+
+/** Language code → plain text, as many languages as there are (up to ROUTE_LANGS_MAX); undefined if nothing usable is left */
+export function readLangMap(v: unknown, max: number, oneLine = false): Record<string, string> | undefined {
+  if (!isObject(v)) return undefined;
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(v)) {
+    if (Object.keys(out).length >= ROUTE_LANGS_MAX) break;
+    const clean = cleanText(value, max);
+    const text = oneLine ? clean.replace(/\s+/g, ' ') : clean;
+    if (LANG_KEY.test(key) && text) out[key] = text;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** The plain name of a route with names in several languages: the one without a language, else English, else the first */
+export function plainName(names: Readonly<Record<string, string>>): string | undefined {
+  const key = ['und', 'en', ...Object.keys(names).sort()].find(k => names[k]);
+  return key ? names[key] : undefined;
+}
+
+function readMeta(v: unknown): RouteMeta | undefined {
+  if (!isObject(v)) return undefined;
+  const meta: RouteMeta = {};
+  const place = readLangMap(v.place, ROUTE_META_MAX, true);
+  if (place) meta.place = place;
+  for (const key of ['author', 'license'] as const) {
+    const text = cleanText(v[key], ROUTE_META_MAX).replace(/\s+/g, ' ');
+    if (text) meta[key] = text;
+  }
+  const source = cleanText(v.source, ROUTE_SOURCE_MAX).replace(/\s+/g, ' ');
+  if (source) meta.source = source;
+  if (Array.isArray(v.tags)) {
+    const tags = [...new Set(v.tags.filter((t): t is string => typeof t === 'string' && TAG_KEY.test(t)))].slice(0, ROUTE_TAGS_MAX);
+    if (tags.length) meta.tags = tags;
+  }
+  return Object.keys(meta).length ? meta : undefined;
 }
 
 export const ROUTE_SPEED_MIN = 0.5;
@@ -173,12 +242,15 @@ export function readRoute(v: unknown): Route | null {
   // A damaged country is dropped, not a reason to lose the route: it is looked up again
   if (v.country === '' || isCountryCode(v.country)) route.country = v.country;
   if (typeof v.defaultSpeed === 'number' && Number.isFinite(v.defaultSpeed) && v.defaultSpeed >= ROUTE_SPEED_MIN && v.defaultSpeed <= ROUTE_SPEED_MAX) route.defaultSpeed = v.defaultSpeed;
-  if (typeof v.description === 'string') {
-    // Plain text: control characters out (a line break stays), cut to length
-    const text = v.description.replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, '').trim().slice(0, ROUTE_DESCRIPTION_MAX).trim();
-    if (text) route.description = text;
-  }
+  const description = cleanText(v.description, ROUTE_DESCRIPTION_MAX);
+  if (description) route.description = description;
   if (typeof v.example === 'string' && /^[a-z0-9-]{1,40}$/.test(v.example)) route.example = v.example;
+  const names = readLangMap(v.names, ROUTE_NAME_MAX, true);
+  if (names) route.names = names;
+  const texts = readLangMap(v.texts, ROUTE_DESCRIPTION_MAX);
+  if (texts) route.texts = texts;
+  const meta = readMeta(v.meta);
+  if (meta) route.meta = meta;
   return analyzeRoute(route).total >= ROUTE_MIN_METERS ? route : null;
 }
 

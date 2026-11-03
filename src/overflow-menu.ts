@@ -5,6 +5,8 @@
 export interface OverflowItem {
   label: string;
   run(): void;
+  /** Name of an icon of the sprite in index.html (i-<name>), drawn before the label */
+  icon?: string;
   /** Drawn in the colour of a destructive action */
   danger?: boolean;
 }
@@ -35,7 +37,16 @@ export function overflowMenu(label: string, items: readonly OverflowItem[]): HTM
     const b = document.createElement('button');
     b.type = 'button';
     b.setAttribute('role', 'menuitem');
-    b.textContent = item.label;
+    if (item.icon) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'icon');
+      svg.setAttribute('aria-hidden', 'true');
+      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      use.setAttribute('href', `#i-${item.icon}`);
+      svg.append(use);
+      b.append(svg);
+    }
+    b.append(Object.assign(document.createElement('span'), { textContent: item.label }));
     if (item.danger) b.classList.add('danger');
     b.onclick = () => { details.open = false; item.run(); };
     panel.append(b);

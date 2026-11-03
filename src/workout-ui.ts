@@ -3,9 +3,10 @@
 // here: "Use" just selects it. What the editor produces is checked by readWorkout before it is saved.
 
 import { confirmDialog } from './dialogs';
-import { onLanguageChange, t } from './i18n';
+import { lang, onLanguageChange, t } from './i18n';
 import { fmtLength, formatProgram, parseProgram, programLength, type ProgramStep } from './program';
 import { fromShort, fromSpeed, toShort, toSpeed } from './units';
+import { routeName } from './route-examples';
 import { getRouteStore } from './route-store';
 import type { Route } from './routes';
 import { getRunStore } from './run-store';
@@ -271,7 +272,7 @@ export function setupWorkouts(host: WorkoutsHost) {
 
   /** What a suggestion points to, undefined when it has been deleted */
   function suggestionName(s: PlanSuggestion): string | undefined {
-    if (s.kind === 'route') return routes.find(r => r.id === s.id)?.name;
+    if (s.kind === 'route') return (r => (r ? routeName(r, lang) : undefined))(routes.find(r => r.id === s.id));
     if (s.id.startsWith(TEMPLATE_PREFIX)) return templateSteps(s.id.slice(TEMPLATE_PREFIX.length)) ? exampleName(s.id.slice(TEMPLATE_PREFIX.length)) : undefined;
     return workouts.find(w => w.id === s.id)?.name;
   }
@@ -292,7 +293,7 @@ export function setupWorkouts(host: WorkoutsHost) {
     sel.append(el('option', { value: '', textContent: t.workouts.suggestNone }));
     if (workouts.length) sel.append(group(t.program.mine, workouts.map(w => [encode({ kind: 'workout', id: w.id }), w.name])));
     sel.append(group(t.program.examples, TEMPLATES.map(tpl => [encode({ kind: 'workout', id: TEMPLATE_PREFIX + tpl.id }), exampleName(tpl.id)])));
-    if (routes.length) sel.append(group(t.routes.mineTitle, routes.map(r => [encode({ kind: 'route', id: r.id }), r.name])));
+    if (routes.length) sel.append(group(t.routes.mineTitle, routes.map(r => [encode({ kind: 'route', id: r.id }), routeName(r, lang)])));
     // A target that is gone keeps its place, so changing another day does not silently drop it
     if (current && !known.some(k => encode(k) === encode(current))) {
       sel.append(el('option', { value: encode(current), textContent: t.workouts.suggestMissing }));
