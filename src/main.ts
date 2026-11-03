@@ -5,7 +5,7 @@ import { drawChart } from './ui/components/chart';
 import { APP_VERSION } from './platform/config';
 import { desktop, setupDesktop } from './ui/desktop';
 import { choose, confirmDialog } from './ui/components/dialogs';
-import type { Sample, TcxSport } from './core/history/export';
+import type { TcxSport } from './core/history/export';
 import { setupExportControls } from './ui/history/export-controls';
 import { cmdPause, cmdRequestControl, cmdStart, cmdStop, describeMachineStatus, hex, OP, parseMachineStatus, parseTrainingStatus, type TreadmillData } from './core/protocol/ftms';
 import { setupHistory } from './ui/history/history';
@@ -17,10 +17,11 @@ import { setupInterval } from './ui/workouts/interval-ui';
 import { fmtDistance, fmtLength, fmtTime, ProgramRunner, programLength, type ProgramStep } from './core/training/program';
 import { setupPwa } from './ui/pwa';
 import type { RunSource, RunTag } from './core/history/runs';
-import { beltMaybeRunning, checkConsoleCommand, controlAvailability, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION, isDisclaimerAccepted, parseHexBytes, StandstillDetector } from './core/safety/safety';
+import { checkConsoleCommand, controlAvailability, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION, isDisclaimerAccepted, parseHexBytes, StandstillDetector } from './core/safety/safety';
 import { ACTIVE_STORAGE_KEY, readActive, type Active } from './core/training/selection';
 import { setupBackground } from './ui/background';
 import { setupInclineCard } from './ui/live/incline-card';
+import { Session } from './ui/live/session';
 import { setupSpeedControls } from './ui/live/speed-controls';
 import { renderInfo } from './ui/settings/info';
 import { setupSettings } from './ui/settings/settings-ui';
@@ -44,17 +45,11 @@ const now = () => performance.now();
 // ---------- State ----------
 const webAdapter = new WebBluetoothAdapter();
 let sim: SimulatorAdapter | null = null;
-let client: TreadmillClient | null = null;
-/** Started by the app or according to Machine Status, and not stopped since */
-let beltStarted = false;
+/** The connection and what is known about the belt; shared by the modules of the training view */
+const session = new Session();
+const { cur, samples } = session;
 /** The banner over the live figures: ready to start, stopping, not connected. Display only. */
 const banner = new BeltBanner();
-let lastMeasured: number | undefined;
-/** When the speed was last reported (performance.now), to tell a fresh reading from an old one */
-let lastMeasuredAt = 0;
-let controlLost = false;
-const cur: Omit<Sample, 'ts'> = {};   // latest measured values
-const samples: Sample[] = [];          // recording since the page was opened (1 Hz), for the chart and export
 let lastSample = 0;
 let runSource: RunSource = 'ble';
 let view: View = 'training';
@@ -76,7 +71,7 @@ const settings = setupSettings();
 settings.onDevMode(on => desktop?.setDevMode(on));
 // The speed and its limits; it owns the governor, the only sender of speed commands
 const speed = setupSpeedControls({
-  send: bytes => (client ? client.send(bytes) : Promise.resolve(false)),
+  send: bytes => session.send(bytes),
   connected: () => connected(),
   now,
   limitsChanged: () => workouts.refreshLimit(),
@@ -99,8 +94,8 @@ const routes = setupRoutes({
   wanted: () => active === 'route',
 });
 
-const connected = () => !!client?.connected;
-const maybeRunning = () => beltMaybeRunning({ startedByApp: beltStarted, lastMeasuredKmh: lastMeasured });
+const connected = () => session.connected();
+const maybeRunning = () => session.maybeRunning();
 
 const standstill = new StandstillDetector();
 
@@ -116,7 +111,7 @@ const runner = new ProgramRunner({
 });
 
 const incline = setupInclineCard({
-  send: bytes => (client ? client.send(bytes) : Promise.resolve(false)),
+  send: bytes => session.send(bytes),
   uiConnected: () => uiConnected,
 });
 
@@ -152,8 +147,8 @@ function onTreadmillData(r: TreadmillData) {
 
   if (r.speed !== undefined) {
     banner.speed(r.speed, now());
-    lastMeasured = r.speed;
-    lastMeasuredAt = now();
+    session.lastMeasured = r.speed;
+    session.lastMeasuredAt = now();
     governor.noteMeasured(r.speed);
     if (standstill.feed(r.speed, now()) && runner.active) {
       log(t.program.standstillLog);
@@ -183,9 +178,9 @@ function renderControls() {
   try {
     const a = controlAvailability({
       connected: connected(),
-      measuredKmh: lastMeasured,
-      measuredAgeMs: now() - lastMeasuredAt,
-      startedByApp: beltStarted,
+      measuredKmh: session.lastMeasured,
+      measuredAgeMs: now() - session.lastMeasuredAt,
+      startedByApp: session.beltStarted,
       startingNow: banner.state(now()).kind === 'start',
       programActive: runner.active,
     });
@@ -220,7 +215,7 @@ function renderStats() {
   // Stop bar (views other than training)
   $('sbSpeed').textContent = connected() && cur.speed !== undefined ? t.control.speed(cur.speed) : '–';
   $('sbMore').textContent = connected() && cur.time !== undefined ? t.stopBar.more(fmtTime(cur.time), cur.dist ?? 0) : '';
-  $('sbState').textContent = (lastMeasured ?? 0) > 0 ? t.stopBar.running : t.stopBar.idle;
+  $('sbState').textContent = (session.lastMeasured ?? 0) > 0 ? t.stopBar.running : t.stopBar.idle;
 }
 
 function onMachineStatus(dv: DataView) {
@@ -232,16 +227,16 @@ function onMachineStatus(dv: DataView) {
     case 'paused':
     case 'safety-key':
       banner.stopRequested(now());
-      beltStarted = false;
+      session.beltStarted = false;
       if (runner.active) runner.abort(() => t.program.endedBy(describeMachineStatus(e)));
       governor.reset();
       standstill.disarm();
       break;
     case 'started':
-      beltStarted = true;
+      session.beltStarted = true;
       break;
     case 'control-lost':
-      controlLost = true;
+      session.controlLost = true;
       log(t.machine.controlLostLog);
       break;
     default:
@@ -259,16 +254,16 @@ async function doStop(reason: Text = () => t.stop.stopped): Promise<boolean> {
   runner.abort(reason);
   governor.reset();
   standstill.disarm();
-  const c = client;
+  const c = session.client;
   if (!c) return false;
   let ok: boolean;
-  if (controlLost) {
+  if (session.controlLost) {
     void c.send(cmdRequestControl(), { urgent: true });
     ok = await c.send(cmdStop());
   } else {
     ok = await c.send(cmdStop(), { urgent: true });
   }
-  if (ok) beltStarted = false;
+  if (ok) session.beltStarted = false;
   return ok;
 }
 
@@ -277,22 +272,22 @@ async function doPause(reason: Text = () => t.stop.paused): Promise<boolean> {
   runner.abort(reason);
   governor.reset();
   standstill.disarm();
-  const c = client;
+  const c = session.client;
   if (!c) return false;
   const ok = await c.send(cmdPause(), { urgent: true });
-  if (ok) beltStarted = false;
+  if (ok) session.beltStarted = false;
   return ok;
 }
 
 async function doStart(): Promise<boolean> {
-  const c = client;
+  const c = session.client;
   if (!c) return false;
   governor.reset();
   standstill.disarm();
   const a = await c.send(cmdRequestControl());
-  if (a) controlLost = false;
+  if (a) session.controlLost = false;
   const b = await c.send(cmdStart());
-  if (b) { beltStarted = true; banner.startRequested(now()); }
+  if (b) { session.beltStarted = true; banner.startRequested(now()); }
   return a && b;
 }
 
@@ -422,7 +417,7 @@ async function connect(kind: 'ble' | 'demo') {
     let adapter: BleAdapter = webAdapter;
     if (kind === 'demo') adapter = sim ??= new SimulatorAdapter({ version: APP_VERSION });
     const c = new TreadmillClient(adapter, events);
-    client = c;
+    session.client = c;
     runSource = kind === 'demo' ? 'demo' : 'ble';
     speed.setDeviceRange(1.0, 12.0);
     incline.reset();
@@ -432,7 +427,7 @@ async function connect(kind: 'ble' | 'demo') {
     incline.onConnected(info, runSource === 'ble');
     renderStats();
 
-    beltStarted = false; lastMeasured = undefined; controlLost = false;
+    session.forgetBelt();
     governor.reset();
     await background.acquireWakeLock();
     speed.applyLimits();
@@ -450,7 +445,7 @@ async function connect(kind: 'ble' | 'demo') {
   } catch (e) {
     log(`❌ ${e instanceof Error ? e.message : String(e)}`);
     if (!connected()) {
-      client = null;
+      session.client = null;
       setStatus(() => t.connection.notConnected);
       setUi(false);
     }
@@ -465,8 +460,8 @@ function onDisconnected() {
   standstill.disarm();
   background.releaseWakeLock();
   desktop?.connectionChanged(false);
-  client = null;
-  beltStarted = false; lastMeasured = undefined; controlLost = false;
+  session.client = null;
+  session.forgetBelt();
   setStatus(() => t.connection.notConnected);
   renderStats();
   $('demoBanner').hidden = true;
@@ -480,7 +475,7 @@ function onDisconnected() {
 }
 
 async function disconnectClicked() {
-  if (!client) return;
+  if (!session.client) return;
   if (maybeRunning()) {
     const choice = await choose({
       title: t.disconnect.runningTitle,
@@ -496,12 +491,12 @@ async function disconnectClicked() {
     if (choice === 'stop') {
       const ok = await doStop(() => t.stop.beforeDisconnect);
       if (!(ok && await waitUntil(() => !maybeRunning(), 10_000))) {
-        const force = await confirmDialog(t.disconnect.stillMovingTitle, [t.disconnect.stillMovingText(lastMeasured)], t.disconnect.force);
+        const force = await confirmDialog(t.disconnect.stillMovingTitle, [t.disconnect.stillMovingText(session.lastMeasured)], t.disconnect.force);
         if (!force) return;
       }
     }
   }
-  client?.disconnect();
+  session.client?.disconnect();
 }
 
 function waitUntil(cond: () => boolean, timeoutMs: number): Promise<boolean> {
@@ -544,7 +539,7 @@ function applyStopPlacement() {
 
 // ---------- Console ----------
 async function rawSend() {
-  const c = client;
+  const c = session.client;
   if (!c) return;
   const bytes = parseHexBytes($input('raw').value);
   if (!bytes) { log(t.console.invalidHex); return; }
@@ -559,14 +554,14 @@ async function rawSend() {
   if (check.action === 'confirm-start') {
     if (!(await confirmStart(undefined, { always: true }))) return;
     governor.reset();
-    if (await c.send(data)) beltStarted = true;
+    if (await c.send(data)) session.beltStarted = true;
     return;
   }
   if (bytes[0] === OP.STOP_PAUSE && (bytes[1] === 0x01 || bytes[1] === 0x02)) {
     runner.abort(() => t.console.stopped);
     governor.reset();
     standstill.disarm();
-    if (await c.send(data, { urgent: true })) beltStarted = false;
+    if (await c.send(data, { urgent: true })) session.beltStarted = false;
     return;
   }
   if (check.setSpeed !== undefined) governor.noteExternalCommand(check.setSpeed);
