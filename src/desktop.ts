@@ -7,6 +7,7 @@ import { bindText } from './i18n-dom';
 import { currentTheme, onThemeChange } from './theme';
 import { $, $button, $input, store } from './ui';
 
+export interface OpenedFile { name: string; text?: string; error?: 'unreadable' | 'tooLarge' }
 
 export interface WalkflowDesktop {
   platform: string;
@@ -15,6 +16,8 @@ export interface WalkflowDesktop {
   onShortcutStatus(cb: (s: { accelerator: string; ok: boolean }) => void): void;
   onBluetoothDevices(cb: (devices: BtDevice[]) => void): void;
   selectBluetoothDevice(id: string): void;
+  /** A route package was opened from the Finder or Explorer; also tells the app that the page can take them */
+  onOpenPackage(cb: (f: OpenedFile) => void): void;
   onBluetoothPairing(cb: (d: { kind: string; pin: string | null }) => void): void;
   respondPairing(r: { confirmed: boolean; pin?: string }): void;
   checkForUpdate(): Promise<{ version: string; url: string } | null>;
@@ -35,7 +38,7 @@ const LAST_DEVICE_KEY = 'walkflow.lastBtDevice';
 const AUTO_SELECT_KEY = 'walkflow.autoSelectLastDevice';
 const UPDATE_CHECK_KEY = 'walkflow.updateCheck';
 
-export function setupDesktop(opts: { onGlobalStop: () => void; log: (m: string) => void }) {
+export function setupDesktop(opts: { onGlobalStop: () => void; onOpenPackage: (f: OpenedFile) => void; log: (m: string) => void }) {
   const d = desktop;
   if (!d) return;
   const mac = d.platform === 'darwin';
@@ -46,6 +49,7 @@ export function setupDesktop(opts: { onGlobalStop: () => void; log: (m: string) 
   onThemeChange(c => d.setTheme(c));
 
   d.onGlobalStop(opts.onGlobalStop);
+  d.onOpenPackage(opts.onOpenPackage);
   d.onShortcutStatus(s => {
     bindText($('globalStopHint'), () => s.ok
       ? t.desktop.shortcutOk(mac ? t.desktop.keysMac : t.desktop.keysOther)

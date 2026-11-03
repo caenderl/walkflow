@@ -1,6 +1,6 @@
 // Electron main process. Loads only the locally bundled web app via its own scheme app://walkflow/.
-import { readFile } from 'node:fs/promises';
-import { join, normalize, sep } from 'node:path';
+import { readFile, stat } from 'node:fs/promises';
+import { basename, join, normalize, sep } from 'node:path';
 import {
   app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeTheme, powerSaveBlocker, protocol, screen, session, shell,
   type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions,
@@ -9,6 +9,7 @@ import { detectLanguage, isLang, setLanguage, t } from '../src/i18n';
 import { buildCsp } from '../src/csp';
 import { mapOrigins, resolveMapStyles } from '../src/map-config';
 import { mimeFor } from '../src/mime';
+import { OPEN_MAX_BYTES, packagePaths } from '../src/open-files';
 import { isNewerVersion } from '../src/version';
 
 declare const __GITHUB_REPO__: string;
@@ -44,6 +45,38 @@ let win: BrowserWindow | null = null;
 let btCallback: ((deviceId: string) => void) | null = null;
 let pairingCallback: ((response: Electron.Response) => void) | null = null;
 let powerBlockerId: number | null = null;
+
+// Route packages opened from the Finder or Explorer: queued until the web app says it can take them, then handed over as
+// text. The web app checks everything and asks the person before it imports anything.
+const pendingOpen: string[] = [];
+let rendererReady = false;
+
+async function flushOpen() {
+  if (!rendererReady || !win) return;
+  if (win.isMinimized()) win.restore();
+  win.focus();
+  for (let path = pendingOpen.shift(); path !== undefined; path = pendingOpen.shift()) {
+    const name = basename(path);
+    try {
+      const info = await stat(path);
+      if (!info.isFile() || info.size > OPEN_MAX_BYTES) win.webContents.send('app:open-package', { name, error: 'tooLarge' });
+      else win.webContents.send('app:open-package', { name, text: await readFile(path, 'utf8') });
+    } catch {
+      win.webContents.send('app:open-package', { name, error: 'unreadable' });
+    }
+  }
+}
+
+function queueOpen(paths: readonly string[]) {
+  pendingOpen.push(...paths);
+  void flushOpen();
+}
+
+// macOS reports an opened file as an event, possibly before the app is ready
+app.on('open-file', (event, path) => {
+  event.preventDefault();
+  queueOpen(packagePaths([path]));
+});
 
 const fromWindow = (e: IpcMainEvent | IpcMainInvokeEvent) => !!win && e.sender === win.webContents;
 const releasesUrl = () => (__GITHUB_REPO__ ? `https://github.com/${__GITHUB_REPO__}/releases` : '');
@@ -226,6 +259,12 @@ ipcMain.handle('app:check-update', async e => {
   }
 });
 
+ipcMain.on('app:files-ready', e => {
+  if (!fromWindow(e)) return;
+  rendererReady = true;
+  void flushOpen();
+});
+
 ipcMain.handle('app:open-external', (e, url: unknown) => {
   if (fromWindow(e) && typeof url === 'string' && isAllowedExternal(url)) void shell.openExternal(url);
 });
@@ -245,8 +284,11 @@ app.on('web-contents-created', (_e, contents) => {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  // Windows and Linux pass an opened file as an argument, to a new start or to the instance that is running
+  queueOpen(packagePaths(process.argv.slice(1)));
+  app.on('second-instance', (_e, argv) => {
     if (win) { if (win.isMinimized()) win.restore(); win.focus(); }
+    queueOpen(packagePaths(argv.slice(1)));
   });
 
   void app.whenReady().then(() => {

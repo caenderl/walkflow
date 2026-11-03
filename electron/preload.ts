@@ -18,6 +18,10 @@ contextBridge.exposeInMainWorld('walkflowDesktop', {
   respondPairing: (r: { confirmed: boolean; pin?: string }) => ipcRenderer.send('bt:pairing-response', r),
   checkForUpdate: (): Promise<{ version: string; url: string } | null> => ipcRenderer.invoke('app:check-update'),
   openExternal: (url: string) => ipcRenderer.invoke('app:open-external', String(url)),
+  onOpenPackage: (cb: (f: { name: string; text?: string; error?: string }) => void) => {
+    ipcRenderer.on('app:open-package', (_e, f: { name: string; text?: string; error?: string }) => cb(f));
+    ipcRenderer.send('app:files-ready');
+  },
   setLanguage: (lang: string) => ipcRenderer.send('app:language', String(lang)),
   setTheme: (theme: string) => ipcRenderer.send('app:theme', String(theme)),
 });

@@ -5,7 +5,8 @@ the place, credit and tags. It is what Walkflow exports with **Routes → ⋯ �
 **Routes → Import GPX file or route package**. It is meant for sharing a route as a file today, and for a catalogue and
 peer-to-peer sharing later.
 
-File extension: `.walkflow`. The content is JSON, UTF-8. The app recognises a package by its content, not by its extension. Size: up to 2 MB (a route of a few thousand points is a few
+File extension: `.walkflow`. The content is JSON, UTF-8. The app recognises a package by its content, not by its extension.
+The desktop app registers the extension with the system (own file icon, double click opens the file in Walkflow, which asks before it imports it); the icon is drawn by `scripts/make-icons.mjs`. Size: up to 2 MB (a route of a few thousand points is a few
 hundred KB at most).
 
 ## Example

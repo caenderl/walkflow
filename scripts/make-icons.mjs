@@ -103,6 +103,90 @@ function render(size, shape) {
   return png(size, buf);
 }
 
+// ---------- File icon for route packages (.walkflow): a sheet with a folded corner and the "forward" mark ----------
+const PAGE = [0xf6, 0xf7, 0xfa];
+const PAGE_EDGE = [0xb9, 0xbf, 0xcc];
+const FOLD = [0xdd, 0xe1, 0xea];
+const PAGE_FG = [0x16, 0xa3, 0x4a]; // darker than the app's green: it has to read on a light sheet
+const PAGE_BELT = [0x8a, 0x90, 0xa2];
+const SHEET = { x0: 0.17, y0: 0.07, x1: 0.83, y1: 0.93, r: 0.05, fold: 0.22 };
+
+/** Colour at (x, y) of the sheet, null = transparent */
+function sheet(x, y) {
+  const { x0, y0, x1, y1, r, fold } = SHEET;
+  const d = roundRectDist(x, y, x0, y0, x1, y1, r);
+  if (d > 0) return null;
+  // The corner at the top right is folded over: what is beyond the diagonal is cut away, the flap lies below it
+  const cx = x1 - fold, cy = y0;
+  const beyond = x > cx && y < cy + (x - cx);
+  if (beyond) return null;
+  const onFlap = x > cx && y < cy + fold;
+  const diagonal = Math.abs((y - cy) - (x - cx)) / Math.SQRT2;
+  if (x > cx && y < cy + fold + 0.02 && diagonal < 0.011) return PAGE_EDGE;
+  if (onFlap && (y > cy + fold - 0.011 || x > x1 - 0.011)) return PAGE_EDGE;
+  if (onFlap) return FOLD;
+  if (d > -0.011) return PAGE_EDGE;
+  // The mark: two chevrons above a belt, as on the app icon, placed on the lower part of the sheet
+  const k = 0.85, ox = 0.5 - 0.5 * k, oy = 0.17;
+  const u = (x - ox) / k, v = (y - oy) / k;
+  if (chevrons.some(seg => segDist(u, v, ...seg) < STROKE / 2)) return PAGE_FG;
+  if (segDist(u, v, ...belt) < 0.035) return PAGE_BELT;
+  return PAGE;
+}
+
+function renderSheet(size) {
+  const buf = Buffer.alloc(size * size * 4);
+  const SS = 4;
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let sy = 0; sy < SS; sy++) {
+        for (let sx = 0; sx < SS; sx++) {
+          const c = sheet((px + (sx + 0.5) / SS) / size, (py + (sy + 0.5) / SS) / size);
+          if (!c) continue;
+          r += c[0]; g += c[1]; b += c[2]; n++;
+        }
+      }
+      const i = (py * size + px) * 4;
+      buf[i] = n ? Math.round(r / n) : 0;
+      buf[i + 1] = n ? Math.round(g / n) : 0;
+      buf[i + 2] = n ? Math.round(b / n) : 0;
+      buf[i + 3] = Math.round((n / (SS * SS)) * 255);
+    }
+  }
+  return png(size, buf);
+}
+
+/** Windows icon: a directory of PNG images (the format Windows reads since Vista) */
+function ico(sizes) {
+  const images = sizes.map(sz => renderSheet(sz));
+  const head = Buffer.alloc(6 + 16 * sizes.length);
+  head.writeUInt16LE(0, 0); head.writeUInt16LE(1, 2); head.writeUInt16LE(sizes.length, 4);
+  let offset = head.length;
+  sizes.forEach((sz, i) => {
+    const e = 6 + 16 * i;
+    head[e] = sz >= 256 ? 0 : sz; head[e + 1] = sz >= 256 ? 0 : sz;
+    head.writeUInt16LE(1, e + 4); head.writeUInt16LE(32, e + 6);
+    head.writeUInt32LE(images[i].length, e + 8); head.writeUInt32LE(offset, e + 12);
+    offset += images[i].length;
+  });
+  return Buffer.concat([head, ...images]);
+}
+
+/** macOS icon: a list of PNG images, each with a four-letter type */
+function icns(entries) {
+  const parts = entries.map(([type, sz]) => {
+    const image = renderSheet(sz);
+    const h = Buffer.alloc(8);
+    h.write(type, 0, 'ascii'); h.writeUInt32BE(8 + image.length, 4);
+    return Buffer.concat([h, image]);
+  });
+  const total = 8 + parts.reduce((n, p) => n + p.length, 0);
+  const h = Buffer.alloc(8);
+  h.write('icns', 0, 'ascii'); h.writeUInt32BE(total, 4);
+  return Buffer.concat([h, ...parts]);
+}
+
 mkdirSync('public/icons', { recursive: true });
 mkdirSync('build', { recursive: true });
 writeFileSync('public/icons/icon-192.png', render(192, 'round'));
@@ -110,4 +194,7 @@ writeFileSync('public/icons/icon-512.png', render(512, 'round'));
 writeFileSync('public/icons/maskable-512.png', render(512, 'full'));
 writeFileSync('public/icons/apple-touch-icon.png', render(180, 'full'));
 writeFileSync('build/icon.png', render(1024, 'mac'));
+writeFileSync('build/file-icon.png', renderSheet(1024));
+writeFileSync('build/file-icon.ico', ico([16, 24, 32, 48, 64, 128, 256]));
+writeFileSync('build/file-icon.icns', icns([['icp4', 16], ['icp5', 32], ['icp6', 64], ['ic07', 128], ['ic08', 256], ['ic09', 512], ['ic10', 1024]]));
 console.log('Icons written');

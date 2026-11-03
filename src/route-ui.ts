@@ -420,6 +420,20 @@ export function setupRoutes(host: RoutesHost) {
   const packageFailure = (reason: 'unreadable' | 'tooLarge' | 'newer' | 'invalid') =>
     reason === 'tooLarge' ? 'packageTooLarge' : reason === 'newer' ? 'packageNewer' : reason === 'invalid' ? 'packageInvalid' : 'unreadable';
 
+  /**
+   * A package opened from outside (double click in the Finder or Explorer). It is read and checked first, then the person is
+   * asked: a file that comes from outside is never imported on its own.
+   */
+  async function openPackage(file: { name: string; text?: string; error?: 'unreadable' | 'tooLarge' }) {
+    location.hash = '#routes';
+    if (file.text === undefined) { setStatus(() => (file.error === 'tooLarge' ? t.routes.packageTooLarge : t.routes.unreadable)); return; }
+    const read = readPackage(file.text, newRouteId(Date.now()), Date.now());
+    if (!read.ok) { setStatus(() => t.routes[packageFailure(read.reason)]); return; }
+    const total = analyzeRoute(read.route).total;
+    if (!(await confirmDialog(t.routes.openPackageTitle, [t.routes.openPackageText(routeName(read.route, lang), fmtDistance(total))], t.routes.openPackageConfirm))) return;
+    await importPackage(file.text, key => setStatus(() => t.routes[key]));
+  }
+
   /** A package always becomes a new route, with a new id: it never replaces one that is there already */
   async function importPackage(text: string, fail: (key: 'unreadable' | 'packageTooLarge' | 'packageNewer' | 'packageInvalid') => void) {
     const read = readPackage(text, newRouteId(Date.now()), Date.now());
@@ -520,6 +534,7 @@ export function setupRoutes(host: RoutesHost) {
 
   return {
     update,
+    openPackage,
     /** The route chosen for the training view, with a line about its length and duration; null if none is chosen */
     current(): { route: Route; info: string } | null {
       if (!analysed) return null;

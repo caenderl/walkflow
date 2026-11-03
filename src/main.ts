@@ -920,6 +920,7 @@ setUi(false);
 setupPwa(connected);
 setupDesktop({
   onGlobalStop: () => { if (connected()) { log(t.stop.globalShortcutLog); void doStop(() => t.stop.globalShortcut); } },
+  onOpenPackage: f => void routes.openPackage(f),
   log,
 });
 

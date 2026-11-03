@@ -25,6 +25,11 @@ module.exports = {
     enableEmbeddedAsarIntegrityValidation: true,
     onlyLoadAppFromAsar: true,
   },
+  // Route packages (.walkflow): the icon in build/file-icon.{icns,ico} (scripts/make-icons.mjs), and a double click opens
+  // the file in the app (electron/main.ts)
+  fileAssociations: [
+    { ext: 'walkflow', name: 'Walkflow route package', description: 'Walkflow route package', icon: 'file-icon', role: 'Editor' },
+  ],
   mac: {
     category: 'public.app-category.healthcare-fitness',
     target: [{ target: 'dmg', arch: ['arm64', 'x64'] }],
@@ -37,6 +42,14 @@ module.exports = {
     extendInfo: {
       NSBluetoothAlwaysUsageDescription: bluetoothUsage,
       NSBluetoothPeripheralUsageDescription: bluetoothUsage,
+      // The file type itself, so Finder knows the extension and shows its icon whether or not Walkflow is running
+      UTExportedTypeDeclarations: [{
+        UTTypeIdentifier: 'app.walkflow.route-package',
+        UTTypeDescription: 'Walkflow route package',
+        UTTypeConformsTo: ['public.json', 'public.data'],
+        UTTypeIconFile: 'file-icon.icns',
+        UTTypeTagSpecification: { 'public.filename-extension': ['walkflow'] },
+      }],
     },
     // Localized usage texts for the macOS Bluetooth prompt (Contents/Resources/<lang>.lproj/InfoPlist.strings)
     extraResources: [{ from: 'build/lproj', to: '.', filter: ['*.lproj/InfoPlist.strings'] }],
