@@ -7,6 +7,7 @@ describe('views', () => {
     expect(viewFromHash('#history')).toBe('history');
     expect(viewFromHash('#workouts')).toBe('workouts');
     expect(viewFromHash('#routes')).toBe('routes');
+    expect(viewFromHash('#community')).toBe('community');
     expect(viewFromHash('')).toBe('training');
     expect(viewFromHash('#')).toBe('training');
     expect(viewFromHash('#nonsense')).toBe('training');
@@ -26,14 +27,16 @@ describe('where Stop is shown', () => {
     expect(stopPlacement('workouts', false)).toBe('none');
     expect(stopPlacement('routes', true)).toBe('bar');
     expect(stopPlacement('routes', false)).toBe('none');
+    expect(stopPlacement('community', true)).toBe('bar');
+    expect(stopPlacement('community', false)).toBe('none');
   });
 
   it('while connected, every view shows a Stop button', () => {
     for (const v of VIEWS) expect(stopPlacement(v, true)).not.toBe('none');
   });
 
-  it('is in the order Training, Workouts, Routes, History, in the code and in the navigation', () => {
-    expect(VIEWS).toEqual(['training', 'workouts', 'routes', 'history']);
+  it('is in the order Training, Workouts, Routes, Community, History, in the code and in the navigation', () => {
+    expect(VIEWS).toEqual(['training', 'workouts', 'routes', 'community', 'history']);
     const nav = [...indexHtml.matchAll(/<a href="[^"]*" data-view="(\w+)"/g)].map(m => m[1]);
     expect(nav).toEqual([...VIEWS]);
   });

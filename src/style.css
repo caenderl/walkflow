@@ -249,7 +249,11 @@ footer a, details a { color:var(--link); }
 html:not([data-view="history"]) .history-part { display:none; }
 html:not([data-view="workouts"]) .workouts-part { display:none; }
 html:not([data-view="routes"]) .routes-part { display:none; }
-html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is(.live, .stage, .more) { display:none; }
+html:not([data-view="community"]) .community-part { display:none; }
+html:is([data-view="history"], [data-view="workouts"], [data-view="routes"], [data-view="community"]) :is(.live, .stage, .more) { display:none; }
+
+/* Community */
+.cm-filters { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
 
 /* History */
 .hist-overview { display:grid; gap:20px; }
@@ -285,7 +289,7 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
 .wk-list, .wk-steps, .plan { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
 .wk-item { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; padding:12px 14px; border:1px solid var(--card-border); border-radius:12px; background:var(--input-bg); }
 .wk-name { font-weight:600; overflow-wrap:anywhere; }
-.wk-actions { display:flex; flex-wrap:wrap; gap:6px; }
+.wk-actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
 .wk-step { display:grid; grid-template-columns:1.6rem minmax(0, 1fr) 4.5rem minmax(0, 1fr) minmax(0, 5.5rem) auto; gap:8px; align-items:center; }
 .wk-n { color:var(--mute); font-variant-numeric:tabular-nums; text-align:center; }
 .wk-move { display:flex; gap:4px; }
@@ -369,7 +373,7 @@ html[data-incline="no"] .incl-only, html[data-incline="no"] .wk-incl { display:n
   .control { order:5; }
   .incline { order:6; }
   .more { order:7; }
-  .history-part, .workouts-part, .routes-part { order:3; }
+  .history-part, .workouts-part, .routes-part, .community-part { order:3; }
   /* Stop bar fixed to the bottom edge, like the dock in the training view */
   html[data-stop="bar"] .stopbar {
     display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; grid-template-areas:"state speed ctl stop" "state more ctl stop";
@@ -409,7 +413,9 @@ html[data-incline="no"] .incl-only, html[data-incline="no"] .wk-incl { display:n
   .menu { left:0; right:0; top:52px; width:auto; max-width:none; }
   .periods { gap:10px; }
   .period .v { font-size:1.35rem; }
-  .views a { flex:1; }
+  /* Five views do not fit in a row on a phone: they wrap into two rows */
+  .views { flex-wrap:wrap; border-radius:20px; }
+  .views a { flex:1 1 auto; }
   .run summary { grid-template-columns:minmax(0, 1fr) auto; }
   .run-line { grid-row:2; margin-left:0; text-align:left; }
   .hero { grid-template-columns:minmax(0, 1fr); gap:16px; text-align:center; }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { exampleRoute, ROUTE_EXAMPLES } from '../routes/route-examples';
 import { readRoute, type Route } from '../routes/routes';
 import { readWorkout, type Workout } from '../training/workouts';
-import { itemId, offeredItems, readCommunityItem, routeText, workoutText } from './community';
+import { itemId, localHashes, offeredItems, readCommunityItem, routeText, workoutText } from './community';
 import { sha256Hex } from './hash';
 
 const route = (over: Partial<Route> = {}): Route => ({
@@ -89,6 +89,25 @@ describe('offeredItems', () => {
   it('keeps the items apart by kind', async () => {
     const items = await offeredItems([route({ shared: true })], [workout({ shared: true })], 'en');
     expect(items.map(i => i.kind)).toEqual(['route', 'workout']);
+  });
+});
+
+describe('localHashes', () => {
+  it('has the hash of every route and workout of the library, shared or not', async () => {
+    const r = route(), w = workout();
+    const hashes = await localHashes([r], [w]);
+    expect(hashes).toEqual(new Set([await sha256Hex(routeText(r)), await sha256Hex(workoutText(w))]));
+  });
+
+  it('is what an item taken from the community arrives as, so it is known as already here', async () => {
+    const text = routeText(route());
+    const read = await readCommunityItem('route', text, 1);
+    if (!read.ok || read.kind !== 'route') throw new Error('not read');
+    expect((await localHashes([read.route], [])).has(await sha256Hex(text))).toBe(true);
+  });
+
+  it('is empty for an empty library', async () => {
+    expect((await localHashes([], [])).size).toBe(0);
   });
 });
 

@@ -18,6 +18,7 @@ import { setupPwa } from './ui/pwa';
 import type { RunSource } from './core/history/runs';
 import { controlAvailability, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION, isDisclaimerAccepted, StandstillDetector } from './core/safety/safety';
 import { setupBackground } from './ui/background';
+import { setupCommunity } from './ui/community/community';
 import { setupInclineCard } from './ui/live/incline-card';
 import { setupConsole } from './ui/live/console';
 import { Session } from './ui/live/session';
@@ -87,14 +88,17 @@ const workouts = setupWorkouts({
   useRoute: id => { routes.use(id); stage.setActive('route'); },
   useWorkout: () => stage.setActive('workout'),
   wanted: () => chosen.get() === 'workout',
-  changed: () => { if (booted) stage.render(); },
+  changed: () => { if (booted) { stage.render(); community.libraryChanged(); } },
 });
 const routes = setupRoutes({
   maxSpeed: () => effectiveMax(),
-  changed: () => { if (booted) stage.render(); },
+  changed: () => { if (booted) { stage.render(); community.libraryChanged(); } },
   chosen: () => stage.setActive('route'),
   wanted: () => chosen.get() === 'route',
 });
+
+// Routes and workouts that other devices share. It reads the library from the stores, so it needs nothing but the two views to reload.
+const community = setupCommunity({ libraryChanged: () => { void workouts.reload(); void routes.reload(); } });
 
 const connected = () => session.connected();
 const maybeRunning = () => session.maybeRunning();

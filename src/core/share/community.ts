@@ -55,6 +55,12 @@ export async function offeredItems(routes: readonly Route[], workouts: readonly 
   return out;
 }
 
+/** The hash of every route and workout in the library, as the file the app would export: what is already here, whoever offers it */
+export async function localHashes(routes: readonly Route[], workouts: readonly Workout[]): Promise<Set<string>> {
+  const hashes = await Promise.all([...routes.map(r => sha256Hex(routeText(r))), ...workouts.map(w => sha256Hex(workoutText(w)))]);
+  return new Set(hashes);
+}
+
 export type CommunityItem =
   | { ok: true; kind: 'route'; route: Route }
   | { ok: true; kind: 'workout'; workout: Workout }

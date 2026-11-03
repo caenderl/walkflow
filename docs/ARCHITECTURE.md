@@ -28,7 +28,7 @@ src/
     settings/           settings dialog, header menus
     live/               the training view's live parts: session state, speed and limits (owns the governor), incline card,
                         stage (chosen workout or route, and starting it), experiment console
-    routes/ workouts/ history/ settings/   one folder per feature view (history also has the export buttons)
+    routes/ workouts/ history/ community/ settings/   one folder per feature view (history also has the export buttons)
     background.ts       wake lock, tab in the background, leaving the page
     desktop.ts pwa.ts theme.ts views.ts i18n-dom.ts   integration of the page
     ui.ts store.ts      DOM lookups, log and download; the storage wrapper that never throws

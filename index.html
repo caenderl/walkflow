@@ -50,6 +50,7 @@
       <a href="#" data-view="training" data-i18n="views.training">Training</a>
       <a href="#workouts" data-view="workouts" data-i18n="views.workouts">Workouts</a>
       <a href="#routes" data-view="routes" data-i18n="views.routes">Routes</a>
+      <a href="#community" data-view="community" data-i18n="views.community">Community</a>
       <a href="#history" data-view="history" data-i18n="views.history">History</a>
     </nav>
     <!-- Connection menu: opens from the status; connect and demo, or the device and Disconnect -->
@@ -294,6 +295,31 @@
         <p class="hint" id="rtStorage" hidden></p>
         <p class="hint" id="rtStatus" role="status"></p>
         <p class="hint" data-i18n="routes.hint">A route only shows where you are along it.</p>
+      </section>
+
+      <!-- Community view (src/ui/community/community.ts): routes and workouts that other devices share, and what you take from them -->
+      <section class="card grid community-part">
+        <div class="head-row">
+          <h2 data-i18n="community.title">Community</h2>
+        </div>
+        <label class="switch">
+          <input type="checkbox" role="switch" id="cmSwitch">
+          <span class="sw-track" aria-hidden="true"></span>
+          <span class="sw-text"><strong data-i18n="community.switch">Take part in the community</strong><span class="hint" data-i18n="community.notice">Notice.</span></span>
+        </label>
+        <p class="hint" id="cmStatus" role="status"></p>
+      </section>
+      <section class="card grid community-part" id="cmFinder" hidden>
+        <div class="cm-filters">
+          <label class="hint field"><span data-i18n="community.search">Search</span><input type="text" id="cmText" autocomplete="off"></label>
+          <label class="hint field"><span data-i18n="community.kind">Kind</span><select id="cmKind"></select></label>
+          <label class="hint field"><span data-i18n="community.country">Country</span><select id="cmCountry"></select></label>
+          <label class="hint field"><span data-i18n="community.tag">Tag</span><select id="cmTag"></select></label>
+          <label class="hint field"><span data-i18n="community.roomLang">Language of the room</span><select id="cmLang"></select></label>
+        </div>
+        <p class="hint" id="cmEmpty" hidden></p>
+        <ul id="cmList" class="wk-list"></ul>
+        <p class="hint"><button type="button" id="cmUnhide" hidden></button></p>
       </section>
     </div>
 
