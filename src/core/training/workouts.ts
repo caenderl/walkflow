@@ -21,6 +21,10 @@ export interface Workout {
   texts?: Record<string, string>;
   /** Who made it and under which terms; travels with the workout when it is exported again */
   meta?: Credit;
+  /** The person has switched on sharing this workout with the community */
+  shared?: true;
+  /** Taken from the community: the SHA-256 of the package text as it arrived (lower-case hex). It is passed on while the package the app writes for the workout is still byte-identical (core/share/community.ts). */
+  communityHash?: string;
 }
 
 export const WORKOUT_MAX_STEPS = 200;
@@ -71,6 +75,8 @@ export function readWorkout(v: unknown): Workout | null {
   if (texts) workout.texts = texts;
   const meta = readCredit(v.meta);
   if (Object.keys(meta).length) workout.meta = meta;
+  if (v.shared === true) workout.shared = true;
+  if (typeof v.communityHash === 'string' && /^[0-9a-f]{64}$/.test(v.communityHash)) workout.communityHash = v.communityHash;
   return workout;
 }
 

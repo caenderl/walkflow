@@ -60,6 +60,23 @@ notice at the Community switch says so: *what you take, you pass on*. The rules:
 - **It can be seen.** Another device that is connected to you can see that you have an item. That is the price of passing
   things on, and the reason it is only while Community is on.
 
+### What is offered and what is saved (`core/share/community.ts`)
+
+A route or workout has two marks (stored with it, in a backup too): `shared`, the person's own switch, and `communityHash`,
+the SHA-256 of the package text exactly as it arrived from the community.
+
+- **Offered** is every item with `shared`, and every item with a `communityHash` as long as the package the app writes for it
+  today (the export format) hashes to the same value. Whatever is offered is the file the app would export, named, placed and
+  tagged in the language of the room, once per file however many copies there are.
+- **Taken** (`readCommunityItem`): the text is read by the reader of its kind, saved as a new item (new id, date of the
+  taking) and marked with the hash it arrived with, but only if the package the app writes for it is byte for byte the text
+  that arrived. A package that the app would write differently (made by another program) is saved without the mark: it would
+  be another file for everyone else.
+- **Editing** a taken item changes the file, so the hashes no longer match and it is the person's own again: not offered unless
+  the person switches it on, and then as the file it is now.
+- Tests show the property the whole idea rests on: what was taken is offered again with the very hash and text it arrived
+  with.
+
 ### Size of a room
 
 Every device in a room connects to every other (a browser handles a limited number of connections). With few people one room
@@ -222,15 +239,13 @@ Anything above ends the exchange with an error (`tooLarge`, `invalid`, `unexpect
 ## What is still to do
 
 Done: the share code, the messages and rules of the exchange, both package formats, the list of what is offered, the
-connection (`src/net/`), the relays and the content security policy.
+connection (`src/net/`), the relays and the content security policy, and what is passed on and how a taken file is saved
+(`core/share/community.ts`, see "What is offered and what is saved").
 
-1. **What was taken from the community**: a route or workout is saved with the hash it arrived with and a mark that it came
-   from the community; the offer is the marked items whose file is still byte-identical (a package written by the app comes out
-   byte for byte the same when it is read and written again; this is tested for routes and workouts).
-2. **Screens**: the Community view (switch with the one-sentence notice, list with filters, take), *Share with the
+1. **Screens**: the Community view (switch with the one-sentence notice, list with filters, take), *Share with the
    community* on routes and workouts, *Share with a code* and *Receive with a code*. Texts in German, English and French.
    They use the hub, the directory, `readPackage` and `readWorkoutPackage`, and the same confirmation as an import.
-3. **Checks without hardware** in the app: two windows exchange a route through the screens; a wrong code, a closed view and
+2. **Checks without hardware** in the app: two windows exchange a route through the screens; a wrong code, a closed view and
    a stopped sender end cleanly. The desktop app has to be checked too (WebRTC and the relays from Electron).
 
 ## Later, maybe

@@ -25,4 +25,10 @@ describe('MemoryRouteStore (fallback without IndexedDB)', () => {
     expect(again!.points).toHaveLength(2);
     expect(again!.name).toBe('A');
   });
+
+  it('keeps the switch for sharing and the hash of what was taken from the community', async () => {
+    const store = new MemoryRouteStore();
+    await store.put({ ...r('a', 'A'), shared: true, communityHash: 'ab'.repeat(32) });
+    expect(await store.list()).toMatchObject([{ shared: true, communityHash: 'ab'.repeat(32) }]);
+  });
 });

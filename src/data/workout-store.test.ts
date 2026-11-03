@@ -5,6 +5,12 @@ import type { WeekPlan } from '../core/training/workouts';
 const w = (id: string, name: string, updated: number) => ({ id, name, steps: [{ sec: 60, speed: 3 }], updated });
 
 describe('MemoryWorkoutStore (fallback without IndexedDB)', () => {
+  it('keeps the switch for sharing and the hash of what was taken from the community', async () => {
+    const store = new MemoryWorkoutStore();
+    await store.put({ ...w('a', 'A', 1), shared: true, communityHash: 'ab'.repeat(32) });
+    expect(await store.list()).toMatchObject([{ shared: true, communityHash: 'ab'.repeat(32) }]);
+  });
+
   it('lists by name, put replaces by id, delete removes', async () => {
     const store = new MemoryWorkoutStore();
     await store.put(w('b', 'Zebra', 1));

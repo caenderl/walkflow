@@ -33,6 +33,10 @@ export interface Route {
   texts?: Record<string, string>;
   /** Where the route comes from and what it is about; travels with the route when it is exported again */
   meta?: RouteMeta;
+  /** The person has switched on sharing this route with the community */
+  shared?: true;
+  /** Taken from the community: the SHA-256 of the package text as it arrived (lower-case hex). It is passed on while the package the app writes for the route is still byte-identical (core/share/community.ts). */
+  communityHash?: string;
 }
 
 export interface RouteMeta {
@@ -269,6 +273,8 @@ export function readRoute(v: unknown): Route | null {
   if (texts) route.texts = texts;
   const meta = readMeta(v.meta);
   if (meta) route.meta = meta;
+  if (v.shared === true) route.shared = true;
+  if (typeof v.communityHash === 'string' && /^[0-9a-f]{64}$/.test(v.communityHash)) route.communityHash = v.communityHash;
   return analyzeRoute(route).total >= ROUTE_MIN_METERS ? route : null;
 }
 
