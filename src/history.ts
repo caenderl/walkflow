@@ -6,6 +6,7 @@ import { desktop } from './desktop';
 import { confirmDialog } from './dialogs';
 import { buildTcx, exportFilename, toCsv, type Sample, type TcxSport } from './export';
 import { lang, onLanguageChange, t } from './i18n';
+import { toDist } from './units';
 import { bindText } from './i18n-dom';
 import { getRouteStore } from './route-store';
 import { getRunStore } from './run-store';
@@ -149,7 +150,7 @@ export function setupHistory(host: HistoryHost) {
 
   function drawWeeks() {
     if (!weeks.length) return;
-    barCentres = drawBarChart($<HTMLCanvasElement>('weekChart'), weeks.map(w => w.dist / 1000), {
+    barCentres = drawBarChart($<HTMLCanvasElement>('weekChart'), weeks.map(w => toDist(w.dist)), {
       labels: weeks.map(w => t.history.weekOf(w.start)),
       active: activeWeek,
       format: v => t.number(v),

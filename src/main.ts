@@ -11,7 +11,7 @@ import {
   OP, parseMachineStatus, parseTrainingStatus, type Range, type TreadmillData,
 } from './ftms';
 import { setupHistory } from './history';
-import { lang, onLanguageChange, t, type Text } from './i18n';
+import { lang, onLanguageChange, retranslate, t, type Text } from './i18n';
 import { routeDescription } from './route-examples';
 import { bindText, initLanguage } from './i18n-dom';
 import { setupMenu, setupPrefs } from './menus';
@@ -21,7 +21,7 @@ import { setupPwa } from './pwa';
 import type { RunSource, RunTag } from './runs';
 import {
   beltMaybeRunning, checkConsoleCommand, decideLimitChange, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION,
-  effectiveMax as calcEffectiveMax, isDisclaimerAccepted, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE, LIMIT_STORAGE_KEY,
+  effectiveMax as calcEffectiveMax, isDisclaimerAccepted, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE, LIMIT_MAX, LIMIT_MIN, LIMIT_STORAGE_KEY,
   loadLimit, MAX_STEP_MAX, MAX_STEP_MIN, MAX_STEP_STORAGE_KEY, parseHexBytes, parseMaxStep, RAMP_INTERVAL_MS,
   serializeLimit, SpeedGovernor, StandstillDetector,
 } from './safety';
@@ -30,6 +30,7 @@ import { setupSettings } from './settings-ui';
 import { SimulatorAdapter } from './sim';
 import { initTheme, onThemeChange } from './theme';
 import { $, $button, $input, download, log, store } from './ui';
+import { fromSpeed, onUnitsChange, parseUnits, setUnits, speedFromInput, speedPresets, speedStep, toDist, toSpeed, UNITS_STORAGE_KEY } from './units';
 import { askBeforeStart } from './quiet';
 import { setupRoutes } from './route-ui';
 import { setupViews, stopPlacement, type View } from './views';
@@ -37,6 +38,8 @@ import { setupWorkouts } from './workout-ui';
 
 initTheme();
 initLanguage();
+// Units before anything is drawn
+setUnits(parseUnits(store.get(UNITS_STORAGE_KEY)));
 
 const HIDDEN_MODE_KEY = 'walkflow.hiddenMode';
 const TCX_SPORT_KEY = 'walkflow.tcxSport';
@@ -161,15 +164,15 @@ function onTreadmillData(r: TreadmillData) {
 function renderStats() {
   const f = (v: number | undefined, digits: number) => (v === undefined ? '–' : t.number(v, digits));
   // Without a connection the current speed is unknown; do not leave the last value standing
-  $('vSpeed').textContent = connected() ? f(cur.speed, 1) : '–';
-  $('vDist').textContent = f(cur.dist === undefined ? undefined : cur.dist / 1000, 2);
+  $('vSpeed').textContent = connected() ? f(cur.speed === undefined ? undefined : toSpeed(cur.speed), 1) : '–';
+  $('vDist').textContent = f(cur.dist === undefined ? undefined : toDist(cur.dist), 2);
   $('vIncl').textContent = f(cur.incl, 1);
   $('vTime').textContent = cur.time === undefined ? '–' : fmtTime(cur.time);
   $('vHr').textContent = cur.hr === undefined ? '–' : String(cur.hr);
   $('vKcal').textContent = cur.kcal === undefined ? '–' : String(cur.kcal);
   // Stop bar (views other than training)
   $('sbSpeed').textContent = connected() && cur.speed !== undefined ? t.control.speed(cur.speed) : '–';
-  $('sbMore').textContent = connected() && cur.time !== undefined ? t.stopBar.more(fmtTime(cur.time), (cur.dist ?? 0) / 1000) : '';
+  $('sbMore').textContent = connected() && cur.time !== undefined ? t.stopBar.more(fmtTime(cur.time), cur.dist ?? 0) : '';
   $('sbState').textContent = (lastMeasured ?? 0) > 0 ? t.stopBar.running : t.stopBar.idle;
 }
 
@@ -645,14 +648,29 @@ async function rawSend() {
 }
 
 // ---------- Settings ----------
+/** The limit and step fields and the quick-select buttons, in the units of the settings. The values stay km/h inside. */
+function renderLimitFields() {
+  const shown = (kmh: number) => String(Math.round(toSpeed(kmh) * 100) / 100);
+  const metric = toSpeed(1) === 1;
+  const cap = $input('cap'), step = $input('maxStep');
+  cap.min = shown(LIMIT_MIN); cap.max = shown(LIMIT_MAX); cap.step = metric ? '0.5' : '0.1'; cap.value = shown(limit);
+  step.min = shown(MAX_STEP_MIN); step.max = shown(MAX_STEP_MAX); step.step = metric ? '0.1' : '0.01'; step.value = shown(governor.maxStep);
+  const presets = speedPresets();
+  document.querySelectorAll<HTMLButtonElement>('.preset').forEach((b, i) => {
+    const v = presets[i];
+    if (v === undefined) return;
+    b.dataset.speed = String(v);
+    b.textContent = t.number(v);
+  });
+}
+
 function loadSettings() {
   const l = loadLimit(store.get(LIMIT_STORAGE_KEY), store.get(LEGACY_LIMIT_KEY));
   limit = l.value;
   if (l.note) log(l.note);
-  $input('cap').value = String(limit);
   const ms = parseMaxStep(store.get(MAX_STEP_STORAGE_KEY) ?? '');
   if (ms !== null) governor.maxStep = ms;
-  $input('maxStep').value = String(governor.maxStep);
+  renderLimitFields();
   const hm = store.get(HIDDEN_MODE_KEY);
   if (hm === 'warn' || hm === 'pause') $<HTMLSelectElement>('hiddenMode').value = hm;
   const sp = store.get(TCX_SPORT_KEY);
@@ -661,17 +679,17 @@ function loadSettings() {
 
 async function limitChanged() {
   const input = $input('cap');
-  const d = decideLimitChange(input.value, limit);
-  if (!d.ok) { log(`❌ ${d.reason}`); input.value = String(limit); return; }
+  const d = decideLimitChange(speedFromInput(input.value), limit);
+  if (!d.ok) { log(`❌ ${d.reason}`); renderLimitFields(); return; }
   if (d.needsConfirmation) {
     const ok = await confirmDialog(t.limit.confirmTitle(d.value), [
       t.limit.risk(LIMIT_CONFIRM_ABOVE),
       t.limit.onlyIf,
     ], t.limit.allow(d.value));
-    if (!ok) { input.value = String(limit); return; }
+    if (!ok) { renderLimitFields(); return; }
   }
   limit = d.value;
-  input.value = String(limit);
+  renderLimitFields();
   store.set(LIMIT_STORAGE_KEY, serializeLimit(limit, limit > LIMIT_CONFIRM_ABOVE));
   applyLimits();
   redrawChart();
@@ -679,10 +697,10 @@ async function limitChanged() {
 
 function maxStepChanged() {
   const input = $input('maxStep');
-  const v = parseMaxStep(input.value);
-  if (v === null) { log(t.limit.maxStepRange(MAX_STEP_MIN, MAX_STEP_MAX)); input.value = String(governor.maxStep); return; }
+  const v = parseMaxStep(speedFromInput(input.value));
+  if (v === null) { log(t.limit.maxStepRange(MAX_STEP_MIN, MAX_STEP_MAX)); renderLimitFields(); return; }
   governor.maxStep = v;
-  input.value = String(v);
+  renderLimitFields();
   store.set(MAX_STEP_STORAGE_KEY, String(v));
   applyLimits();
 }
@@ -721,7 +739,7 @@ function link(href: string, text: string) {
 // The header menus never cover the controls (Start/Pause/Stop, ±)
 const controls = () => [document.querySelector('.dock')];
 const connMenu = setupMenu($button('statusBtn'), $('connMenu'), controls);
-setupPrefs($('langOptions'), $('themeOptions'));
+setupPrefs($('langOptions'), $('themeOptions'), $('unitsOptions'));
 $button('openData').onclick = () => settings.open('data');
 // The belt runs: settings are locked (the dialog itself checks this when it opens)
 const renderSettingsLock = () => settings.setLocked(connected() && maybeRunning());
@@ -757,10 +775,10 @@ slider.addEventListener('pointerdown', () => { sliderDragging = true; });
 window.addEventListener('pointerup', () => { sliderDragging = false; });
 slider.oninput = () => { $('target').textContent = t.control.speed(parseFloat(slider.value)); };
 slider.onchange = () => { sliderDragging = false; requestSpeed(parseFloat(slider.value)); };
-$button('minus').onclick = () => stepSpeed(-0.5);
-$button('plus').onclick = () => stepSpeed(0.5);
+$button('minus').onclick = () => stepSpeed(-speedStep());
+$button('plus').onclick = () => stepSpeed(speedStep());
 document.querySelectorAll<HTMLButtonElement>('.preset').forEach(b => {
-  b.onclick = () => requestSpeed(parseFloat(b.dataset.speed ?? ''));
+  b.onclick = () => requestSpeed(fromSpeed(parseFloat(b.dataset.speed ?? '')));
 });
 $input('cap').onchange = () => void limitChanged();
 $input('maxStep').onchange = maxStepChanged;
@@ -789,13 +807,19 @@ document.addEventListener('keydown', e => {
     (document.activeElement as HTMLElement | null)?.blur?.();
     void doStop();
   } else if (tag !== 'INPUT' && e.key === 'ArrowUp') {
-    e.preventDefault(); stepSpeed(0.5);
+    e.preventDefault(); stepSpeed(speedStep());
   } else if (tag !== 'INPUT' && e.key === 'ArrowDown') {
-    e.preventDefault(); stepSpeed(-0.5);
+    e.preventDefault(); stepSpeed(-speedStep());
   }
 });
 
+onUnitsChange(u => {
+  store.set(UNITS_STORAGE_KEY, u);
+  retranslate();
+});
+
 onLanguageChange(() => {
+  renderLimitFields();
   renderInfo();
   renderRangeInfo();
   renderSpeed();

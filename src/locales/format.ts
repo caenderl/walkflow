@@ -1,5 +1,7 @@
 // Number formatting for the locale files: decimal separator per language, no thousands grouping.
 
+import { distUnit, KM_PER_MILE, shortUnit, speedUnit, toDist, toShort, toSpeed, units } from '../units';
+
 export type NumberFormat = (value: number, digits?: number) => string;
 
 /** `digits` = fixed number of decimals; omitted = up to 2 decimals, as needed. */
@@ -50,5 +52,30 @@ export function dateFormat(locale: string) {
     shortDay: (ts: number) => day.format(ts),
     weekday: (ts: number) => weekday.format(ts),
     time: (ts: number) => time.format(ts),
+  };
+}
+
+/**
+ * Speeds and lengths for the texts of a language, in the units chosen in the settings (src/units.ts). The numbers are
+ * always metric (km/h, metres); the choice only decides what is shown.
+ */
+export function unitFormat(n: NumberFormat) {
+  return {
+    /** "5.5 km/h" or "3.4 mph" */
+    speed: (kmh: number, digits?: number) => `${n(toSpeed(kmh), digits)} ${speedUnit()}`,
+    /** The number alone, for ranges: "1 – 6 km/h" */
+    speedValue: (kmh: number, digits?: number) => n(toSpeed(kmh), digits),
+    speedUnit,
+    /** "2.54 km" or "1.58 mi" */
+    dist: (m: number, digits = 2) => `${n(toDist(m), digits)} ${distUnit()}`,
+    distValue: (m: number, digits = 2) => n(toDist(m), digits),
+    distUnit,
+    /** Whole metres or feet: heights, climbs, short distances */
+    short: (m: number) => `${n(Math.round(toShort(m)))} ${shortUnit()}`,
+    shortUnit,
+    /** The length of a step or a route: metres (feet) when short, otherwise km (miles) */
+    length: (m: number) => (units === 'imperial'
+      ? (m < 0.1 * KM_PER_MILE * 1000 ? `${n(Math.round(toShort(m)))} ft` : `${n(toDist(m), 2)} mi`)
+      : (m < 1000 ? `${n(Math.round(m))} m` : `${n(m / 1000, 2)} km`)),
   };
 }

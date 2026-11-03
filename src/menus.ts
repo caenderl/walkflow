@@ -8,6 +8,7 @@
 import { lang, LANGS, messagesFor, onLanguageChange, t } from './i18n';
 import { chooseLanguage } from './i18n-dom';
 import { chooseTheme, currentTheme, onThemeChange, type ThemeChoice } from './theme';
+import { onUnitsChange, setUnits, UNIT_SYSTEMS, units } from './units';
 
 export interface Menu {
   readonly isOpen: boolean;
@@ -85,7 +86,7 @@ function option(label: string, checked: boolean, onPick: () => void): HTMLButton
 }
 
 /** Language list and theme switch (in the settings dialog); both follow changes made elsewhere (e.g. the first-run dialog). */
-export function setupPrefs(langBox: HTMLElement, themeBox: HTMLElement) {
+export function setupPrefs(langBox: HTMLElement, themeBox: HTMLElement, unitsBox: HTMLElement) {
   const render = () => {
     langBox.replaceChildren(...LANGS.map(l => {
       const b = option(messagesFor(l).name, l === lang, () => {
@@ -104,8 +105,17 @@ export function setupPrefs(langBox: HTMLElement, themeBox: HTMLElement) {
       b.dataset.themeChoice = c;
       return b;
     }));
+    unitsBox.replaceChildren(...UNIT_SYSTEMS.map(u => {
+      const b = option(t.unitSystem[u], u === units, () => {
+        setUnits(u);
+        unitsBox.querySelector<HTMLElement>(`[data-units-choice="${u}"]`)?.focus();
+      });
+      b.dataset.unitsChoice = u;
+      return b;
+    }));
   };
   render();
   onLanguageChange(render);
   onThemeChange(render);
+  onUnitsChange(render);
 }

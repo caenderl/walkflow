@@ -12,6 +12,7 @@ import { lang, onLanguageChange, t } from './i18n';
 import { adoptExample, descriptionAfterEdit, exampleRoute, examplesToSeed, markSeeded, readSeeded, routeDescription, ROUTE_EXAMPLES, SEEDED_STORAGE_KEY } from './route-examples';
 import { createMapSlot, type MapSlot } from './route-map';
 import { isDark, onThemeChange } from './theme';
+import { fromSpeed, toSpeed } from './units';
 import { fmtDistance, type ProgramStep } from './program';
 import { getRouteStore, type RouteStore } from './route-store';
 import {
@@ -197,7 +198,7 @@ export function setupRoutes(host: RoutesHost) {
     bar.setAttribute('aria-label', t.routes.progressLabel);
     $('routeText').textContent = pos.done
       ? t.routes.finished
-      : `${t.routes.progress(t.number(pos.meters / 1000, 2), t.number(stats.total / 1000, 2))} · ${t.routes.remaining(fmtDistance(stats.total - pos.meters))}`;
+      : `${t.routes.progress(pos.meters, stats.total)} · ${t.routes.remaining(fmtDistance(stats.total - pos.meters))}`;
     const grade = pos.done ? undefined : gradeAhead(route, stats, pos.meters);
     $('routeDetail').textContent = pos.ele === undefined
       ? t.routes.noElevation
@@ -223,7 +224,9 @@ export function setupRoutes(host: RoutesHost) {
   let editor: Editor | null = null;
 
   function buildEditor(r: Route): Editor {
-    const speed = el('input', { type: 'number', min: String(ROUTE_SPEED_MIN), max: String(ROUTE_SPEED_MAX), step: '0.1', value: String(routeSpeed(r)) });
+    // Stored in km/h, typed and shown in the units of the settings
+    const shown = (kmh: number) => String(Math.round(toSpeed(kmh) * 100) / 100);
+    const speed = el('input', { type: 'number', min: shown(ROUTE_SPEED_MIN), max: shown(ROUTE_SPEED_MAX), step: '0.1', value: shown(routeSpeed(r)) });
     speed.setAttribute('inputmode', 'decimal');
     const text = el('textarea', { maxLength: ROUTE_DESCRIPTION_MAX, rows: 3, placeholder: t.routes.descriptionPlaceholder, value: routeDescription(r, lang)?.text ?? '' });
     const status = el('p', { className: 'hint' });
@@ -243,7 +246,7 @@ export function setupRoutes(host: RoutesHost) {
     if (!editor || editor.id !== id || !route) return;
     // An empty field means "no speed of its own": the app's default is used
     const raw = editor.speed.value.trim().replace(',', '.');
-    const kmh = raw ? Number(raw) : undefined;
+    const kmh = raw ? Math.round(fromSpeed(Number(raw)) * 100) / 100 : undefined;
     if (kmh !== undefined && !(kmh >= ROUTE_SPEED_MIN && kmh <= ROUTE_SPEED_MAX)) { editor.status.textContent = t.routes.speedInvalid(ROUTE_SPEED_MIN, ROUTE_SPEED_MAX); return; }
     const next = readRoute({ ...route, defaultSpeed: kmh, description: undefined, example: undefined, ...descriptionAfterEdit(route, editor.text.value, lang) });
     if (!next) return;
@@ -404,7 +407,7 @@ export function setupRoutes(host: RoutesHost) {
     select(route.id);
     const stats = analyzeRoute(route);
     setStatus(() => [
-      t.routes.imported(route.name, stats.total / 1000),
+      t.routes.imported(route.name, stats.total),
       ...(parsed.skipped ? [t.routes.skippedPoints(parsed.skipped)] : []),
       ...(parsed.simplified ? [t.routes.simplified] : []),
     ].join(' '));

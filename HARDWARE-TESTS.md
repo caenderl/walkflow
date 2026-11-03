@@ -93,6 +93,16 @@ The settings dialog and the training view only change what is shown, plus one se
 - [ ] Run a workout with several steps: the main element shows the current step (target speed, time or distance left), the strip of all steps and the next steps. Compare the step changes with the treadmill’s display and with the log (speed commands at the step boundaries).
 - [ ] Choose a route and switch the map on: the map is the main element of the training view, also while the route is walked. During a workout with steps the steps are shown instead.
 
+### Units (km/h or mph)
+
+**Settings → General → Units** only changes what is shown and typed. Everything stored, sent and checked stays km/h and metres: the limit of 6 km/h, the step of 0.5 km/h per command, the lines in the log of the experiment console. Please check with the belt running in **Imperial**:
+
+- [ ] The speed on the treadmill’s display (km/h) matches the speed shown in the app in mph (km/h ÷ 1.609). Same for the distance (km ÷ 1.609 = mi).
+- [ ] **+** and **−** change the target by half a mph (0.8 km/h). In the log, the commands still go up in steps of at most 0.5 km/h, at least 1.5 s apart.
+- [ ] The default limit shows as 3.73 mph. Typing 3.7 mph keeps the 6 km/h limit and asks nothing; typing 3.8 mph asks for the confirmation (it is above 6 km/h). With the limit at 3.7 mph, a target above it is capped at 6.0 km/h in the log.
+- [ ] A workout with distance steps (in feet or miles) ends its steps at the treadmill’s distance counter, as in metric.
+- [ ] Switch back to Metric: the same values show as km/h and km again.
+
 ## Desktop app
 
 - [ ] macOS: on the first “Connect”, macOS asks for Bluetooth. Does the chooser with the treadmill appear afterwards? Is the prompt text in the system language?

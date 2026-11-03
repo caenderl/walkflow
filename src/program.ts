@@ -2,6 +2,7 @@
 // it talks to the app through ProgramHost.
 
 import { t, type Text } from './i18n';
+import { fromSpeed, KM_PER_MILE, M_PER_FOOT, toSpeed, units } from './units';
 
 /**
  * A step ends after a time or after the belt has covered a distance. The incline (percent) is optional and only
@@ -13,33 +14,57 @@ export type ProgramStep =
 
 const num = (v: string) => parseFloat(v.replace(',', '.'));
 
+const METERS_PER = { m: 1, km: 1000, mi: KM_PER_MILE * 1000, ft: M_PER_FOOT } as const;
+
+/** In imperial units the speed in a line is mph; stored it is km/h, to 0.01 */
+const kmhOf = (v: number) => (units === 'imperial' ? Math.round(fromSpeed(v) * 100) / 100 : v);
+const trim3 = (v: number) => String(+v.toFixed(3));
+
+function parseLine(line: string): ProgramStep | null {
+  const m = line.trim().match(/^(\d+(?:[.,]\d+)?)\s*(min|km|mi|ft|s|m)?\s+(\d+(?:[.,]\d+)?)(?:\s+incl\s+(-?\d+(?:[.,]\d+)?))?/);
+  if (!m?.[1] || !m[3]) return null;
+  const amount = num(m[1]), speed = kmhOf(num(m[3])), unit = m[2] ?? 'min';
+  const incline = m[4] === undefined ? {} : { incline: num(m[4]) };
+  if (unit === 'm' || unit === 'km' || unit === 'mi' || unit === 'ft') {
+    // A distance step without a speed could never end
+    return speed > 0 ? { meters: Math.round(amount * METERS_PER[unit]), speed, ...incline } : null;
+  }
+  return { sec: Math.round(amount * (unit === 's' ? 1 : 60)), speed, ...incline };
+}
+
+/** One step as a line of the text format, in the units of the settings */
+function formatStep(s: ProgramStep): string {
+  const incl = s.incline === undefined ? '' : ` incl ${s.incline}`;
+  const speed = units === 'imperial' ? trim3(toSpeed(s.speed)) : String(s.speed);
+  if (s.meters !== undefined) {
+    const length = units === 'imperial'
+      ? (s.meters >= 0.1 * METERS_PER.mi ? `${trim3(s.meters / METERS_PER.mi)} mi` : `${trim3(s.meters / METERS_PER.ft)} ft`)
+      : (s.meters >= 1000 ? `${s.meters / 1000} km` : `${s.meters} m`);
+    return `${length} ${speed}${incl}`;
+  }
+  return (s.sec % 60 === 0 ? `${s.sec / 60} ${speed}` : `${s.sec} s ${speed}`) + incl;
+}
+
 /**
- * One step per line: "<amount> [unit] <km/h> [incl <percent>]", decimal point or comma. Unit min (default), s, m or km.
- * Unreadable lines are ignored, and so is a distance step without a speed, which could never end.
+ * One step per line: "<amount> [unit] <speed> [incl <percent>]", decimal point or comma. Unit min (default), s, m, km,
+ * mi or ft; the speed is km/h or mph, as in the settings. Unreadable lines are ignored, and so is a distance step
+ * without a speed, which could never end. A line that is exactly what formatProgram wrote for one of `keep` gives that
+ * step back as it was, so converted values do not drift when a text is applied without having been edited.
  */
-export function parseProgram(text: string): ProgramStep[] {
+export function parseProgram(text: string, keep: readonly ProgramStep[] = []): ProgramStep[] {
+  const kept = new Map<string, ProgramStep>();
+  for (const s of keep) if (!kept.has(formatStep(s))) kept.set(formatStep(s), s);
   const steps: ProgramStep[] = [];
   for (const line of text.split('\n')) {
-    const m = line.trim().match(/^(\d+(?:[.,]\d+)?)\s*(min|km|s|m)?\s+(\d+(?:[.,]\d+)?)(?:\s+incl\s+(-?\d+(?:[.,]\d+)?))?/);
-    if (!m?.[1] || !m[3]) continue;
-    const amount = num(m[1]), speed = num(m[3]), unit = m[2] ?? 'min';
-    const incline = m[4] === undefined ? {} : { incline: num(m[4]) };
-    if (unit === 'm' || unit === 'km') {
-      if (speed > 0) steps.push({ meters: Math.round(amount * (unit === 'km' ? 1000 : 1)), speed, ...incline });
-    } else {
-      steps.push({ sec: Math.round(amount * (unit === 's' ? 1 : 60)), speed, ...incline });
-    }
+    const step = kept.get(line.trim()) ?? parseLine(line);
+    if (step) steps.push(step);
   }
   return steps;
 }
 
-/** Text that parseProgram reads back to the same steps */
+/** Text that parseProgram reads back to the same steps (in imperial units to within the rounding of the numbers) */
 export function formatProgram(steps: readonly ProgramStep[]): string {
-  return steps.map(s => {
-    const incl = s.incline === undefined ? '' : ` incl ${s.incline}`;
-    if (s.meters !== undefined) return (s.meters >= 1000 ? `${s.meters / 1000} km ${s.speed}` : `${s.meters} m ${s.speed}`) + incl;
-    return (s.sec % 60 === 0 ? `${s.sec / 60} ${s.speed}` : `${s.sec} s ${s.speed}`) + incl;
-  }).join('\n');
+  return steps.map(formatStep).join('\n');
 }
 
 export function programLength(steps: readonly ProgramStep[]): { sec: number; meters: number } {
@@ -57,7 +82,7 @@ export function fmtTime(s: number): string {
 }
 
 export function fmtDistance(meters: number): string {
-  return meters < 1000 ? `${Math.round(meters)} m` : `${t.number(meters / 1000, 2)} km`;
+  return t.u.length(meters);
 }
 
 /** "5:00 min", "400 m", or both */

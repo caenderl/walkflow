@@ -5,6 +5,7 @@
 import { confirmDialog } from './dialogs';
 import { onLanguageChange, t } from './i18n';
 import { fmtLength, formatProgram, parseProgram, programLength, type ProgramStep } from './program';
+import { fromShort, fromSpeed, toShort, toSpeed } from './units';
 import { getRouteStore } from './route-store';
 import type { Route } from './routes';
 import { getRunStore } from './run-store';
@@ -196,12 +197,16 @@ export function setupWorkouts(host: WorkoutsHost) {
       input.oninput = () => { onInput(input.valueAsNumber); renderTotals(); };
       return input;
     };
+    // Row values are metric (metres, km/h); the fields show the units of the settings. A length is metres or feet.
+    const rounded = (v: number, digits: number) => (Number.isFinite(v) ? Math.round(v * 10 ** digits) / 10 ** digits : v);
+    const amount = num(row.unit === 'm' ? rounded(toShort(row.amount), 1) : row.amount, 'any', t.workouts.amount, v => { row.amount = row.unit === 'm' ? fromShort(v) : v; });
     const unit = el('select');
     unit.setAttribute('aria-label', `${t.workouts.step(i + 1)}: ${t.workouts.unit}`);
     for (const [value, text] of [['min', t.workouts.unitMin], ['s', t.workouts.unitSec], ['m', t.workouts.unitMeters]] as const) {
       unit.append(el('option', { value, textContent: text, selected: row.unit === value }));
     }
-    unit.onchange = () => { row.unit = unit.value as Unit; renderTotals(); };
+    // The number stays as it is shown when the unit changes: 5 min becomes 5 m (or 5 ft)
+    unit.onchange = () => { row.unit = unit.value as Unit; row.amount = row.unit === 'm' ? fromShort(amount.valueAsNumber) : amount.valueAsNumber; renderTotals(); };
 
     const move = (by: number) => {
       const j = i + by;
@@ -220,9 +225,9 @@ export function setupWorkouts(host: WorkoutsHost) {
     incline.classList.add('wk-incl');
     return el('li', { className: 'wk-step' },
       el('span', { className: 'wk-n', textContent: String(i + 1) }),
-      num(row.amount, 'any', t.workouts.amount, v => { row.amount = v; }),
+      amount,
       unit,
-      num(row.speed, '0.1', t.workouts.speed, v => { row.speed = v; }, 'km/h'),
+      num(rounded(toSpeed(row.speed), 2), '0.1', t.workouts.speed, v => { row.speed = rounded(fromSpeed(v), 2); }, t.u.speedUnit()),
       incline,
       el('span', { className: 'wk-move' },
         icon('↑', t.workouts.up, () => move(-1), i === 0),
@@ -371,7 +376,7 @@ export function setupWorkouts(host: WorkoutsHost) {
   $input('wkName').oninput = e => { if (draft) draft.name = (e.target as HTMLInputElement).value; };
   $button('wkApplyText').onclick = () => {
     if (!draft) return;
-    const steps = parseProgram($<HTMLTextAreaElement>('wkText').value);
+    const steps = parseProgram($<HTMLTextAreaElement>('wkText').value, draftSteps(draft).filter((s): s is ProgramStep => s !== null));
     if (!steps.length) { setStatus(() => t.workouts.textEmpty); return; }
     draft.rows = steps.map(toRow);
     setStatus(null);

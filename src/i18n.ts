@@ -38,6 +38,11 @@ export function setLanguage(l: Lang) {
   for (const cb of [...listeners]) cb(l);
 }
 
+/** The texts depend on more than the language (the units): run everything that redraws texts again. */
+export function retranslate() {
+  for (const cb of [...listeners]) cb(lang);
+}
+
 /** Returns the unsubscribe function. */
 export function onLanguageChange(cb: (l: Lang) => void): () => void {
   listeners.add(cb);

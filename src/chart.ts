@@ -3,6 +3,7 @@
 import type { Sample } from './export';
 import { t } from './i18n';
 import { cssColor } from './theme';
+import { toSpeed } from './units';
 
 export const CHART_WINDOW_MS = 5 * 60 * 1000;
 /** Longer gaps between two samples are not bridged by the line (no data, e.g. connection closed) */
@@ -57,12 +58,14 @@ export function drawSpeedChart(c: HTMLCanvasElement, samples: readonly Sample[],
   const L = 30, B = 16, T = 8, R = 6;
   const span = Math.max(1, o.to - o.from);
   const px = (ts: number) => L + ((ts - o.from) / span) * (W - L - R);
-  const py = (v: number) => H - B - (v / o.ymax) * (H - B - T);
+  // Speeds come in km/h; the axis and the lines are in the units of the settings
+  const ymax = Math.max(1, Math.ceil(toSpeed(o.ymax)));
+  const py = (v: number) => H - B - (v / ymax) * (H - B - T);
 
   const line = cssColor('--line'), label = cssColor('--mute'), target = cssColor('--link'), speed = cssColor('--accent');
   g.fillStyle = label; g.strokeStyle = line; g.lineWidth = 1;
-  const stepY = Math.max(1, Math.round(o.ymax / 4));
-  for (let y = 0; y <= o.ymax; y += stepY) {
+  const stepY = Math.max(1, Math.round(ymax / 4));
+  for (let y = 0; y <= ymax; y += stepY) {
     g.beginPath(); g.moveTo(L, py(y)); g.lineTo(W - R, py(y)); g.stroke();
     g.fillText(String(y), 6, py(y) + 4);
   }
@@ -73,7 +76,7 @@ export function drawSpeedChart(c: HTMLCanvasElement, samples: readonly Sample[],
 
   if (o.target) {
     g.strokeStyle = target; g.setLineDash([5, 4]);
-    g.beginPath(); g.moveTo(L, py(o.target)); g.lineTo(W - R, py(o.target)); g.stroke();
+    g.beginPath(); g.moveTo(L, py(toSpeed(o.target))); g.lineTo(W - R, py(toSpeed(o.target))); g.stroke();
     g.setLineDash([]);
   }
 
@@ -88,7 +91,7 @@ export function drawSpeedChart(c: HTMLCanvasElement, samples: readonly Sample[],
   for (const seg of segments) {
     if (seg.length < 2) continue;
     g.beginPath();
-    seg.forEach((s, i) => i ? g.lineTo(px(s.ts), py(s.speed!)) : g.moveTo(px(s.ts), py(s.speed!)));
+    seg.forEach((s, i) => i ? g.lineTo(px(s.ts), py(toSpeed(s.speed!))) : g.moveTo(px(s.ts), py(toSpeed(s.speed!))));
     g.stroke();
     g.lineTo(px(seg.at(-1)!.ts), py(0)); g.lineTo(px(seg[0]!.ts), py(0)); g.closePath();
     g.globalAlpha = 0.14; g.fill(); g.globalAlpha = 1;

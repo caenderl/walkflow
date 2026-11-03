@@ -40,7 +40,7 @@ export function setupInterval() {
     renderPreview(steps: readonly ProgramStep[]) {
       // The name and the summary are in the stage's heading already
       $('ivStep').textContent = '';
-      $('ivSpeed').textContent = steps[0] ? t.number(steps[0].speed, 1) : '–';
+      $('ivSpeed').textContent = steps[0] ? t.u.speedValue(steps[0].speed, 1) : '–';
       $('ivLeft').textContent = fmtLength(programLength(steps));
       $('ivLeftLabel').textContent = t.interval.total;
       ($('ivBar') as HTMLProgressElement).value = 0;
@@ -55,7 +55,7 @@ export function setupInterval() {
       const n = p.steps.length;
       const step = p.index >= 0 ? p.steps[p.index] : undefined;
       $('ivStep').textContent = !step ? (p.phase === 'starting' ? t.interval.starting : t.interval.countdown) : t.interval.stepOf(p.index + 1, n);
-      $('ivSpeed').textContent = step ? t.number(target ?? step.speed, 1) : '–';
+      $('ivSpeed').textContent = step ? t.u.speedValue(target ?? step.speed, 1) : '–';
       const left = p.left;
       $('ivLeft').textContent = !left ? '–' : 'sec' in left ? fmtTime(left.sec) : fmtDistance(left.meters);
       $('ivLeftLabel').textContent = !left ? '' : 'sec' in left ? t.interval.timeLeft : t.interval.distanceLeft;

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setLanguage } from './i18n';
+import { setUnits } from './units';
 import { fmtLength, fmtTime, formatProgram, parseProgram, programLength, ProgramRunner, totalSeconds, type ProgramHost } from './program';
 
 describe('incline in the text format', () => {
@@ -17,6 +18,54 @@ describe('incline in the text format', () => {
     const steps = [{ sec: 300, speed: 4, incline: 2 }, { meters: 400, speed: 3.5, incline: 0 }, { sec: 20, speed: 3 }];
     expect(formatProgram(steps)).toBe('5 4 incl 2\n400 m 3.5 incl 0\n20 s 3');
     expect(parseProgram(formatProgram(steps))).toEqual(steps);
+  });
+});
+
+describe('the text format in imperial units', () => {
+  afterEach(() => setUnits('metric'));
+
+  it('reads the speed as mph and converts it to km/h', () => {
+    setUnits('imperial');
+    expect(parseProgram('5 2.5\n30 s 3,1')).toEqual([{ sec: 300, speed: 4.02 }, { sec: 30, speed: 4.99 }]);
+  });
+
+  it('knows mi and ft next to m and km, in either system', () => {
+    expect(parseProgram('0.25 mi 3\n1320 ft 3\n400 m 3\n1 km 3')).toEqual([
+      { meters: 402, speed: 3 }, { meters: 402, speed: 3 }, { meters: 400, speed: 3 }, { meters: 1000, speed: 3 },
+    ]);
+    setUnits('imperial');
+    expect(parseProgram('1 mi 2')).toEqual([{ meters: 1609, speed: 3.22 }]);
+  });
+
+  it('keeps "min" a unit of time, not of miles', () => {
+    expect(parseProgram('5 min 3')).toEqual([{ sec: 300, speed: 3 }]);
+  });
+
+  it('writes mph, and miles or feet, and reads them back close to the same steps', () => {
+    setUnits('imperial');
+    const steps = [{ sec: 300, speed: 4.02 }, { meters: 1609, speed: 3.22 }, { meters: 100, speed: 4.83 }];
+    const text = formatProgram(steps);
+    expect(text).toBe('5 2.498\n1 mi 2.001\n328.084 ft 3.001');
+    for (const [i, s] of parseProgram(text).entries()) {
+      expect(s.speed).toBeCloseTo(steps[i]!.speed, 1);
+      expect(s.meters ?? 0).toBeCloseTo(steps[i]!.meters ?? 0, -1);
+    }
+  });
+
+  it('keeps a step exactly as it was when its line was not touched, so opening and applying changes nothing', () => {
+    const steps = [{ sec: 300, speed: 4 }, { meters: 400, speed: 5.6 }, { meters: 1000, speed: 3.5, incline: 1 }];
+    setUnits('imperial');
+    expect(parseProgram(formatProgram(steps), steps)).toEqual(steps);
+    // a changed line is read again, the others stay
+    const text = formatProgram(steps).split('\n');
+    text[0] = '5 3';
+    const out = parseProgram(text.join('\n'), steps);
+    expect(out[0]).toEqual({ sec: 300, speed: 4.83 });
+    expect(out.slice(1)).toEqual(steps.slice(1));
+  });
+
+  it('does not change the metric text: whole numbers, m and km', () => {
+    expect(formatProgram([{ sec: 300, speed: 4 }, { meters: 400, speed: 3.5 }, { meters: 1500, speed: 3 }])).toBe('5 4\n400 m 3.5\n1.5 km 3');
   });
 });
 
