@@ -543,7 +543,7 @@ html[data-quiet="1"] #safetyNotice { display:none; }
 .rt-speed > div { display:grid; gap:2px; }
 .rt-speed strong { font-size:1.15rem; font-variant-numeric:tabular-nums; }
 .rt-speed .icon-btn { width:40px; height:40px; border-radius:10px; flex:none; }
-/* Icon buttons in a route's row: the walking icon stands out, the chevron turns when the route is open */
+/* Icon buttons in a route's row: the Walkflow icon stands out, the chevron turns when the route is open */
 .rt-item .icon-btn { width:40px; height:40px; border-radius:10px; }
 .rt-item .icon-btn.primary { width:48px; }
 .rt-item .icon-btn .icon { width:22px; height:22px; transition:transform .15s; }

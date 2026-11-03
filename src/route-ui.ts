@@ -352,7 +352,7 @@ export function setupRoutes(host: RoutesHost) {
       const flag = r.country ? flagUrl(r.country) : null;
       const kmh = routeSpeed(r);
       const minutes = Math.max(1, Math.round(walkSeconds(stats.total, kmh) / 60));
-      const use = iconButton('walk', t.routes.use, () => { select(r.id); host.chosen(); location.hash = ''; });
+      const use = iconButton('walkflow', t.routes.use, () => { select(r.id); host.chosen(); location.hash = ''; });
       use.classList.add('primary');
       const item = el('li', { className: 'wk-item rt-item' },
         outlineEl(r),

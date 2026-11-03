@@ -11,7 +11,7 @@ import { getRouteStore } from './route-store';
 import type { Route } from './routes';
 import { getRunStore } from './run-store';
 import type { RunSummary } from './runs';
-import { $, $button, $input, button, el, store } from './ui';
+import { $, $button, $input, button, el, iconButton, store } from './ui';
 import { getWorkoutStore, type WorkoutStore } from './workout-store';
 import {
   newWorkoutId, planFromMinutes, readWorkout, TEMPLATES, todaySuggestion, weekProgress, WORKOUT_NAME_MAX,
@@ -123,7 +123,9 @@ export function setupWorkouts(host: WorkoutsHost) {
   }
 
   function useButton(id: string) {
-    return button(t.workouts.use, () => { select(id); host.useWorkout(); location.hash = ''; });
+    const b = iconButton('walkflow', t.workouts.use, () => { select(id); host.useWorkout(); location.hash = ''; });
+    b.classList.add('primary');
+    return b;
   }
 
   function renderLists() {
@@ -310,7 +312,8 @@ export function setupWorkouts(host: WorkoutsHost) {
     if (!sug || !name) return;
     $('todayPlanText').textContent = t.workouts.todaySuggest(sug.kind === 'route' ? t.history.tagRoute : t.history.tagWorkout, name);
     const use = $button('todayPlanUse');
-    use.textContent = t.workouts.use;
+    use.title = t.workouts.use;
+    use.setAttribute('aria-label', t.workouts.use);
     use.onclick = () => { if (sug.kind === 'route') host.useRoute(sug.id); else { select(sug.id); host.useWorkout(); } };
   }
 

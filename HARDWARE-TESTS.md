@@ -67,7 +67,7 @@ The route’s progress follows the treadmill’s own distance counter. The route
 
 ### Walk this route (route as a workout)
 
-With a route chosen, **Start** (it reads “Strecke gehen” / “Walk this route”) is one workout step: the whole route as a distance step at the route’s own walking speed (**Routes** → open a route with the arrow → pencil icon, default 3 km/h). Speed steps, limit, confirmation and stop work as for every workout. Please check in the log:
+With a route chosen, **Start** (its tooltip reads “Strecke gehen” / “Walk this route”) is one workout step: the whole route as a distance step at the route’s own walking speed (**Routes** → open a route with the arrow → pencil icon, default 3 km/h). Speed steps, limit, confirmation and stop work as for every workout. Please check in the log:
 
 - [ ] Start a short route (about 200 m) at a low speed (3 km/h). The confirmation names the route, its length and the speed. After confirming, the log shows Request Control and Start, then speed commands that follow the ramp (0.5 km/h per command, at least 1.5 s apart). There is no incline command at all.
 - [ ] Give the route a walking speed above your limit (**Routes** → arrow → pencil icon): the confirmation says it is capped, and the belt never goes above the limit.

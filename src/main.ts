@@ -389,7 +389,9 @@ function renderStage() {
   else if (workout) interval.renderPreview(workout.steps);
   $('stageChart').hidden = mode !== 'chart';
   $('stageFreeHint').hidden = kind !== null;
-  $('startLabel').textContent = kind === 'workout' ? t.program.start : kind === 'route' ? t.routes.walk : t.control.start;
+  // The label stays "Start" (a longer one does not fit the button); what it starts is the tooltip
+  $('startLabel').textContent = t.control.start;
+  $('start').title = kind === 'workout' ? t.program.start : kind === 'route' ? t.routes.walk : '';
   if (mode === 'chart' && was !== 'chart') redrawChart();
 }
 

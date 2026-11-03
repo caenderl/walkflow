@@ -13,14 +13,13 @@
 <body>
 <!-- Icons, used via <use href="#i-…">. Filled media symbols, the rest drawn as strokes in the current text colour. -->
 <svg class="sprite" aria-hidden="true">
-  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.6v14.8a1 1 0 0 0 1.5.86l12.2-7.4a1 1 0 0 0 0-1.72L8.5 3.74A1 1 0 0 0 7 4.6z" fill="currentColor"/></symbol>
   <symbol id="i-pause" viewBox="0 0 24 24"><rect x="5.5" y="4" width="4.5" height="16" rx="1.2" fill="currentColor"/><rect x="14" y="4" width="4.5" height="16" rx="1.2" fill="currentColor"/></symbol>
   <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2.5" fill="currentColor"/></symbol>
   <symbol id="i-bluetooth" viewBox="0 0 24 24"><path d="M7 7l10 10-5 5V2l5 5L7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-demo" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6.5L4.6 18.4A1.7 1.7 0 0 0 6.1 21h11.8a1.7 1.7 0 0 0 1.5-2.6L14 9.5V3M7.5 15h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
   <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-  <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="14" cy="4.5" r="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 8.5l-2 5 3 3.5-.5 4M11 13.5l-2.5 4-3 1.5M13 9.5l3.5 2.5 2-.5M13 9.5l-3 1.5-1.5 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-walkflow" viewBox="0 0 24 24"><path d="M7 4.5l5 5-5 5M13 4.5l5 5-5 5M6 19h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3zM14.5 7.5l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0M12 17l4-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -127,7 +126,7 @@
       <section class="card stage" id="stage" data-mode="chart">
         <div class="today-plan" id="todayPlan" hidden>
           <span class="hint" id="todayPlanText"></span>
-          <button id="todayPlanUse" type="button"></button>
+          <button id="todayPlanUse" type="button" class="icon-btn primary"><svg class="icon" aria-hidden="true"><use href="#i-walkflow"/></svg></button>
         </div>
         <!-- What the Start button starts: a workout or a route chosen in its own view, or nothing (free training) -->
         <div class="stage-head" id="stageHead" hidden>
@@ -296,7 +295,7 @@
             <button id="plus" class="needs-conn" disabled data-i18n="control.plus">+ 0.5</button>
           </div>
           <div class="row actions">
-            <button id="start" class="primary needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><span id="startLabel">Start</span></button>
+            <button id="start" class="primary needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-walkflow"/></svg><span id="startLabel">Start</span></button>
             <button id="pause" class="needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg><span data-i18n="control.pause">Pause</span></button>
             <button id="stop" class="stop needs-conn" disabled><svg class="icon" aria-hidden="true"><use href="#i-stop"/></svg><span data-i18n="control.stop">Stop</span></button>
           </div>
