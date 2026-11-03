@@ -62,6 +62,13 @@ describe('ROUTE_EXAMPLES', () => {
     expect(ex.points[0]![0]).not.toBe(0);
   });
 
+  it('makes every example a closed loop, so it can be walked round and round', () => {
+    for (const ex of ROUTE_EXAMPLES) {
+      const route = exampleRoute(ex, 'x', 0);
+      expect(distanceBetween(route.points[0]!, route.points.at(-1)!), ex.key).toBeLessThan(5);
+    }
+  });
+
   it('has the Central Park reservoir loop as a closed loop of about 2.5 km', () => {
     const ex = ROUTE_EXAMPLES.find(e => e.key === 'central-park-reservoir')!;
     expect(ex).toBeDefined();
