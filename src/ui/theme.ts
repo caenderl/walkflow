@@ -1,7 +1,7 @@
 // Colour theme: follow the system, or fixed dark/light. The colours themselves are tokens in style.css;
 // this module only sets data-theme on <html> and resolves tokens for places CSS cannot reach (canvas, meta).
 
-import { store } from './ui';
+import { store } from './store';
 
 export type ThemeChoice = 'system' | 'dark' | 'light';
 export const THEMES: readonly ThemeChoice[] = ['system', 'dark', 'light'];

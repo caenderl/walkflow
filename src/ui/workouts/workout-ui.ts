@@ -11,7 +11,9 @@ import { getRouteStore } from '../../data/route-store';
 import type { Route } from '../../core/routes/routes';
 import { getRunStore } from '../../data/run-store';
 import type { RunSummary } from '../../core/history/runs';
-import { $, $button, $input, button, el, iconButton, store } from '../ui';
+import { $, $button, $input } from '../ui';
+import { button, el, iconButton } from '../components/elements';
+import { store } from '../store';
 import { getWorkoutStore, type WorkoutStore } from '../../data/workout-store';
 import {
   newWorkoutId, planFromMinutes, readWorkout, TEMPLATES, todaySuggestion, weekProgress, WORKOUT_NAME_MAX,

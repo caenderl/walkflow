@@ -14,7 +14,8 @@ import { getWorkoutStore } from '../../data/workout-store';
 import { decodeTrack, parseBackup, RunRecorder, serializeBackup, type RunSummary } from '../../core/history/runs';
 import { countable, overview, records, streaks, weeklyDistance, type WeekTotal } from '../../core/history/stats';
 import { onThemeChange } from '../theme';
-import { $, $button, $input, download, store } from '../ui';
+import { $, $button, $input, download } from '../ui';
+import { store } from '../store';
 
 const SAVE_RUNS_KEY = 'walkflow.saveRuns';
 const PAGE = 20;

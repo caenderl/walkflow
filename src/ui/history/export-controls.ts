@@ -3,7 +3,8 @@
 
 import { buildTcx, exportFilename, toCsv, type Sample, type TcxSport } from '../../core/history/export';
 import { t } from '../../i18n/i18n';
-import { $, $button, download, log, store } from '../ui';
+import { $, $button, download, log } from '../ui';
+import { store } from '../store';
 
 const TCX_SPORT_KEY = 'walkflow.tcxSport';
 

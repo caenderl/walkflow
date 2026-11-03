@@ -5,7 +5,8 @@ import { choose } from './components/dialogs';
 import { lang, onLanguageChange, t } from '../i18n/i18n';
 import { bindText } from './i18n-dom';
 import { currentTheme, onThemeChange } from './theme';
-import { $, $button, $input, store } from './ui';
+import { $, $button, $input } from './ui';
+import { store } from './store';
 
 export interface OpenedFile { name: string; text?: string; error?: 'unreadable' | 'tooLarge' }
 

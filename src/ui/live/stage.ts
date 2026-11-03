@@ -10,7 +10,8 @@ import type { SpeedGovernor, StandstillDetector } from '../../core/safety/safety
 import { lang, t } from '../../i18n/i18n';
 import { bindText } from '../i18n-dom';
 import type { setupRoutes } from '../routes/route-ui';
-import { $, $button, store } from '../ui';
+import { $, $button } from '../ui';
+import { store } from '../store';
 import type { setupInterval } from '../workouts/interval-ui';
 import type { setupWorkouts } from '../workouts/workout-ui';
 

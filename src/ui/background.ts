@@ -6,7 +6,8 @@
 import { t, type Text } from '../i18n/i18n';
 import { bindText } from './i18n-dom';
 import { APP_NAME } from '../platform/config';
-import { $, log, store } from './ui';
+import { $, log } from './ui';
+import { store } from './store';
 
 const HIDDEN_MODE_KEY = 'walkflow.hiddenMode';
 

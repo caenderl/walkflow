@@ -12,7 +12,8 @@ import {
 import { t } from '../../i18n/i18n';
 import { fromSpeed, speedFromInput, speedPresets, speedStep, toSpeed } from '../../i18n/units';
 import { confirmDialog } from '../components/dialogs';
-import { $, $button, $input, log, store } from '../ui';
+import { $, $button, $input, log } from '../ui';
+import { store } from '../store';
 
 export interface SpeedControlsHost {
   /** Sends a command to the treadmill; false if there is no connection or it failed */

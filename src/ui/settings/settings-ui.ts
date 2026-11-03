@@ -7,7 +7,8 @@ import { confirmDialog } from '../components/dialogs';
 import { t } from '../../i18n/i18n';
 import { DEV_MODE_STORAGE_KEY, readDevMode } from '../../core/safety/dev-mode';
 import { QUIET_STORAGE_KEY, readQuiet } from '../../core/safety/quiet';
-import { $, $button, $input, store } from '../ui';
+import { $, $button, $input } from '../ui';
+import { store } from '../store';
 
 export type SettingsTab = 'general' | 'safety' | 'data' | 'info';
 const TABS: readonly SettingsTab[] = ['general', 'safety', 'data', 'info'];

@@ -5,7 +5,8 @@
 import { cmdSetInclination, type Features, type Range } from '../../core/protocol/ftms';
 import { clampIncline, inclineSupport, levelsFromCount, parseLevelCount, type InclineSupport } from '../../core/safety/incline';
 import { t } from '../../i18n/i18n';
-import { $, $input, log, store } from '../ui';
+import { $, $input, log } from '../ui';
+import { store } from '../store';
 
 const INCLINE_LEVELS_KEY = 'walkflow.inclineLevelCount';
 /** 'no' once a real treadmill reported no incline: then nothing about the incline is shown */

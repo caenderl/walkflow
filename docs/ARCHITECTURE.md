@@ -22,13 +22,14 @@ src/
   device/             the treadmill: Web Bluetooth adapter, simulator
   data/               IndexedDB storage (workouts, routes, runs)
   ui/                 everything that draws or listens
-    components/         reusable parts: dialogs, the "⋯" menu, the speed chart
+    components/         reusable parts: dialogs, the "⋯" menu, the speed chart, element builders (el, button, iconButton)
     settings/           settings dialog, header menus
     live/               the training view's live parts: session state, speed and limits (owns the governor), incline card,
                         stage (chosen workout or route, and starting it), experiment console
     routes/ workouts/ history/ settings/   one folder per feature view (history also has the export buttons)
     background.ts       wake lock, tab in the background, leaving the page
-    desktop.ts pwa.ts theme.ts views.ts i18n-dom.ts ui.ts   integration and helpers of the page
+    desktop.ts pwa.ts theme.ts views.ts i18n-dom.ts   integration of the page
+    ui.ts store.ts      DOM lookups, log and download; the storage wrapper that never throws
 electron/             main process and preload of the desktop app
 tests/                tests about the project itself
 ```
@@ -90,6 +91,4 @@ tests/                tests about the project itself
   is the treadmill session itself: connecting and disconnecting, the stop/pause/start commands, the live data handler, the
   banner and button drawing, and the keyboard shortcuts. They are the most safety-relevant part, so they move only with a
   test on the real treadmill in between.
-- `ui/ui.ts` mixes DOM helpers (`el`, `button`), the storage wrapper (`store`) and the log. The storage wrapper belongs in
-  its own module.
 - `ui/routes/route-ui.ts` and `ui/workouts/workout-ui.ts` are long; their editors can become components.

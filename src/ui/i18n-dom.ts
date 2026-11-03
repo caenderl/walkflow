@@ -8,7 +8,7 @@ import {
   detectLanguage, isLang, lang, LANG_STORAGE_KEY, LANGS, messagesFor, onLanguageChange, setLanguage, t,
   type Lang, type Messages, type Text,
 } from '../i18n/i18n';
-import { store } from './ui';
+import { store } from './store';
 
 /** Resolves "a.b.c" to a string in a message set, undefined if missing or not a string. */
 export function lookup(m: Messages, path: string): string | undefined {

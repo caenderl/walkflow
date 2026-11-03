@@ -21,7 +21,9 @@ import {
   ROUTE_SPEED_MAX, ROUTE_SPEED_MIN, routeSpeed, walkSeconds, walkSteps, type Route, type RouteStats,
 } from '../../core/routes/routes';
 import { getRunStore } from '../../data/run-store';
-import { $, $button, button, download, el, iconButton, store } from '../ui';
+import { $, $button, download } from '../ui';
+import { button, el, iconButton } from '../components/elements';
+import { store } from '../store';
 import { getWorkoutStore } from '../../data/workout-store';
 import { todayGoal, type DayGoal } from '../../core/training/workouts';
 
