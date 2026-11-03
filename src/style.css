@@ -326,7 +326,9 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
 .dlg-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
 .dlg-head h2 { margin:0 0 10px; }
 .chooser { list-style:none; padding:0; margin:8px 0; display:grid; gap:6px; max-height:50vh; overflow:auto; }
+.dlg .chooser { padding:0; }
 .chooser button { width:100%; text-align:left; }
+.dlg .link { display:block; margin:0 0 12px; padding:4px 0; background:none; border:0; color:var(--link); text-decoration:underline; font-size:.9rem; cursor:pointer; }
 /* Used by src/theme.ts to resolve a token to a colour (e.g. for the chart canvas) */
 .color-probe { position:absolute; width:0; height:0; overflow:hidden; pointer-events:none; }
 

@@ -106,6 +106,7 @@ The settings dialog and the training view only change what is shown, plus one se
 ## Desktop app
 
 - [ ] macOS: on the first “Connect”, macOS asks for Bluetooth. Does the chooser with the treadmill appear afterwards? Is the prompt text in the system language?
+- [ ] The chooser lists only devices with a name (the treadmill, e.g. `sPad500-…`); the nameless ones (“Unbekanntes oder nicht unterstütztes Gerät (…)”) are behind “Show N nameless devices”. Is the treadmill listed without opening that link? If it only shows up there, note what its entry says: the filter then needs another rule.
 - [ ] Second connect with “connect automatically” ticked: is the treadmill selected without the chooser? Log: `Automatically selected the last connected device`.
 - [ ] Global shortcut: another app in the foreground, Cmd+Shift+Space. Log: `Global stop shortcut`, `→ 08 01`. (Registering works on macOS without extra permissions; triggering it is still untested.)
 - [ ] Windows: chooser and, if the treadmill wants to pair, the PIN dialog.

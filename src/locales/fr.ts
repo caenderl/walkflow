@@ -566,6 +566,8 @@ export const fr: Messages = {
     chooserAuto: 'La prochaine fois, connecter automatiquement l’appareil choisi',
     unnamed: (id: string) => `(sans nom) ${id}`,
     lastConnected: ' · dernière connexion',
+    showUnnamed: (n: number) => `Afficher ${n} appareils sans nom`,
+    hideUnnamed: 'Masquer les appareils sans nom',
     pairTitle: 'Appairer l’appareil ?',
     pairConfirmPin: (pin: string) => `Ce code PIN correspond-il à celui de l’appareil ? ${pin}`,
     pairRequest: 'L’appareil souhaite être appairé.',

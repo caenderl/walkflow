@@ -1,12 +1,12 @@
 // Integration with the Electron app (only if window.walkflowDesktop exists, i.e. provided by the preload).
 
+import { type BtDevice, chooserList } from './bt-devices';
 import { choose } from './dialogs';
 import { lang, onLanguageChange, t } from './i18n';
 import { bindText } from './i18n-dom';
 import { currentTheme, onThemeChange } from './theme';
 import { $, $button, $input, store } from './ui';
 
-interface BtDevice { id: string; name: string }
 
 export interface WalkflowDesktop {
   platform: string;
@@ -79,6 +79,9 @@ function setupChooser(d: WalkflowDesktop, log: (m: string) => void) {
   let dlg: HTMLDialogElement | null = null;
   let list: HTMLUListElement | null = null;
   let autoBox: HTMLInputElement | null = null;
+  let more: HTMLButtonElement | null = null;
+  let devices: BtDevice[] = [];
+  let showAll = false;
 
   const finish = (id: string, name?: string) => {
     if (id) store.set(LAST_DEVICE_KEY, JSON.stringify({ id, name }));
@@ -86,13 +89,33 @@ function setupChooser(d: WalkflowDesktop, log: (m: string) => void) {
     dlg?.close();
     dlg?.remove();
     dlg = null;
+    showAll = false;
   };
 
   const last = (): BtDevice | null => {
     try { return JSON.parse(store.get(LAST_DEVICE_KEY) ?? 'null') as BtDevice | null; } catch { return null; }
   };
 
-  d.onBluetoothDevices(devices => {
+  const render = () => {
+    if (!list || !more) return;
+    const prev = last();
+    const { shown, hidden } = chooserList(devices, prev?.id ?? null, showAll);
+    list.replaceChildren(...shown.map(dev => {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = dev.name || t.desktop.unnamed(dev.id);
+      if (prev?.id === dev.id) b.textContent += t.desktop.lastConnected;
+      b.onclick = () => finish(dev.id, dev.name);
+      li.append(b);
+      return li;
+    }));
+    more.hidden = hidden === 0;
+    more.textContent = showAll ? t.desktop.hideUnnamed : t.desktop.showUnnamed(hidden);
+  };
+
+  d.onBluetoothDevices(found => {
+    devices = found;
     const prev = last();
     if (store.get(AUTO_SELECT_KEY) !== 'off' && prev) {
       const hit = devices.find(x => x.id === prev.id);
@@ -124,20 +147,15 @@ function setupChooser(d: WalkflowDesktop, log: (m: string) => void) {
       cancel.textContent = t.common.cancel;
       cancel.onclick = () => finish('');
       dlg.addEventListener('cancel', e => { e.preventDefault(); finish(''); });
-      dlg.append(h, p, list, label, cancel);
+      more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'link';
+      more.onclick = () => { showAll = !showAll; render(); };
+      dlg.append(h, p, list, more, label, cancel);
       document.body.append(dlg);
       dlg.showModal();
     }
-    list!.replaceChildren(...devices.map(dev => {
-      const li = document.createElement('li');
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = dev.name || t.desktop.unnamed(dev.id);
-      if (prev?.id === dev.id) b.textContent += t.desktop.lastConnected;
-      b.onclick = () => finish(dev.id, dev.name);
-      li.append(b);
-      return li;
-    }));
+    render();
   });
 }
 

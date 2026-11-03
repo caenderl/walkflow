@@ -564,6 +564,8 @@ export const en = {
     chooserAuto: 'Connect to the selected device automatically next time',
     unnamed: (id: string) => `(unnamed) ${id}`,
     lastConnected: ' · last connected',
+    showUnnamed: (n: number) => `Show ${n} nameless devices`,
+    hideUnnamed: 'Hide nameless devices',
     pairTitle: 'Pair device?',
     pairConfirmPin: (pin: string) => `Does this PIN match the one on the device? ${pin}`,
     pairRequest: 'The device wants to be paired.',

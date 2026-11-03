@@ -563,6 +563,8 @@ export const de: Messages = {
     chooserAuto: 'Nächstes Mal das gewählte Gerät automatisch verbinden',
     unnamed: (id: string) => `(ohne Namen) ${id}`,
     lastConnected: ' · zuletzt verbunden',
+    showUnnamed: (n: number) => `${n} Geräte ohne Namen anzeigen`,
+    hideUnnamed: 'Geräte ohne Namen ausblenden',
     pairTitle: 'Gerät koppeln?',
     pairConfirmPin: (pin: string) => `Stimmt diese PIN mit der am Gerät überein? ${pin}`,
     pairRequest: 'Das Gerät möchte gekoppelt werden.',
