@@ -86,6 +86,7 @@ npm run dev
 | `npm run typecheck` | TypeScript strict for app, config and Electron |
 | `npm run build` | Web build to `dist/` (with service worker) |
 | `npm run electron` | Build the desktop variant and start Electron |
+| `npm run electron:dev` | Start Electron in watch mode: changes in `src/` show at once (hot reload), a change in `electron/` restarts the app |
 | `npm run dist` | Installer for the current system in `release/` |
 | `npm run icons` | Regenerate the icons (`scripts/make-icons.mjs`) |
 | `node scripts/build-country-data.mjs <50m> <10m> <flags>` | Rebuild `src/data/countries.json` and `src/flags/` from Natural Earth and flag-icons (only to update the data) |

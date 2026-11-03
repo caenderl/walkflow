@@ -7,6 +7,7 @@ import {
 } from 'electron';
 import { detectLanguage, isLang, setLanguage, t } from '../src/i18n';
 import { buildCsp } from '../src/csp';
+import { devOrigin } from '../src/dev-url';
 import { mapOrigins, resolveMapStyles } from '../src/map-config';
 import { mimeFor } from '../src/mime';
 import { OPEN_MAX_BYTES, packagePaths } from '../src/open-files';
@@ -20,6 +21,11 @@ declare const __MAP_STYLE_DARK_RAW__: string;
 const SCHEME = 'app';
 const HOST = 'walkflow';
 const ORIGIN = `${SCHEME}://${HOST}`;
+/** npm run electron:dev: the Vite dev server is loaded instead of the bundled files (never in an installed app) */
+const DEV_ORIGIN = devOrigin(process.env.WALKFLOW_DEV_URL, app.isPackaged);
+// A development instance has its own data folder: it does not collide (single instance lock) with an app that is running, and
+// it does not touch its settings
+if (DEV_ORIGIN) app.setPath('userData', `${app.getPath('userData')}-dev`);
 const RENDERER_DIR = join(__dirname, '..', 'dist-desktop');
 /** Global stop shortcut, registered only while connected */
 const STOP_ACCELERATOR = 'CommandOrControl+Shift+Space';
@@ -198,7 +204,7 @@ function createWindow() {
 
   win.once('ready-to-show', () => win?.show());
   win.on('closed', () => { win = null; });
-  void win.loadURL(`${ORIGIN}/index.html`);
+  void win.loadURL(DEV_ORIGIN ? `${DEV_ORIGIN}/` : `${ORIGIN}/index.html`);
 }
 
 // ---------- IPC ----------
@@ -271,7 +277,7 @@ ipcMain.handle('app:open-external', (e, url: unknown) => {
 
 // ---------- Hardening ----------
 app.on('web-contents-created', (_e, contents) => {
-  const block = (e: Electron.Event, url: string) => { if (!url.startsWith(`${ORIGIN}/`)) e.preventDefault(); };
+  const block = (e: Electron.Event, url: string) => { if (!url.startsWith(`${ORIGIN}/`) && !(DEV_ORIGIN && url.startsWith(`${DEV_ORIGIN}/`))) e.preventDefault(); };
   contents.on('will-navigate', block);
   contents.on('will-redirect', block);
   contents.on('will-attach-webview', e => e.preventDefault());
@@ -300,7 +306,8 @@ if (!app.requestSingleInstanceLock()) {
     });
     // No requests to remote hosts from the renderer, except the map servers of this build (only used once the map is on)
     session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
-      const ok = [`${ORIGIN}/`, 'devtools://', 'data:', 'blob:', ...MAP_ORIGINS.map(o => `${o}/`)].some(p => details.url.startsWith(p));
+      const dev = DEV_ORIGIN ? [`${DEV_ORIGIN}/`, `${DEV_ORIGIN.replace('http:', 'ws:')}/`] : [];
+      const ok = [`${ORIGIN}/`, 'devtools://', 'data:', 'blob:', ...dev, ...MAP_ORIGINS.map(o => `${o}/`)].some(p => details.url.startsWith(p));
       if (!ok) console.log(`Blocked: ${details.url}`);
       callback({ cancel: !ok });
     });
