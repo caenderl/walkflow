@@ -10,18 +10,19 @@ import { overflowMenu } from '../components/overflow-menu';
 import { serializeGpx } from '../../core/routes/gpx';
 import { packageFileName, packageFromRoute, serializePackage } from '../../core/routes/route-package';
 import { lang, onLanguageChange, t } from '../../i18n/i18n';
-import { descriptionAfterEdit, routeDescription, routeName } from '../../core/routes/route-examples';
+import { routeDescription, routeName } from '../../core/routes/route-examples';
+import { editedRoute } from '../../core/routes/route-edit';
 import { safeFileName } from '../../core/routes/route-files';
 import { createProfile, svgEl } from './route-profile';
 import { backfillCountries, seedExamples } from './library-upkeep';
 import { setupRouteImport } from './route-import';
 import { createMapSlot, type MapSlot } from './route-map';
 import { isDark, onThemeChange } from '../theme';
-import { fromSpeed, toSpeed } from '../../i18n/units';
+import { toSpeed } from '../../i18n/units';
 import { fmtDistance, type ProgramStep } from '../../core/training/program';
 import { getRouteStore, type RouteStore } from '../../data/route-store';
 import {
-  analyzeRoute, DistanceTracker, gradeAhead, minutesLeft, newRouteId, pointAt, readRoute, ROUTE_DESCRIPTION_MAX, ROUTE_NAME_MAX,
+  analyzeRoute, DistanceTracker, gradeAhead, minutesLeft, pointAt, readRoute, ROUTE_DESCRIPTION_MAX,
   ROUTE_SPEED_MAX, ROUTE_SPEED_MIN, routeSpeed, walkSeconds, walkSteps, type Route, type RouteStats,
 } from '../../core/routes/routes';
 import { getRunStore } from '../../data/run-store';
@@ -194,12 +195,12 @@ export function setupRoutes(host: RoutesHost) {
   async function saveEditor(id: string) {
     const route = routes.find(r => r.id === id);
     if (!editor || editor.id !== id || !route) return;
-    // An empty field means "no speed of its own": the app's default is used
-    const raw = editor.speed.value.trim().replace(',', '.');
-    const kmh = raw ? Math.round(fromSpeed(Number(raw)) * 100) / 100 : undefined;
-    if (kmh !== undefined && !(kmh >= ROUTE_SPEED_MIN && kmh <= ROUTE_SPEED_MAX)) { editor.status.textContent = t.routes.speedInvalid(ROUTE_SPEED_MIN, ROUTE_SPEED_MAX); return; }
-    const next = readRoute({ ...route, defaultSpeed: kmh, description: undefined, example: undefined, texts: undefined, ...descriptionAfterEdit(route, editor.text.value, lang) });
-    if (!next) return;
+    const result = editedRoute(route, { speed: editor.speed.value, description: editor.text.value }, lang);
+    if (!result.ok) {
+      if (result.reason === 'speed') editor.status.textContent = t.routes.speedInvalid(ROUTE_SPEED_MIN, ROUTE_SPEED_MAX);
+      return;
+    }
+    const next = result.route;
     try { await (await ready).put(next); } catch (e) { editor.status.textContent = t.routes.failed(String(e)); return; }
     editor = null;
     await reload();
