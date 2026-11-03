@@ -36,9 +36,8 @@ could not: a package can be 2 MB, the relays allow 64–128 KB per message).
    before it is saved. Nothing is ever saved on its own.
 5. **Present while it is on.** Because what you take is passed on, the device has to be in the room for that to mean anything:
    it joins when Community is switched on and the app is open, and leaves when you switch it off or close the app. It does
-   not need the Community view to be open. The switch says so, and the number of connections is limited. (Open to decide:
-   the alternative is to be in the room only while the Community view is open, which exposes you less but means almost
-   nothing is passed on.)
+   not need the Community view to be open. The switch says so, and the number of connections is limited. (Decided: the
+   alternative, being in the room only while the view is open, would expose you less but pass on almost nothing.)
 
 ### Offering
 
