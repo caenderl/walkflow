@@ -91,4 +91,7 @@ tests/                tests about the project itself
   is the treadmill session itself: connecting and disconnecting, the stop/pause/start commands, the live data handler, the
   banner and button drawing, and the keyboard shortcuts. They are the most safety-relevant part, so they move only with a
   test on the real treadmill in between.
-- `ui/routes/route-ui.ts` and `ui/workouts/workout-ui.ts` are long; their editors can become components.
+- `ui/routes/route-ui.ts` (about 430 lines) still holds the library list, the detail card with its editor and the card in the
+  training view; `ui/workouts/workout-ui.ts` (about 270 lines) the library and the editor. The week plan, the step row, the
+  elevation profile, the import and the library upkeep are already their own modules. The route detail card and editor are
+  the next candidates.
