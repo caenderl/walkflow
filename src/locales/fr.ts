@@ -138,8 +138,6 @@ export const fr: Messages = {
     startFailed: 'Échec du démarrage, programme terminé',
     aborted: 'Programme annulé',
     done: 'Terminé. Arrêt du tapis.',
-    step: (i: number, count: number, kmh: number, remaining: string) => `Étape ${i}/${count} : ${u.speed(kmh, 1)}, encore ${remaining}`,
-    stepDistance: (i: number, count: number, kmh: number, left: string) => `Étape ${i}/${count} : ${u.speed(kmh, 1)}, encore ${left}`,
     distanceStuck: 'La distance n’avance pas, programme terminé',
     distanceStuckLog: (step: number) => `⚠ Étape ${step} : la distance du tapis n’avance pas comme prévu, fin du programme (le tapis garde sa vitesse)`,
     skipped: (steps: number[]) =>
@@ -164,10 +162,12 @@ export const fr: Messages = {
     freeHint: 'Entraînement libre : vous réglez la vitesse vous-même. Choisissez une séance type ou un parcours sous Séances types ou Parcours ; Start le lance ensuite.',
     clear: 'S’entraîner librement',
   },
+  banner: {
+    start: 'Préparez-vous, le tapis démarre dans un instant …',
+    stopping: 'Le tapis s’arrête …',
+    stopped: 'Le tapis est à l’arrêt',
+  },
   interval: {
-    stepOf: (i: number, n: number) => `Étape ${i} sur ${n}`,
-    starting: 'Le tapis démarre…',
-    countdown: 'Préparez-vous, le tapis va bientôt se mettre en marche',
     get targetUnit() { return `${u.speedUnit()} visés`; },
     total: 'au total',
     timeLeft: 'restant',

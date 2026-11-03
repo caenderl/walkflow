@@ -162,8 +162,6 @@ button.big { min-height:52px; font-size:1.05rem; }
 .side { position:sticky; top:16px; display:grid; gap:16px; }
 
 /* Not connected: one line pointing to the connection menu */
-.offline-hint { margin:0; }
-.connected .offline-hint { display:none; }
 .linkish { display:inline; min-height:0; padding:0; border:0; background:none; color:var(--link); font:inherit; text-decoration:underline; cursor:pointer; }
 .linkish:hover:not(:disabled) { background:none; }
 
@@ -192,10 +190,23 @@ html:not([data-stop="controls"]) .side { display:none; }
 html:not([data-stop="controls"]) .layout { grid-template-columns:minmax(0, 1fr); }
 
 /* Live values: large enough to read from the treadmill */
-.live { display:grid; gap:20px; }
+.live { display:grid; gap:20px; position:relative; }
+/* The banner over the live figures (src/belt-banner.ts); its opacity is set by the script */
+.belt-banner { position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:16px; border-radius:inherit; text-align:center; pointer-events:none; }
+.belt-banner[hidden] { display:none; }
+.bb-text { font-size:clamp(1.5rem, 3.4vw, 2.6rem); font-weight:650; line-height:1.15; letter-spacing:-.01em; }
+.bb-start { background:var(--primary); color:var(--primary-fg); }
+.bb-stop { background:var(--stop); color:var(--stop-fg); }
+.bb-offline { background:color-mix(in srgb, var(--card) 88%, transparent); color:var(--fg); backdrop-filter:blur(2px); pointer-events:auto; }
+.bb-offline { flex-direction:row; flex-wrap:wrap; gap:4px 10px; }
+.bb-offline .bb-text { font-size:1.25rem; font-weight:600; }
+.bb-connect { display:none; font-size:1.25rem; font-weight:600; }
+.bb-offline .bb-connect { display:inline; }
 .hero { display:grid; grid-template-columns:auto minmax(0, 1fr); gap:20px 40px; align-items:center; }
-.hero-speed .v { font-size:clamp(4.5rem, 7vw, 8rem); font-weight:650; line-height:1; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+.hero-speed .v { font-size:clamp(3.5rem, 5.5vw, 6rem); font-weight:650; line-height:1; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
 .hero-speed .l { color:var(--mute); margin-top:4px; }
+.hero-speed .hint { margin:10px 0 0; max-width:22em; }
+.status-line:empty { display:none; }
 html:not(.connected) .hero .v { color:var(--mute); font-weight:300; }
 .hero-stats { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:18px; }
 .stat .v { font-size:clamp(1.6rem, 2.2vw, 2.3rem); font-weight:600; letter-spacing:-.01em; font-variant-numeric:tabular-nums; }
@@ -422,8 +433,6 @@ html:not(.i18n-ready) body { visibility:hidden; animation:i18n-reveal 0s 1.5s fo
 .stage[data-kind="route"] > #stageInfo { order:2; }
 .stage[data-kind="route"] > #routeLive { order:3; }
 .interval { display:grid; gap:16px; }
-.iv-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
-.iv-head h2 { margin:0; font-size:1.1rem; color:var(--fg); text-transform:none; letter-spacing:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .iv-now { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; }
 .iv-right { text-align:right; }
 /* Last 10 seconds of a timed step: red and blinking (steady red when motion is reduced) */

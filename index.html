@@ -108,8 +108,19 @@
       <div class="notice" id="safetyNotice"><svg class="icon" aria-hidden="true"><use href="#i-warning"/></svg><span data-i18n-rich="notice">If the connection drops, this app cannot stop the belt. Then you can only stop it on the treadmill: stop button or safety key. Keep both within reach.</span></div>
 
       <section class="card live">
+        <!-- Over the figures: green while the belt gets ready to start (fading out), red while it stops (getting stronger),
+             grey without a connection (src/belt-banner.ts, set in src/main.ts) -->
+        <div class="belt-banner bb-offline" id="beltBanner" role="status">
+          <div class="bb-text" id="bbText"></div>
+          <button type="button" class="linkish bb-connect" id="openConn" data-i18n="connection.connectNow">Connect now</button>
+        </div>
         <div class="hero">
-          <div class="hero-speed"><div class="v" id="vSpeed">–</div><div class="l" data-i18n="stats.speed">km/h (actual)</div></div>
+          <div class="hero-speed">
+            <div class="v" id="vSpeed">–</div>
+            <div class="l" data-i18n="stats.speed">km/h (actual)</div>
+            <!-- Status: what the program does now (belt starting, done, cancelled …), and while not connected how to connect -->
+            <p class="hint status-line" id="progStatus" role="status"></p>
+          </div>
           <div class="hero-stats">
             <div class="stat"><div class="v" id="vTime">–</div><div class="l" data-i18n="stats.time">Time</div></div>
             <div class="stat"><div class="v" id="vDist">–</div><div class="l" data-i18n="stats.dist">km</div></div>
@@ -118,7 +129,6 @@
             <div class="stat"><div class="v" id="vHr">–</div><div class="l" data-i18n="stats.heartRate">Heart rate (bpm)</div></div>
           </div>
         </div>
-        <p class="hint offline-hint"><span data-i18n="connection.offlineHint">Not connected.</span> <button type="button" class="linkish" id="openConn" data-i18n="connection.connectNow">Connect now</button></p>
       </section>
 
       <!-- The main element of the training view: the map when a route is chosen and the map is on, the steps while a
@@ -143,10 +153,8 @@
           <div class="hint" id="shDesc"></div>
           <div class="hint" id="routeEstimate"></div>
         </div>
-        <div class="hint" id="progStatus"></div>
         <div id="routeMap" class="route-map stage-map" role="region" hidden></div>
         <div id="stageInterval" class="interval" role="group" aria-label="Workout progress" data-i18n-aria="interval.label" hidden>
-          <div class="iv-head"><span class="hint" id="ivStep"></span></div>
           <div class="iv-now">
             <div><div class="iv-v" id="ivSpeed">–</div><div class="l" data-i18n="interval.targetUnit">km/h target</div></div>
             <div class="iv-right"><div class="iv-v" id="ivLeft">–</div><div class="l" id="ivLeftLabel"></div></div>

@@ -100,8 +100,13 @@ export interface ProgramHost {
   currentTarget(): number | null;
   /** Total distance of the treadmill in m, undefined as long as none has been reported */
   distance(): number | undefined;
-  /** Status line. A function, so the app can re-render it after a language change. */
-  status(text: Text): void;
+  /**
+   * Status message (a function, so the app can re-render it after a language change), or null while a step runs: there
+   * is no message then, the workout panel shows the step, its speed and what is left. Also called at every tick, so the
+   * app redraws. `attention`: the message must stay visible (the program ended in a way the person has to know about);
+   * the others are shown by the banner and the workout panel anyway.
+   */
+  status(text: Text | null, attention?: boolean): void;
   log?(msg: string): void;
 }
 
@@ -182,11 +187,11 @@ export class ProgramRunner {
     return { ...base, fraction: step.sec > 0 ? Math.min(1, 1 - remainingMs / (step.sec * 1000)) : 1, left: { sec: Math.ceil(remainingMs / 1000) } };
   }
 
-  abort(msg?: Text) {
+  abort(msg?: Text, attention = false) {
     const st = this.cur;
     if (!st) return;
     this.end(st);
-    this.host.status(msg ?? (() => t.program.aborted));
+    this.host.status(msg ?? (() => t.program.aborted), attention);
   }
 
   run(steps: readonly ProgramStep[]): Promise<'finished' | 'aborted'> {
@@ -200,7 +205,7 @@ export class ProgramRunner {
       this.host.status(() => t.program.starting);
       void this.host.start().catch(() => false).then(ok => {
         if (this.cur !== st) return;
-        if (!ok) { this.abort(() => t.program.startFailed); return; }
+        if (!ok) { this.abort(() => t.program.startFailed, true); return; }
         st.t0 = this.now() + this.countdownMs;
         st.phase = 'countdown';
         this.tick();
@@ -253,22 +258,18 @@ export class ProgramRunner {
         st.limitMs = (step.meters / (kmh / 3.6)) * 2000 + 30_000;
       }
     }
-    const shown = this.host.currentTarget() ?? step.speed;
-    const count = st.steps.length;
     if (step.meters !== undefined) {
       if (nowMs - st.stepStart > st.limitMs) {
         this.host.log?.(t.program.distanceStuckLog(i + 1));
-        this.abort(() => t.program.distanceStuck);
+        this.abort(() => t.program.distanceStuck, true);
         return;
       }
-      const left = step.meters - st.covered;
-      this.host.status(() => t.program.stepDistance(i + 1, count, shown, fmtDistance(left)));
+      this.host.status(null);
       st.timer = setTimeout(() => this.tick(), 1000);
       return;
     }
     const remainingMs = start + step.sec * 1000 - nowMs;
-    const remaining = fmtTime(Math.ceil(remainingMs / 1000));
-    this.host.status(() => t.program.step(i + 1, count, shown, remaining));
+    this.host.status(null);
     st.timer = setTimeout(() => this.tick(), remainingMs % 1000 || 1000);
   }
 

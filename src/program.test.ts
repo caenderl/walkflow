@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setLanguage } from './i18n';
+import { setLanguage, type Text } from './i18n';
 import { setUnits } from './units';
 import { fmtLength, fmtTime, formatProgram, parseProgram, programLength, ProgramRunner, totalSeconds, type ProgramHost } from './program';
 
@@ -126,14 +126,15 @@ function setup(opts: { startOk?: boolean } = {}) {
   let dist: number | undefined;
   const calls: string[] = [];
   const logs: string[] = [];
-  const statuses: string[] = [];
+  const statuses: (string | null)[] = [];
+  const attention_: boolean[] = [];
   const host: ProgramHost = {
     start: vi.fn(async () => { calls.push('start'); return opts.startOk ?? true; }),
     stop: vi.fn(async () => { calls.push('stop'); }),
     setTarget: vi.fn((kmh: number) => { target = kmh; calls.push(`speed ${kmh}`); }),
     currentTarget: () => target,
     distance: () => dist,
-    status: vi.fn(text => { statuses.push(text()); }),
+    status: vi.fn((text: Text | null, attention?: boolean) => { statuses.push(text ? text() : null); attention_.push(attention === true); }),
     log: m => logs.push(m),
   };
   const runner = new ProgramRunner(host, { now: () => Date.now() + offset });
@@ -141,8 +142,9 @@ function setup(opts: { startOk?: boolean } = {}) {
   /** The clock jumps without timers firing (throttled tab). */
   const jump = (ms: number) => { offset += ms; };
   const lastStatus = () => statuses.at(-1);
+  const lastNeedsAttention = () => attention_.at(-1);
   const setDist = (m: number | undefined) => { dist = m; };
-  return { host, runner, calls, logs, statuses, lastStatus, advance, jump, setDist };
+  return { host, runner, calls, logs, statuses, lastStatus, lastNeedsAttention, advance, jump, setDist };
 }
 
 describe('ProgramRunner', () => {
@@ -167,27 +169,31 @@ describe('ProgramRunner', () => {
     expect(runner.active).toBe(false);
   });
 
-  it('shows the remaining time per step', async () => {
-    const { runner, lastStatus, advance } = setup();
+  it('tracks the remaining time per step, and says nothing while a step runs: the workout panel shows it', async () => {
+    const { runner, lastStatus, lastNeedsAttention, advance } = setup();
     void runner.run([{ sec: 2, speed: 2 }]);
     await advance(0);
     expect(lastStatus()).toBe('Belt starting…');
+    expect(lastNeedsAttention()).toBe(false);
     await advance(4500);
-    expect(lastStatus()).toBe('Step 1/1: 2.0 km/h, 0:02 left');
+    expect(lastStatus()).toBeNull();
+    expect(runner.progress()).toMatchObject({ index: 0, left: { sec: 2 } });
     await advance(1000);
-    expect(lastStatus()).toBe('Step 1/1: 2.0 km/h, 0:01 left');
+    expect(lastStatus()).toBeNull();
+    expect(runner.progress()).toMatchObject({ index: 0, left: { sec: 1 } });
     await advance(1000);
     expect(lastStatus()).toBe('Done. Stopping the belt.');
+    expect(lastNeedsAttention()).toBe(false);
   });
 
   it('status texts follow a language change', async () => {
     const { host, runner, advance } = setup();
     void runner.run([{ sec: 2, speed: 2.5 }]);
-    await advance(4500);
-    const text = vi.mocked(host.status).mock.lastCall![0];
-    expect(text()).toBe('Step 1/1: 2.5 km/h, 0:02 left');
+    await advance(0);
+    const text = vi.mocked(host.status).mock.lastCall![0]!;
+    expect(text()).toBe('Belt starting…');
     setLanguage('de');
-    expect(text()).toBe('Schritt 1/1: 2,5 km/h, noch 0:02');
+    expect(text()).toBe('Band startet…');
     setLanguage('en');
   });
 
@@ -227,11 +233,12 @@ describe('ProgramRunner', () => {
   });
 
   it('start failed → program ends without a speed command', async () => {
-    const { runner, calls, lastStatus, advance } = setup({ startOk: false });
+    const { runner, calls, lastStatus, lastNeedsAttention, advance } = setup({ startOk: false });
     const done = runner.run([{ sec: 10, speed: 3 }]);
     await advance(20_000);
     expect(calls).toEqual(['start']);
     expect(lastStatus()).toBe('Start failed, program ended');
+    expect(lastNeedsAttention()).toBe(true);
     await expect(done).resolves.toBe('aborted');
   });
 
@@ -355,13 +362,14 @@ describe('ProgramRunner: distance steps', () => {
     expect(calls).toEqual(['start', 'speed 3', 'speed 2']);
   });
 
-  it('shows the remaining distance', async () => {
+  it('tracks the remaining distance', async () => {
     const { runner, lastStatus, setDist } = await started([{ meters: 400, speed: 3 }, { meters: 2000, speed: 3 }]);
-    expect(lastStatus()).toBe('Step 1/2: 3.0 km/h, 400 m left');
+    expect(runner.progress()).toMatchObject({ index: 0, left: { meters: 400 } });
     setDist(5150); runner.tick();
-    expect(lastStatus()).toBe('Step 1/2: 3.0 km/h, 250 m left');
+    expect(runner.progress()).toMatchObject({ index: 0, left: { meters: 250 } });
     setDist(5400); runner.tick();
-    expect(lastStatus()).toBe('Step 2/2: 3.0 km/h, 2.00 km left');
+    expect(runner.progress()).toMatchObject({ index: 1, left: { meters: 2000 } });
+    expect(lastStatus()).toBeNull();
   });
 
   it('counts from the reading at the start of the step (the belt counter does not start at 0)', async () => {
@@ -382,8 +390,8 @@ describe('ProgramRunner: distance steps', () => {
   });
 
   it('waits for the first reading when none has arrived yet and counts from there', async () => {
-    const { runner, calls, setDist, lastStatus } = await started([{ meters: 100, speed: 3 }, { sec: 5, speed: 2 }], null);
-    expect(lastStatus()).toBe('Step 1/2: 3.0 km/h, 100 m left');
+    const { runner, calls, setDist } = await started([{ meters: 100, speed: 3 }, { sec: 5, speed: 2 }], null);
+    expect(runner.progress()).toMatchObject({ index: 0, left: { meters: 100 } });
     setDist(700); runner.tick();
     setDist(790); runner.tick();
     expect(calls).toEqual(['start', 'speed 3']);
@@ -392,13 +400,14 @@ describe('ProgramRunner: distance steps', () => {
   });
 
   it('distance never advances: ends the program after twice the expected time plus 30 s, without touching the belt', async () => {
-    const { calls, logs, lastStatus, advance, done } = await started([{ meters: 100, speed: 3 }, { sec: 5, speed: 2 }]);
+    const { calls, logs, lastStatus, lastNeedsAttention, advance, done } = await started([{ meters: 100, speed: 3 }, { sec: 5, speed: 2 }]);
     // 100 m at 3 km/h = 120 s → limit 270 s
     await advance(269_000);
     expect(calls).toEqual(['start', 'speed 3']);
     await advance(2000);
     expect(calls).toEqual(['start', 'speed 3']);
     expect(lastStatus()).toBe('Distance not advancing, program ended');
+    expect(lastNeedsAttention()).toBe(true);
     expect(logs.join('\n')).toMatch(/Step 1/);
     await expect(done).resolves.toBe('aborted');
   });

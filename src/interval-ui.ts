@@ -39,7 +39,6 @@ export function setupInterval() {
     /** A chosen workout that has not started: its steps and total length */
     renderPreview(steps: readonly ProgramStep[]) {
       // The name and the summary are in the stage's heading already
-      $('ivStep').textContent = '';
       $('ivSpeed').textContent = steps[0] ? t.u.speedValue(steps[0].speed, 1) : '–';
       $('ivLeft').textContent = fmtLength(programLength(steps));
       $('ivLeftLabel').textContent = t.interval.total;
@@ -53,9 +52,7 @@ export function setupInterval() {
      * @param target the speed the belt is asked for now (capped to the limit), null if there is none yet
      */
     render(p: ProgramProgress, target: number | null) {
-      const n = p.steps.length;
       const step = p.index >= 0 ? p.steps[p.index] : undefined;
-      $('ivStep').textContent = !step ? (p.phase === 'starting' ? t.interval.starting : t.interval.countdown) : t.interval.stepOf(p.index + 1, n);
       $('ivSpeed').textContent = step ? t.u.speedValue(target ?? step.speed, 1) : '–';
       const left = p.left;
       $('ivLeft').textContent = !left ? '–' : 'sec' in left ? fmtTime(left.sec) : fmtDistance(left.meters);

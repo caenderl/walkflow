@@ -27,7 +27,7 @@ If the treadmill sends different status bytes or none at all, please note the he
 - [ ] **Incline levels.** Settings → General → Incline levels: set the slider to the number of levels of the treadmill (for the sPad 500: 5). The card then shows one numbered button per level instead of the slider; the levels are spread evenly from the lowest to the highest incline in `Inclination range` (both ends included), the button’s tooltip says the percent. Press each: `→ 03 …` in the log with that value (percent × 10, little endian), and the treadmill goes to that level? Which percent does each level of the treadmill really have? (That decides whether a percent per level has to become configurable.) With the slider at 0 the card shows the slider again.
 - [ ] **Heart rate.** Does the log say `Heart rate service subscribed`? Do values come in?
 - [ ] **Countdown.** How long does the treadmill count down after start? The program waits 4.5 s before setting the first speed.
-- [ ] **Program transitions.** Program `0.5 2` / `0.5 3` / `0.5 2`. Changes at the right time? Cancel a program with the stop button on the device: does it end (status line or `Belt stopped, program ended`)?
+- [ ] **Program transitions.** Program `0.5 2` / `0.5 3` / `0.5 2`. Changes at the right time? Cancel a program with the stop button on the device: does it end (status under the speed or `Belt stopped, program ended`)?
 - [ ] **Reconnecting.** Disconnect, connect again: `← Request Control: OK` and live values again?
 - [ ] **Connection loss** (the dangerous assumption). At 2 km/h, standing on the side rails, turn off Bluetooth on the computer. Does the belt keep running, does it stop, after how long? Record the result here and in the project description. The app shows the warning in any case.
 
@@ -46,7 +46,7 @@ Saving runs only reads the live values the app already receives; it sends nothin
 
 Time steps work as before. A distance step ends when the treadmill’s own distance counter has advanced by that amount since the step began; the app sends nothing new to the belt for it (the same speed commands as for a time step). Speed limit, ramp and Stop are unchanged.
 
-- [ ] Make a workout with one distance step of 50 m at about 3 km/h (**Workouts → New workout**, unit `m`), select it, start it from **Training**. Watch the status line: the remaining metres should count down roughly once per second.
+- [ ] Make a workout with one distance step of 50 m at about 3 km/h (**Workouts → New workout**, unit `m`), select it, start it from **Training**. Watch the workout panel (“to go”): the remaining metres should count down roughly once per second.
 - [ ] When it reaches 0, the belt should stop. Compare the distance on the treadmill’s display with 50 m: how far off is it (at 3 km/h one metre is about 1.2 s)?
 - [ ] Log while it runs: is there a speed command at the start of the step and no further ones? If `Distance not advancing` shows up while the belt is moving, please note the text and whether the treadmill’s distance display moved.
 - [ ] Mixed workout: a time step, then a distance step, then a time step. Does the second time step really last its full time after the distance step ended?
@@ -95,6 +95,7 @@ The settings dialog and the training view only change what is shown, plus one se
 - [ ] Run a workout with several steps: the main element shows the current step (target speed, time or distance left), the strip of all steps and the next steps. Compare the step changes with the treadmill’s display and with the log (speed commands at the step boundaries).
 - [ ] Choose a route and switch the map on: the map is the main element of the training view, also while the route is walked. During a workout with steps the steps are shown instead.
 
+- [ ] **Banner over the figures** (display only, nothing is sent). Press **Start** (confirm): the box with the speed turns green with “Mach dich bereit, das Band startet gleich …” and fades out over about 4.5 s, earlier if the belt already moves. Is it gone about when the belt starts to move? Press **Stop** (button, Space or Esc, also the stop on the device and the safety key) while the belt runs: the box turns red (“Band stoppt …”), the stronger the slower the belt is, “Band steht” when it stands, and after 3 s the normal display. Stop must work exactly as fast as before. Without a connection (also after pulling the Bluetooth) the box has a grey overlay “Nicht verbunden. Jetzt verbinden”, and the link opens the connection menu.
 ### Units (km/h or mph)
 
 **Settings → General → Units** only changes what is shown and typed. Everything stored, sent and checked stays km/h and metres: the limit of 6 km/h, the step of 0.5 km/h per command, the lines in the log of the experiment console. Please check with the belt running in **Imperial**:

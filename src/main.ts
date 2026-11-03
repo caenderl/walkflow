@@ -13,7 +13,7 @@ import {
 import { setupHistory } from './history';
 import { lang, onLanguageChange, retranslate, t, type Text } from './i18n';
 import { routeDescription, routeName } from './route-examples';
-import { bindText, initLanguage } from './i18n-dom';
+import { bindText, clearText, initLanguage } from './i18n-dom';
 import { setupMenu, setupPrefs } from './menus';
 import { setupInterval } from './interval-ui';
 import { fmtDistance, fmtLength, fmtTime, ProgramRunner, programLength, type ProgramStep } from './program';
@@ -29,6 +29,7 @@ import { ACTIVE_STORAGE_KEY, readActive, type Active } from './selection';
 import { setupSettings } from './settings-ui';
 import { SimulatorAdapter } from './sim';
 import { initTheme, onThemeChange } from './theme';
+import { BeltBanner } from './belt-banner';
 import { clampIncline, inclineSupport, levelsFromCount, parseLevelCount, type InclineSupport } from './incline';
 import { $, $button, $input, download, log, store } from './ui';
 import { fromSpeed, onUnitsChange, parseUnits, setUnits, speedFromInput, speedPresets, speedStep, toDist, toSpeed, UNITS_STORAGE_KEY } from './units';
@@ -58,6 +59,8 @@ let limit = 6;
 let wakeLock: WakeLockSentinel | null = null;
 /** Started by the app or according to Machine Status, and not stopped since */
 let beltStarted = false;
+/** The banner over the live figures: ready to start, stopping, not connected. Display only. */
+const banner = new BeltBanner();
 let lastMeasured: number | undefined;
 let controlLost = false;
 let hiddenSince: number | null = null;
@@ -120,7 +123,8 @@ const runner = new ProgramRunner({
   setTarget: kmh => { governor.request(kmh); standstill.arm(); },
   currentTarget: () => governor.target,
   distance: () => cur.dist,
-  status: text => { bindText($('progStatus'), text); renderStage(); },
+  // Only what the person has to know stays on screen; start, stop and progress are shown by the banner and the workout panel
+  status: (text, attention) => { if (text && attention) bindText($('progStatus'), text); else clearText($('progStatus')); renderStage(); },
   log,
 });
 
@@ -146,11 +150,12 @@ function onTreadmillData(r: TreadmillData) {
   renderStats();
 
   if (r.speed !== undefined) {
+    banner.speed(r.speed, now());
     lastMeasured = r.speed;
     governor.noteMeasured(r.speed);
     if (standstill.feed(r.speed, now()) && runner.active) {
       log(t.program.standstillLog);
-      runner.abort(() => t.program.standstill);
+      runner.abort(() => t.program.standstill, true);
       governor.reset();
     }
   }
@@ -166,6 +171,20 @@ function onTreadmillData(r: TreadmillData) {
     redrawChart();
     recorder.feed(sample, runSource);
   }
+}
+
+
+/** Follows the banner state: kind, colour, text and how strong it is. Display only: nothing here may get in the way of a stop. */
+function renderBanner() {
+  try {
+    const { kind, opacity } = banner.state(now());
+    const el = $('beltBanner');
+    el.hidden = kind === 'none';
+    if (kind === 'none') return;
+    el.className = `belt-banner ${kind === 'start' ? 'bb-start' : kind === 'offline' ? 'bb-offline' : 'bb-stop'}`;
+    el.style.opacity = kind === 'offline' ? '' : String(opacity);
+    $('bbText').textContent = kind === 'start' ? t.banner.start : kind === 'stopping' ? t.banner.stopping : kind === 'stopped' ? t.banner.stopped : t.connection.offlineHint;
+  } catch { /* display only */ }
 }
 
 function renderStats() {
@@ -192,6 +211,7 @@ function onMachineStatus(dv: DataView) {
     case 'stopped':
     case 'paused':
     case 'safety-key':
+      banner.stopRequested(now());
       beltStarted = false;
       if (runner.active) runner.abort(() => t.program.endedBy(describeMachineStatus(e)));
       governor.reset();
@@ -294,6 +314,7 @@ function setIncline(requested: number) {
 
 // ---------- Start / stop / program ----------
 async function doStop(reason: Text = () => t.stop.stopped): Promise<boolean> {
+  banner.stopRequested(now());
   runner.abort(reason);
   governor.reset();
   standstill.disarm();
@@ -311,6 +332,7 @@ async function doStop(reason: Text = () => t.stop.stopped): Promise<boolean> {
 }
 
 async function doPause(reason: Text = () => t.stop.paused): Promise<boolean> {
+  banner.stopRequested(now());
   runner.abort(reason);
   governor.reset();
   standstill.disarm();
@@ -329,7 +351,7 @@ async function doStart(): Promise<boolean> {
   const a = await c.send(cmdRequestControl());
   if (a) controlLost = false;
   const b = await c.send(cmdStart());
-  if (b) beltStarted = true;
+  if (b) { beltStarted = true; banner.startRequested(now()); }
   return a && b;
 }
 
@@ -600,6 +622,8 @@ function waitUntil(cond: () => boolean, timeoutMs: number): Promise<boolean> {
 function setUi(isConnected: boolean) {
   // Layout switch (style.css): connection menu content, fixed control dock on narrow screens, stop bar
   uiConnected = isConnected;
+  banner.setConnected(isConnected);
+  renderBanner();
   document.documentElement.classList.toggle('connected', isConnected);
   applyStopPlacement();
   renderSettingsLock();
@@ -910,6 +934,7 @@ renderStats();
 applyLimits();
 redrawChart();
 setInterval(() => { redrawChart(); recorder.tick(Date.now()); }, 1000);
+setInterval(renderBanner, 100);
 new ResizeObserver(redrawChart).observe($('chart'));
 
 const env = { ua: navigator.userAgent, hasApi: !!navigator.bluetooth, secure: isSecureContext, touchPoints: navigator.maxTouchPoints };

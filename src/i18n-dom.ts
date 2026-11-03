@@ -52,6 +52,12 @@ export function bindText(el: HTMLElement, text: Text) {
   el.textContent = text();
 }
 
+/** Empties an element that was set with bindText */
+export function clearText(el: HTMLElement) {
+  bound.delete(el);
+  el.textContent = '';
+}
+
 function apply(attr: string, set: (el: HTMLElement, v: string) => void) {
   for (const el of document.querySelectorAll<HTMLElement>(`[${attr}]`)) {
     const path = el.getAttribute(attr) ?? '';
