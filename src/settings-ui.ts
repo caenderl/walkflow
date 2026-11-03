@@ -1,10 +1,11 @@
 // The settings dialog: one large modal with sections (general, safety, data, info). The fields in it keep the ids they had
 // as cards in the page, so the code that reads and writes them (limit, backup, export …) does not depend on where
-// they sit. This file only opens and closes it, switches sections, and holds quiet mode.
+// they sit. This file only opens and closes it, switches sections, and holds quiet mode and developer mode.
 // Locked while the belt runs: the limit, the ramp and the other safety values are not changed in the middle of a run.
 
 import { confirmDialog } from './dialogs';
 import { t } from './i18n';
+import { DEV_MODE_STORAGE_KEY, readDevMode } from './dev-mode';
 import { QUIET_STORAGE_KEY, readQuiet } from './quiet';
 import { $, $button, $input, store } from './ui';
 
@@ -17,7 +18,10 @@ export function setupSettings() {
   const tabs = new Map(TABS.map(name => [name, $button(`tab-${name}`)] as const));
   const panels = new Map(TABS.map(name => [name, $(`sd-${name}`)] as const));
   const quietSwitch = $input('quietSwitch');
+  const devSwitch = $input('devSwitch');
   let locked = false;
+  let devMode = readDevMode(store.get(DEV_MODE_STORAGE_KEY));
+  const devListeners: ((on: boolean) => void)[] = [];
   let quiet = readQuiet(store.get(QUIET_STORAGE_KEY));
 
   function showTab(name: SettingsTab, focus = false) {
@@ -33,6 +37,13 @@ export function setupSettings() {
     quietSwitch.checked = quiet;
     // style.css hides the safety notice for it
     document.documentElement.dataset.quiet = quiet ? '1' : '0';
+  }
+
+  function applyDevMode() {
+    devSwitch.checked = devMode;
+    // style.css shows the experiment console for it
+    document.documentElement.dataset.dev = devMode ? '1' : '0';
+    for (const cb of devListeners) cb(devMode);
   }
 
   function renderLock() {
@@ -71,8 +82,19 @@ export function setupSettings() {
     applyQuiet();
   };
 
+  devSwitch.onchange = async () => {
+    if (!devSwitch.checked) { devMode = false; store.set(DEV_MODE_STORAGE_KEY, '0'); applyDevMode(); return; }
+    // Switching it on is asked for first; "off" needs no question
+    devSwitch.checked = false;
+    const ok = await confirmDialog(t.settings.devConfirmTitle, t.settings.devConfirm, t.settings.devConfirmOk, 'stop');
+    devMode = ok;
+    if (ok) store.set(DEV_MODE_STORAGE_KEY, '1');
+    applyDevMode();
+  };
+
   showTab('general');
   applyQuiet();
+  applyDevMode();
   renderLock();
 
   return {
@@ -85,6 +107,8 @@ export function setupSettings() {
     },
     /** Quiet mode: no safety notice, no question before a start */
     get quiet() { return quiet; },
+    /** Developer mode: the experiment console, the developer tools of the desktop app. Called now and at every change. */
+    onDevMode(cb: (on: boolean) => void) { devListeners.push(cb); cb(devMode); },
     relabel: renderLock,
   };
 }

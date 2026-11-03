@@ -18,6 +18,8 @@ export interface WalkflowDesktop {
   selectBluetoothDevice(id: string): void;
   /** A route package was opened from the Finder or Explorer; also tells the app that the page can take them */
   onOpenPackage(cb: (f: OpenedFile) => void): void;
+  /** Developer mode on or off: the developer tools of the desktop app can only be opened in developer mode */
+  setDevMode(on: boolean): void;
   onBluetoothPairing(cb: (d: { kind: string; pin: string | null }) => void): void;
   respondPairing(r: { confirmed: boolean; pin?: string }): void;
   checkForUpdate(): Promise<{ version: string; url: string } | null>;

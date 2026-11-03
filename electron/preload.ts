@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('walkflowDesktop', {
     ipcRenderer.on('app:open-package', (_e, f: { name: string; text?: string; error?: string }) => cb(f));
     ipcRenderer.send('app:files-ready');
   },
+  setDevMode: (on: boolean) => ipcRenderer.send('app:dev-mode', on === true),
   setLanguage: (lang: string) => ipcRenderer.send('app:language', String(lang)),
   setTheme: (theme: string) => ipcRenderer.send('app:theme', String(theme)),
 });

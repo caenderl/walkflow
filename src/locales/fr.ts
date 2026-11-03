@@ -417,6 +417,15 @@ export const fr: Messages = {
       'Ne l’activez que si vous connaissez bien l’application et votre tapis. Vous pouvez le désactiver ici à tout moment.',
     ],
     quietConfirmOk: 'Masquer',
+    devLabel: 'Mode développeur',
+    devHint: 'Affiche la console d’expérimentation (commandes brutes vers le tapis) et, dans l’application de bureau, les outils de développement. Pour bricoler et diagnostiquer, pas nécessaire pour marcher.',
+    devConfirmTitle: 'Activer le mode développeur ?',
+    devConfirm: [
+      'La console d’expérimentation permet d’envoyer des commandes brutes au tapis. Ses contrôles restent : la limite de vitesse, la variation maximale, l’espacement des commandes de vitesse et la question avant un démarrage brut. N’activez ceci que si vous savez ce que font les commandes.',
+      'Dans l’application de bureau, les outils de développement deviennent disponibles.',
+      'Vous pouvez le désactiver ici à tout moment.',
+    ],
+    devConfirmOk: 'Activer',
     get limit() { return `Limite de vitesse personnelle (${u.speedUnit()})`; },
     get maxStep() { return `Variation maximale par commande (${u.speedUnit()})`; },
     hiddenMode: 'Quand l’onglet passe en arrière-plan pendant que le tapis tourne',
@@ -454,6 +463,7 @@ export const fr: Messages = {
   },
   console: {
     title: 'Console d’expérimentation (Control Point 0x2AD9)',
+    logTitle: 'Journal',
     placeholder: 'Octets hexadécimaux, p. ex. 02 2C 01',
     inputLabel: 'Octets hexadécimaux',
     send: 'Envoyer',

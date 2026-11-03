@@ -180,6 +180,7 @@
       </section>
 
       <div class="more">
+        <!-- Developer mode only (Settings → General): raw commands to the treadmill -->
         <details class="card wide" id="consoleCard">
           <summary data-i18n="console.title">Experiment console (Control Point 0x2AD9)</summary>
           <div class="grid">
@@ -188,6 +189,11 @@
               <button id="rawSend" class="needs-conn" disabled data-i18n="console.send">Send</button>
             </div>
             <div class="hint" data-i18n-rich="console.hint">Set Speed (02 …) is blocked if it is above the limit, larger than the maximum change, or comes too soon after the last speed command. Start (07) only after confirmation, Set Target Heart Rate (06) not at all. Everything else is sent raw.</div>
+          </div>
+        </details>
+        <details class="card wide" id="logCard">
+          <summary data-i18n="console.logTitle">Log</summary>
+          <div class="grid">
             <div id="log" aria-live="off"></div>
           </div>
         </details>
@@ -368,6 +374,12 @@
           </label>
           <div class="hint" data-i18n="incline.levelsHint"></div>
         </div>
+        <hr>
+        <label class="switch">
+          <input type="checkbox" role="switch" id="devSwitch">
+          <span class="sw-track" aria-hidden="true"></span>
+          <span class="sw-text"><strong data-i18n="settings.devLabel">Developer mode</strong><span class="hint" data-i18n="settings.devHint">Shows the experiment console.</span></span>
+        </label>
       </section>
 
       <section class="sd-panel grid" id="sd-safety" role="tabpanel" aria-labelledby="tab-safety" hidden>

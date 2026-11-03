@@ -414,6 +414,15 @@ export const de: Messages = {
       'Schalte das nur ein, wenn du die App und dein Laufband gut kennst. Du kannst es hier jederzeit wieder ausschalten.',
     ],
     quietConfirmOk: 'Ausblenden',
+    devLabel: 'Entwicklermodus',
+    devHint: 'Zeigt die Experimentier-Konsole (rohe Befehle ans Band) und in der Desktop-App die Entwicklerwerkzeuge. Zum Tüfteln und Fehlersuchen, zum Gehen brauchst du ihn nicht.',
+    devConfirmTitle: 'Entwicklermodus einschalten?',
+    devConfirm: [
+      'Mit der Experimentier-Konsole kannst du rohe Befehle ans Band senden. Ihre Prüfungen bleiben: das Tempolimit, die größte Änderung, der Abstand der Tempobefehle und die Frage vor einem rohen Start. Schalte es aber nur ein, wenn du weißt, was die Befehle tun.',
+      'In der Desktop-App werden die Entwicklerwerkzeuge verfügbar.',
+      'Du kannst es hier jederzeit wieder ausschalten.',
+    ],
+    devConfirmOk: 'Einschalten',
     get limit() { return `Eigenes Speed-Limit (${u.speedUnit()})`; },
     get maxStep() { return `Maximale Änderung pro Befehl (${u.speedUnit()})`; },
     hiddenMode: 'Wenn der Tab in den Hintergrund geht, während das Band läuft',
@@ -451,6 +460,7 @@ export const de: Messages = {
   },
   console: {
     title: 'Experimentier-Konsole (Control Point 0x2AD9)',
+    logTitle: 'Protokoll',
     placeholder: 'Hex-Bytes, z. B. 02 2C 01',
     inputLabel: 'Hex-Bytes',
     send: 'Senden',

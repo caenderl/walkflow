@@ -415,6 +415,15 @@ export const en = {
       'Only switch this on if you know the app and your treadmill well. You can switch it off here at any time.',
     ],
     quietConfirmOk: 'Hide them',
+    devLabel: 'Developer mode',
+    devHint: 'Shows the experiment console (raw commands to the treadmill) and, in the desktop app, the developer tools. For tinkering and diagnosing, walking does not need it.',
+    devConfirmTitle: 'Switch on developer mode?',
+    devConfirm: [
+      'The experiment console lets you send raw commands to the treadmill. Its checks stay: the speed limit, the maximum change, the spacing of speed commands and the question before a raw Start. But only switch this on if you know what the commands do.',
+      'In the desktop app the developer tools become available.',
+      'You can switch it off here at any time.',
+    ],
+    devConfirmOk: 'Switch on',
     get limit() { return `Personal speed limit (${u.speedUnit()})`; },
     get maxStep() { return `Maximum change per command (${u.speedUnit()})`; },
     hiddenMode: 'When the tab goes to the background while the belt is running',
@@ -452,6 +461,7 @@ export const en = {
   },
   console: {
     title: 'Experiment console (Control Point 0x2AD9)',
+    logTitle: 'Log',
     placeholder: 'Hex bytes, e.g. 02 2C 01',
     inputLabel: 'Hex bytes',
     send: 'Send',

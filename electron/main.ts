@@ -7,6 +7,7 @@ import {
 } from 'electron';
 import { detectLanguage, isLang, setLanguage, t } from '../src/i18n';
 import { buildCsp } from '../src/csp';
+import { devToolsAllowed } from '../src/dev-mode';
 import { devOrigin } from '../src/dev-url';
 import { mapOrigins, resolveMapStyles } from '../src/map-config';
 import { mimeFor } from '../src/mime';
@@ -51,6 +52,9 @@ let win: BrowserWindow | null = null;
 let btCallback: ((deviceId: string) => void) | null = null;
 let pairingCallback: ((response: Electron.Response) => void) | null = null;
 let powerBlockerId: number | null = null;
+/** Developer mode of the web app (Settings → General), reported by the page; off until it says so */
+let devMode = false;
+const devToolsOk = () => devToolsAllowed(devMode, DEV_ORIGIN !== null);
 
 // Route packages opened from the Finder or Explorer: queued until the web app says it can take them, then handed over as
 // text. The web app checks everything and asks the person before it imports anything.
@@ -127,7 +131,7 @@ function setMenu() {
     {
       label: m.menuView,
       submenu: [
-        { role: 'toggleDevTools', label: m.devTools }, { type: 'separator' },
+        ...(devToolsOk() ? [{ role: 'toggleDevTools', label: m.devTools } satisfies MenuItemConstructorOptions, { type: 'separator' } satisfies MenuItemConstructorOptions] : []),
         { role: 'resetZoom', label: m.actualSize }, { role: 'zoomIn', label: m.zoomIn }, { role: 'zoomOut', label: m.zoomOut },
         { role: 'togglefullscreen', label: m.fullScreen },
       ],
@@ -171,6 +175,8 @@ function createWindow() {
     },
   });
   const wc = win.webContents;
+  // The developer tools only in developer mode: no menu entry, and one that is opened some other way is closed again
+  wc.on('devtools-opened', () => { if (!devToolsOk()) wc.closeDevTools(); });
 
   // Device selection for navigator.bluetooth.requestDevice(). Without this handler there is no chooser.
   // The event fires several times while the list grows; the latest callback counts.
@@ -263,6 +269,13 @@ ipcMain.handle('app:check-update', async e => {
   } catch {
     return null;
   }
+});
+
+ipcMain.on('app:dev-mode', (e, on: unknown) => {
+  if (!fromWindow(e)) return;
+  devMode = on === true;
+  setMenu();
+  if (!devToolsOk()) win?.webContents.closeDevTools();
 });
 
 ipcMain.on('app:files-ready', e => {

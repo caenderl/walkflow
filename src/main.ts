@@ -93,6 +93,7 @@ const history = setupHistory({
 const recorder = history.recorder;
 const interval = setupInterval();
 const settings = setupSettings();
+settings.onDevMode(on => desktop?.setDevMode(on));
 const workouts = setupWorkouts({
   maxSpeed: () => effectiveMax(),
   useRoute: id => { routes.use(id); setActive('route'); },

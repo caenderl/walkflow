@@ -490,6 +490,8 @@ html:not(.i18n-ready) body { visibility:hidden; animation:i18n-reveal 0s 1.5s fo
 
 /* Quiet mode (settings): no safety notice. Everything that limits or stops the belt stays. */
 html[data-quiet="1"] #safetyNotice { display:none; }
+/* The experiment console only in developer mode (src/settings-ui.ts) */
+html:not([data-dev="1"]) #consoleCard { display:none; }
 
 /* The demo note sits in the controls panel (training view): one column, the buttons below the text */
 .control .banner.demo { grid-template-columns:minmax(0, 1fr); padding:12px 14px; font-size:.9rem; }
