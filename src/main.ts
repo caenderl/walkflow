@@ -27,6 +27,7 @@ import {
   serializeLimit, SpeedGovernor, StandstillDetector,
 } from './core/safety/safety';
 import { ACTIVE_STORAGE_KEY, readActive, type Active } from './core/training/selection';
+import { setupBackground } from './ui/background';
 import { renderInfo } from './ui/settings/info';
 import { setupSettings } from './ui/settings/settings-ui';
 import { SimulatorAdapter } from './device/sim';
@@ -45,7 +46,6 @@ initLanguage();
 // Units before anything is drawn
 setUnits(parseUnits(store.get(UNITS_STORAGE_KEY)));
 
-const HIDDEN_MODE_KEY = 'walkflow.hiddenMode';
 const INCLINE_LEVELS_KEY = 'walkflow.inclineLevelCount';
 /** 'no' once a real treadmill reported no incline: then nothing about the incline is shown */
 const INCLINE_SEEN_KEY = 'walkflow.inclineSupport';
@@ -57,7 +57,6 @@ let sim: SimulatorAdapter | null = null;
 let client: TreadmillClient | null = null;
 let devMin = 1.0, devMax = 12.0;
 let limit = 6;
-let wakeLock: WakeLockSentinel | null = null;
 /** Started by the app or according to Machine Status, and not stopped since */
 let beltStarted = false;
 /** The banner over the live figures: ready to start, stopping, not connected. Display only. */
@@ -66,8 +65,6 @@ let lastMeasured: number | undefined;
 /** When the speed was last reported (performance.now), to tell a fresh reading from an old one */
 let lastMeasuredAt = 0;
 let controlLost = false;
-let hiddenSince: number | null = null;
-let hiddenWhileRunning: 'warned' | 'paused' | null = null;
 let sliderDragging = false;
 let inclRange: Range | null = null;
 let inclShown = 0;
@@ -130,6 +127,15 @@ const runner = new ProgramRunner({
   // Only what the person has to know stays on screen; start, stop and progress are shown by the banner and the workout panel
   status: (text, attention) => { if (text && attention) bindText($('progStatus'), text); else clearText($('progStatus')); renderStage(); },
   log,
+});
+
+// The tab goes to the background, the page is closed: keep the screen on while connected, warn or pause, save the run
+const background = setupBackground({
+  connected: () => connected(),
+  maybeRunning: () => maybeRunning(),
+  pause: reason => doPause(reason),
+  tick: () => runner.tick(),
+  flush: () => recorder.flush(),
 });
 
 const events: TreadmillEvents = {
@@ -526,7 +532,7 @@ async function connect(kind: 'ble' | 'demo') {
 
     beltStarted = false; lastMeasured = undefined; controlLost = false;
     governor.reset();
-    await acquireWakeLock();
+    await background.acquireWakeLock();
     applyLimits();
     setUi(true);
     $('alarm').hidden = true;
@@ -575,7 +581,7 @@ function onDisconnected() {
   runner.abort(() => t.disconnect.programEnded);
   governor.reset();
   standstill.disarm();
-  releaseWakeLock();
+  background.releaseWakeLock();
   desktop?.connectionChanged(false);
   client = null;
   beltStarted = false; lastMeasured = undefined; controlLost = false;
@@ -654,53 +660,6 @@ function applyStopPlacement() {
   document.documentElement.dataset.stop = stopPlacement(view, uiConnected);
 }
 
-// ---------- Wake lock & background ----------
-async function acquireWakeLock() {
-  if (wakeLock && !wakeLock.released) return;
-  try { wakeLock = (await navigator.wakeLock?.request('screen')) ?? null; } catch { wakeLock = null; }
-}
-
-function releaseWakeLock() {
-  try { void wakeLock?.release(); } catch { /* ignore */ }
-  wakeLock = null;
-}
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    if (connected() && maybeRunning()) {
-      hiddenSince = Date.now();
-      document.title = t.hidden.title;
-      if ($<HTMLSelectElement>('hiddenMode').value === 'pause') {
-        hiddenWhileRunning = 'paused';
-        log(t.hidden.pausingLog);
-        void doPause(() => t.hidden.pausedReason);
-      } else {
-        hiddenWhileRunning = 'warned';
-        log(t.hidden.warnLog);
-      }
-    }
-    // After the pause command has been queued, not before
-    recorder.flush();
-    return;
-  }
-  document.title = APP_NAME;
-  runner.tick();
-  if (connected()) void acquireWakeLock(); // the browser releases the wake lock when the tab is hidden
-  if (hiddenSince !== null && hiddenWhileRunning) {
-    const s = Math.round((Date.now() - hiddenSince) / 1000);
-    const how = hiddenWhileRunning;
-    bindText($('hiddenText'), () => how === 'paused' ? t.hidden.paused(s) : t.hidden.warned(s));
-    $('hiddenBanner').hidden = false;
-  }
-  hiddenSince = null;
-  hiddenWhileRunning = null;
-});
-
-window.addEventListener('pagehide', () => recorder.flush());
-window.addEventListener('beforeunload', e => {
-  if (connected() && maybeRunning()) e.preventDefault();
-});
-
 // ---------- Console ----------
 async function rawSend() {
   const c = client;
@@ -756,8 +715,6 @@ function loadSettings() {
   const ms = parseMaxStep(store.get(MAX_STEP_STORAGE_KEY) ?? '');
   if (ms !== null) governor.maxStep = ms;
   renderLimitFields();
-  const hm = store.get(HIDDEN_MODE_KEY);
-  if (hm === 'warn' || hm === 'pause') $<HTMLSelectElement>('hiddenMode').value = hm;
   inclLevelCount = parseLevelCount(store.get(INCLINE_LEVELS_KEY));
   renderLevelCountField();
   applyInclineSeen();
@@ -838,7 +795,6 @@ document.querySelectorAll<HTMLButtonElement>('.preset').forEach(b => {
 });
 $input('cap').onchange = () => void limitChanged();
 $input('maxStep').onchange = maxStepChanged;
-$<HTMLSelectElement>('hiddenMode').onchange = e => store.set(HIDDEN_MODE_KEY, (e.target as HTMLSelectElement).value);
 
 $input('inclLevelsInput').oninput = e => {
   inclLevelCount = parseLevelCount((e.target as HTMLInputElement).value);
@@ -886,7 +842,7 @@ onLanguageChange(() => {
   renderIncline();
   renderStats();
   redrawChart();
-  if (document.hidden && hiddenSince !== null) document.title = t.hidden.title;
+  background.relabel();
 });
 
 // ---------- Init ----------
