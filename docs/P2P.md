@@ -93,16 +93,35 @@ protects the set-up of the connection, with different prefixes, so the room says
 ## The connection
 
 [Trystero](https://github.com/dmotz/trystero) (MIT) with its Nostr strategy turns the meeting at a relay into a direct
-WebRTC data channel, encrypted end to end.
+WebRTC data channel, encrypted end to end. The code is in `src/net/`:
 
-- **Dependency**: `trystero` 0.26.0 (pinned), which pulls in `@trystero-p2p/nostr` and `@noble/secp256k1`; about 120 KB
-  unpacked. Loaded only when a share or Community view opens.
-- **Relays**: the library knows 29 public relays and picks five at random; five of them do not work for this (checked
-  2026-11-03). We pin our own list (`relayConfig.urls`) and put exactly those hosts into the `connect-src` of the content
-  security policy instead of allowing `wss:` everywhere. The list is a constant in `src/net/`; a relay that goes away is
-  replaced there. A small script checks the list.
+- `transport.ts`: the small `Room` interface the rest of `net/` uses (join, send, hear a device come, go or send).
+- `trystero-transport.ts`: the only file that uses the library, loaded when a room is joined, so a person who never shares
+  does not load it. It adds to the library's defaults: our five relays, a handshake, the limit of devices, and a limit on the
+  size of one message (16 MiB, a package is at most about 6 MB as text).
+- `handshake.ts`: the moment two devices are connected they must each say `{app: "walkflow", protocol: 1}` within 10 seconds,
+  or they are not let in (the library's `onPeerHandshake`). Another program that uses the same library, app id and even
+  password, does not get in. This is not proof that the other side is Walkflow (nothing can be), it keeps other programs and
+  versions out.
+- `share-hub.ts`: joins a room, runs a `SharePeer` for each device, keeps the `Directory`, offers what this device shares,
+  takes a file from a device that has it (one transfer at a time, compared with its hash, the next device is asked when one
+  fails), and ignores devices that break a rule or do not answer in time. Tested with a fake network.
+
+- **Dependency**: `trystero` 0.26.0 (pinned, a dev dependency like the other libraries the build bundles), which pulls in
+  `@trystero-p2p/nostr` and `@noble/secp256k1`; about 120 KB unpacked.
+- **Relays** (`src/platform/relays.ts`, the only list): `nos.lol`, `relay.layer.systems`, `relay.piazza.today`,
+  `nostr.christiansass.de`, `relay.bullishbounty.com`. They run different software (strfry, a custom relay, Ditto,
+  nostr-rs-relay, nostream), so one fault does not stop all five, and two devices need only one relay in common. The content
+  security policy allows exactly these hosts for connections (`connect-src`), no wildcard; a test and the built page both
+  show that another host is blocked. `npm run relays:check` publishes a short-lived event on each relay and listens on a
+  second connection; run it now and then and before a release (`-- --default` tries all 29 relays the library knows, to
+  find a replacement). A relay can rate-limit after many tests from one address; it is not a reason to drop it.
 - **STUN**: by default Google (three servers) and Cloudflare, to find out how the device can be reached. They see the IP
   address of the device, like in any WebRTC call. Overridable with `rtcConfig`.
+
+Checked with two browser tabs on one machine against the real relays (2026-11-03): the second tab with the code found the
+first within about a second, saw its offer, took the file (4 ms) and the reader accepted it; a changed offer showed up at
+once; a device that left was forgotten; another program in the same room with the same password was never admitted.
 
 ## What the others learn
 
@@ -202,20 +221,17 @@ Anything above ends the exchange with an error (`tooLarge`, `invalid`, `unexpect
 
 ## What is still to do
 
-Done: the share code, the messages and rules of the exchange (both roles on one connection, offers with hashes and limits,
-check by hash), both package formats, the list of what is offered (`Directory`).
+Done: the share code, the messages and rules of the exchange, both package formats, the list of what is offered, the
+connection (`src/net/`), the relays and the content security policy.
 
-1. **Connection** in `src/net/`: a thin adapter around Trystero that turns the protocol's messages into data channel
-   messages, with the pinned relay list; a room for a language and a room for a code. The library is loaded on demand.
-   The handshake timeout, dropping and ignoring devices that break a rule, and the limit of connections belong here.
-2. **What was taken from the community**: a route or workout is saved with the hash it arrived with and a mark that it came
+1. **What was taken from the community**: a route or workout is saved with the hash it arrived with and a mark that it came
    from the community; the offer is the marked items whose file is still byte-identical (a package written by the app comes out
    byte for byte the same when it is read and written again; this is tested for routes and workouts).
-3. **Screens**: the Community view (switch with the one-sentence notice, list with filters, take), *Share with the
+2. **Screens**: the Community view (switch with the one-sentence notice, list with filters, take), *Share with the
    community* on routes and workouts, *Share with a code* and *Receive with a code*. Texts in German, English and French.
-4. **CSP** for the pinned relays in `src/platform/csp.ts` and a test for it; the script that checks the relays.
-5. **Checks without hardware**: two browser tabs on one machine see each other in the room and exchange a route; a wrong
-   code, a closed view and a stopped sender end cleanly.
+   They use the hub, the directory, `readPackage` and `readWorkoutPackage`, and the same confirmation as an import.
+3. **Checks without hardware** in the app: two windows exchange a route through the screens; a wrong code, a closed view and
+   a stopped sender end cleanly. The desktop app has to be checked too (WebRTC and the relays from Electron).
 
 ## Later, maybe
 

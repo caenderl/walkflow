@@ -17,7 +17,8 @@
     "electron": "node scripts/build-desktop.mjs && electron .",
     "electron:dev": "node scripts/dev-desktop.mjs",
     "dist": "node scripts/build-desktop.mjs && electron-builder --config electron-builder.config.cjs --publish never",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "relays:check": "node scripts/check-relays.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
@@ -26,6 +27,7 @@
     "electron-builder": "26.18.0",
     "esbuild": "0.28.2",
     "maplibre-gl": "6.15.0",
+    "trystero": "0.26.0",
     "typescript": "7.0.2",
     "vite": "8.3.5",
     "vite-plugin-pwa": "2.0.0",

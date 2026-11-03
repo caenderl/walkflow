@@ -3,6 +3,7 @@ import type { Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { buildCsp } from './src/platform/csp.ts';
+import { RELAY_URLS } from './src/platform/relays.ts';
 import { mapOrigins, resolveMapStyles } from './src/core/routes/map-config.ts';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
@@ -16,7 +17,7 @@ const desktop = process.env.VITE_TARGET === 'desktop';
 const mapStyles = resolveMapStyles(process.env.WALKFLOW_MAP_STYLE, process.env.WALKFLOW_MAP_STYLE_DARK);
 
 /** Strict CSP only in the build: the dev server injects styles it would forbid. */
-const CSP = buildCsp({ mapOrigins: mapStyles ? mapOrigins(mapStyles) : [], header: false });
+const CSP = buildCsp({ mapOrigins: mapStyles ? mapOrigins(mapStyles) : [], relays: RELAY_URLS, header: false });
 
 function csp(): Plugin {
   return {

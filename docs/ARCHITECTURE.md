@@ -41,7 +41,7 @@ tests/                tests about the project itself
 | `i18n`, `platform` | itself |
 | `core` | `i18n` |
 | `device` | `core`, `i18n` |
-| `net` | `core`, `i18n` (never `device`, `ui`, or the FTMS commands) |
+| `net` | `core`, `i18n`, `platform` (never `device`, `ui`, or the FTMS commands) |
 | `data` | `core` |
 | `ui` | `core`, `i18n`, `device`, `data`, `platform`, `net` |
 | `electron/` | pure code of `src/` only: `i18n`, `platform`, `core` |

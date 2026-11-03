@@ -7,6 +7,7 @@ import {
 } from 'electron';
 import { detectLanguage, isLang, setLanguage, t } from '../src/i18n/i18n';
 import { buildCsp } from '../src/platform/csp';
+import { RELAY_URLS } from '../src/platform/relays';
 import { devToolsAllowed } from '../src/core/safety/dev-mode';
 import { devOrigin } from '../src/platform/dev-url';
 import { mapOrigins, resolveMapStyles } from '../src/core/routes/map-config';
@@ -36,7 +37,7 @@ const background = () => (nativeTheme.shouldUseDarkColors ? BACKGROUND.dark : BA
 
 const MAP_STYLES = resolveMapStyles(__MAP_STYLE_RAW__, __MAP_STYLE_DARK_RAW__);
 const MAP_ORIGINS = MAP_STYLES ? mapOrigins(MAP_STYLES) : [];
-const CSP = buildCsp({ mapOrigins: MAP_ORIGINS, header: true });
+const CSP = buildCsp({ mapOrigins: MAP_ORIGINS, relays: RELAY_URLS, header: true });
 
 /** Allowed permission requests. Everything else (camera, microphone, location, notifications …) is denied. */
 const ALLOWED_PERMISSIONS = new Set(['screen-wake-lock', 'fullscreen']);

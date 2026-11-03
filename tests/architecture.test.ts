@@ -18,7 +18,7 @@ const MAY_IMPORT: Record<string, readonly string[]> = {
   device: ['core', 'i18n'],
   data: ['core'],
   /** The connection to other people's devices (sharing). Never the treadmill: no device, no ui. */
-  net: ['core', 'i18n'],
+  net: ['core', 'i18n', 'platform'],
   ui: ['core', 'i18n', 'device', 'data', 'platform', 'net'],
 };
 /** Without the browser: no DOM, no storage. device and data are where those belong. */
