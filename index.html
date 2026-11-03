@@ -131,6 +131,11 @@
           <div class="sh-title"><span class="badge" id="shKind"></span><strong id="shName"></strong></div>
           <button id="shClear" type="button" class="linkish"></button>
         </div>
+        <!-- Route progress sits above the map; the description and the length below it (order in style.css) -->
+        <div class="grid" id="routeProgress" hidden>
+          <progress id="routeBar" max="1000" value="0"></progress>
+          <div id="routeText" class="route-text"></div>
+        </div>
         <div class="stage-info" id="stageInfo" hidden>
           <div id="shInfo"></div>
           <div class="hint" id="shDesc"></div>
@@ -154,8 +159,6 @@
           <p class="hint" id="stageFreeHint" data-i18n="stage.freeHint">Free training.</p>
         </div>
         <div class="grid" id="routeLive" hidden>
-          <progress id="routeBar" max="1000" value="0"></progress>
-          <div id="routeText" class="route-text"></div>
           <div class="hint" id="routeDetail"></div>
           <div id="routeProfile" class="profile"></div>
           <div class="row">

@@ -273,6 +273,7 @@ export const de: Messages = {
     progressLabel: 'Fortschritt auf der Strecke',
     progress: (done: number, total: number) => `${u.distValue(done)} von ${u.dist(total)}`,
     remaining: (left: string) => `noch ${left}`,
+    timeLeft: (min: number) => `noch etwa ${n(min)} min`,
     elevation: (m: number) => `Höhe ${u.short(m)}`,
     grade: (pct: number) => `nächste ${u.short(100)}: ${pct > 0 ? '+' : ''}${n(pct, 1)} %`,
     finished: 'Strecke geschafft.',

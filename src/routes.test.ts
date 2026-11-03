@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeRoute, DistanceTracker, distanceBetween, elevationSeries, gradeAhead, newRouteId, pointAt, readRoute, readRoutes, ROUTE_MAX_POINTS, walkSeconds, walkSteps, type Route, type RoutePoint, DEFAULT_WALK_SPEED, ROUTE_DESCRIPTION_MAX, routeSpeed } from './routes';
+import { analyzeRoute, DistanceTracker, distanceBetween, elevationSeries, gradeAhead, newRouteId, pointAt, readRoute, readRoutes, ROUTE_MAX_POINTS, minutesLeft, walkSeconds, walkSteps, type Route, type RoutePoint, DEFAULT_WALK_SPEED, ROUTE_DESCRIPTION_MAX, routeSpeed } from './routes';
 
 /** 0.001° of longitude at the equator, in metres */
 const MILLI_DEG = 111.195;
@@ -343,5 +343,20 @@ describe('routeSpeed', () => {
     expect(DEFAULT_WALK_SPEED).toBe(3);
     expect(routeSpeed(base)).toBe(3);
     expect(routeSpeed({ ...base, defaultSpeed: 4.5 })).toBe(4.5);
+  });
+});
+
+describe('minutesLeft', () => {
+  it('rounds up to whole minutes, so the time never looks shorter than it is', () => {
+    expect(minutesLeft(1000, 4)).toBe(15);
+    expect(minutesLeft(1010, 4)).toBe(16);
+    expect(minutesLeft(10, 4)).toBe(1);
+  });
+
+  it('is 0 when nothing is left or the speed is unusable', () => {
+    expect(minutesLeft(0, 4)).toBe(0);
+    expect(minutesLeft(-5, 4)).toBe(0);
+    expect(minutesLeft(1000, 0)).toBe(0);
+    expect(minutesLeft(1000, NaN)).toBe(0);
   });
 });

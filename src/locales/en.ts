@@ -274,6 +274,7 @@ export const en = {
     progressLabel: 'Route progress',
     progress: (done: number, total: number) => `${u.distValue(done)} of ${u.dist(total)}`,
     remaining: (left: string) => `${left} to go`,
+    timeLeft: (min: number) => `about ${n(min)} min left`,
     elevation: (m: number) => `Elevation ${u.short(m)}`,
     grade: (pct: number) => `next ${u.short(100)}: ${pct > 0 ? '+' : ''}${n(pct, 1)} %`,
     finished: 'Route completed.',

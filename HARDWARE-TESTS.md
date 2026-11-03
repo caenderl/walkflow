@@ -59,6 +59,7 @@ Time steps work as before. A distance step ends when the treadmill’s own dista
 The route’s progress follows the treadmill’s own distance counter. The route itself sends nothing to the treadmill: no incline, and no speed from the file. The checks up to “Restart route” only display; **Start** with a route chosen starts a workout (see below), so the belt moves only after the usual confirmation.
 
 - [ ] Import a real GPX file (**Routes → Import GPX file**) and choose it with **Use** (the training view is about it then). Start the belt and walk 100 m: does “km of km” advance together with the distance shown on the treadmill’s display? Note how far apart the two are after 100 m.
+- [ ] With a route chosen, the progress bar, “km of km · km to go · about N min left” sit above the map, the length, speed and description below it. The time left is the distance left at the route’s walking speed (capped by the limit), rounded up to whole minutes. Over a longer walk, does it match the clock?
 - [ ] Press **Restart route**: the progress goes back to 0 and counts on from there, the belt is not affected.
 - [ ] Stop the belt and start it again: does the route continue where it was, or did the treadmill’s counter reset and the route lose or double distance? (The app adds up only increases; a counter that goes back adds nothing.)
 - [ ] Disconnect and reconnect in the middle of a route: does the progress carry on without a jump?

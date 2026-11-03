@@ -239,3 +239,8 @@ export function walkSteps(stats: RouteStats, kmh: number): ProgramStep[] | null 
 export function walkSeconds(meters: number, kmh: number): number {
   return Number.isFinite(kmh) && kmh > 0 ? meters / (kmh / 3.6) : 0;
 }
+
+/** Whole minutes (rounded up) a distance still takes at a constant speed; 0 when nothing is left or the speed is unusable */
+export function minutesLeft(metersLeft: number, kmh: number): number {
+  return metersLeft > 0 ? Math.ceil(walkSeconds(metersLeft, kmh) / 60) : 0;
+}

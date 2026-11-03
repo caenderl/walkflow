@@ -16,7 +16,7 @@ import { fromSpeed, toSpeed } from './units';
 import { fmtDistance, type ProgramStep } from './program';
 import { getRouteStore, type RouteStore } from './route-store';
 import {
-  analyzeRoute, DistanceTracker, elevationSeries, gradeAhead, newRouteId, pointAt, readRoute, ROUTE_DESCRIPTION_MAX, ROUTE_NAME_MAX,
+  analyzeRoute, DistanceTracker, elevationSeries, gradeAhead, minutesLeft, newRouteId, pointAt, readRoute, ROUTE_DESCRIPTION_MAX, ROUTE_NAME_MAX,
   ROUTE_SPEED_MAX, ROUTE_SPEED_MIN, routeSpeed, walkSeconds, walkSteps, type Route, type RouteStats,
 } from './routes';
 import { getRunStore } from './run-store';
@@ -189,7 +189,7 @@ export function setupRoutes(host: RoutesHost) {
   function renderProgress() {
     const live = $('routeLive');
     const shown = trainingRoute();
-    live.hidden = !shown;
+    live.hidden = $('routeProgress').hidden = !shown;
     if (!shown) { training.slot?.mark(null); return; }
     const { route, stats } = shown;
     const pos = pointAt(route, stats, tracker.covered);
@@ -198,7 +198,7 @@ export function setupRoutes(host: RoutesHost) {
     bar.setAttribute('aria-label', t.routes.progressLabel);
     $('routeText').textContent = pos.done
       ? t.routes.finished
-      : `${t.routes.progress(pos.meters, stats.total)} · ${t.routes.remaining(fmtDistance(stats.total - pos.meters))}`;
+      : [t.routes.progress(pos.meters, stats.total), t.routes.remaining(fmtDistance(stats.total - pos.meters)), t.routes.timeLeft(minutesLeft(stats.total - pos.meters, Math.min(routeSpeed(route), host.maxSpeed())))].join(' · ');
     const grade = pos.done ? undefined : gradeAhead(route, stats, pos.meters);
     $('routeDetail').textContent = pos.ele === undefined
       ? t.routes.noElevation

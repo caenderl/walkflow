@@ -362,6 +362,7 @@ function renderStage() {
   const stage = $('stage');
   const was = stage.dataset.mode;
   stage.dataset.mode = mode;
+  stage.dataset.kind = kind ?? '';
 
   const workout = kind === 'workout' ? workouts.selectedInfo() : null;
   const route = kind === 'route' ? routes.current() : null;

@@ -414,7 +414,10 @@ html:not(.i18n-ready) body { visibility:hidden; animation:i18n-reveal 0s 1.5s fo
 /* ---------- Stage: the main element of the training view (data-mode: map | interval | chart, src/main.ts) ---------- */
 .stage { display:grid; gap:16px; }
 .stage-map { height:clamp(320px, 56vh, 640px); }
-.stage[data-mode="interval"] .stage-map, .stage[data-mode="interval"] #routeLive { display:none; }
+.stage[data-mode="interval"] .stage-map, .stage[data-mode="interval"] :is(#routeLive, #routeProgress) { display:none; }
+/* A route: its progress comes first, then the map (or the chart); its length and description follow below */
+.stage[data-kind="route"] > #stageInfo { order:2; }
+.stage[data-kind="route"] > #routeLive { order:3; }
 .interval { display:grid; gap:16px; }
 .iv-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
 .iv-head h2 { margin:0; font-size:1.1rem; color:var(--fg); text-transform:none; letter-spacing:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
