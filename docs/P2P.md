@@ -1,93 +1,145 @@
 # Sharing between devices (peer to peer)
 
-Status: design, the pure core (`src/core/share/`) and both package formats are in; the connection and the screens are still to do.
+Status: design, the pure core (`src/core/share/`) and both package formats are in; the connection and the screens are
+still to do. The first version of the core was written for sending to one person with a code; the community mode below is
+the main mode and needs a small extension of the protocol (see "What changes in the protocol").
 
 ## What it is for
 
-Send a route or a workout from one device to another, directly, without an account and without a server of the project.
-It is not for the treadmill: nobody who is connected to you can see, steer or stop your belt. Running together, with live
-figures of the others, is a possible later step and would need its own design.
+Find and take routes and workouts that other people share, directly from their devices, without an account and without a
+server of the project. It is not for the treadmill: nobody who is connected to you can see, steer or stop your belt.
+Running together, with live figures of the others, is a possible later step and would need its own design.
 
-## How it feels
+There are two ways to meet. Both use the same connection, the same messages and the same checks.
 
-1. **Sender**: *Share* on a route or workout. The app shows a code like `K7M2Q-XR4NT`. It stays valid while this
-   dialog is open.
-2. **Receiver**: *Receive*, types the code. Both devices connect.
-3. The receiver sees **what is offered** (names and sizes) and picks what to take. Nothing arrives without being asked for.
-4. What arrives is read and checked like an imported file, and the receiver confirms before it is saved (the same
-   question as when a package is opened from outside).
+| | **Community** (main mode) | **Direct** (with a code) |
+| --- | --- | --- |
+| For | Finding what others share, without arranging anything | Sending something to one person, nobody else sees it |
+| Meeting point | A public room per language | A room that only exists for the code |
+| Who sees your offer | Everyone in the room, only if you switched it on | The person who has the code |
+| Who sees your IP address | Everyone you are connected to | That person |
 
-## The code
+## Community: how devices find each other
 
-Ten characters from an alphabet without look-alikes (no `I L O 0 1`), about 49 bits. It is a one-time secret: it is not
-stored and it ends when the dialog closes. From it the app derives two things with different prefixes: the **room**
-(a hash, what the relay sees) and the **password** that protects the set-up of the connection. A relay operator who sees
-the room cannot get the password from it without guessing the whole code.
+A browser cannot find other devices on its own: there is no DHT and no mDNS for a web page. Two devices need a **meeting
+point** where they first notice each other. That is the job of public relays; the data itself never goes through them (and
+could not: a package can be 2 MB, the relays allow 64–128 KB per message).
 
-## How two devices find each other
+1. **Opt-in.** Community is off. Switching it on says in one sentence who sees what (see "What the others learn").
+2. **One room per language**, e.g. `walkflow/community/de`. Everyone who has switched Community on joins the room of the
+   language they chose (default: the language of the app). The library announces each device through the relays and the
+   devices connect directly (WebRTC).
+3. **Offers.** Over every connection each side sends what it shares: kind, name, place, size, SHA-256 of the file (the
+   same identity a catalogue uses, see `ROUTE-PACKAGE.md`). The app merges them into one list with filters (kind,
+   country, tags), shows how many devices have each item, and de-duplicates by hash.
+4. **Taking.** You pick an offer; the app asks one device that has it. The package arrives as text, is read by the reader
+   of its kind (`readPackage`, `readWorkoutPackage`), its SHA-256 is compared with the one that was offered, and you confirm
+   before it is saved. Nothing is ever saved on its own.
+5. **Only while the view is open.** The app joins the room when the Community view opens and leaves when it closes, so it
+   does not hold connections in the background.
 
-WebRTC connects the devices directly. To start, they need a way to exchange a few lines of connection data, and there is
-no server of the project for that, so a public relay carries them: the **Nostr** strategy of the library
-[Trystero](https://github.com/dmotz/trystero) (MIT). After that, everything goes directly between the devices over an
-encrypted channel; the relay never sees names, routes or workouts.
+### Offering
 
-- **Dependency**: `trystero` 0.26.0 (pinned), which pulls in `@trystero-p2p/nostr` and `@noble/secp256k1`. About 120 KB
-  unpacked in total. Added only when the connection is built, and only loaded when the person opens the share dialog.
-- **Relays**: the library knows 29 public relays and picks five. We pin our own short list (`relayConfig.urls`) and put
-  exactly those hosts into the `connect-src` of the content security policy instead of allowing `wss:` everywhere. The list
-  is a constant in `src/net/`; a relay that goes away is replaced there.
+Nothing is offered by default. In the list of your routes and workouts each item has a switch *Share with the community*.
+A second switch, *Pass on what I have taken*, offers packages you have imported from others, so they stay available
+when the first person is offline. Both are off until you turn them on, and an offer is only visible while your device is
+online (most useful with the desktop app).
+
+### Size of a room
+
+Every device in a room connects to every other (a browser handles a limited number of connections). With few people one room
+per language is plenty. If it grows, rooms are split further (language and country: `…/de/AT`), which doubles as the
+filter. A device limits itself to a fixed number of connections and ignores the rest.
+
+## Direct: with a code
+
+*Share* on an item shows a code such as `K7M2Q-XR4NT`; the receiver types it. Ten characters from an alphabet without
+look-alikes (no `I L O 0 1`), about 49 bits. It is a one-time secret: not stored, valid while the dialog is open. From it
+the app derives the **room** (a hash, what the relay sees) and the **password** that protects the set-up of the
+connection, with different prefixes, so the room says nothing about the password.
+
+## The connection
+
+[Trystero](https://github.com/dmotz/trystero) (MIT) with its Nostr strategy turns the meeting at a relay into a direct
+WebRTC data channel, encrypted end to end.
+
+- **Dependency**: `trystero` 0.26.0 (pinned), which pulls in `@trystero-p2p/nostr` and `@noble/secp256k1`; about 120 KB
+  unpacked. Loaded only when a share or Community view opens.
+- **Relays**: the library knows 29 public relays and picks five at random; five of them do not work for this (checked
+  2026-11-03). We pin our own list (`relayConfig.urls`) and put exactly those hosts into the `connect-src` of the content
+  security policy instead of allowing `wss:` everywhere. The list is a constant in `src/net/`; a relay that goes away is
+  replaced there. A small script checks the list.
 - **STUN**: by default Google (three servers) and Cloudflare, to find out how the device can be reached. They see the IP
-  address of the device, like any WebRTC call. Overridable with `rtcConfig`.
+  address of the device, like in any WebRTC call. Overridable with `rtcConfig`.
 
-## What the other side learns
+## What the others learn
 
-- The **other device** sees your IP address (WebRTC cannot avoid that) and what you offer.
-- The **relay** sees the room hash, your IP address and when you connected, not what you share.
-- The **STUN servers** see your IP address.
+- **Every device you are connected to** sees your IP address (WebRTC cannot avoid that) and what you offer. In the
+  Community room that can be many people you do not know; with a code it is one person you chose.
+- **The relays** see the room name, your IP address and when you connected, not what you share. In Community the room name
+  is public, so a relay can tell that a device is looking at the Walkflow community.
+- **The STUN servers** see your IP address.
 
-The share dialog says this in one sentence before the first connection.
+The switch for Community says this in one sentence, and the share dialog says it before the first connection.
+The id the other devices see is random for each session, so a device cannot be followed from one visit to the next.
 
 ## The messages (`core/share/protocol.ts`)
 
 | Message | From | Meaning |
 | --- | --- | --- |
-| `hello {v}` | receiver | I am here and speak version `v` |
-| `offer {items}` | sender | What I have: `id`, `kind` (route, workout), `name`, `chars` |
-| `want {ids}` | receiver | Of these, I take those |
-| `item {id, text}` | sender | The package, as text, in its file format |
+| `hello {v}` | the one who wants to take | I am here and speak version `v` |
+| `offer {items}` | the one who shares | What I have: `id`, `kind` (route, workout), `name`, `chars` |
+| `want {ids}` | the one who wants to take | Of these, I take those |
+| `item {id, text}` | the one who shares | The package, as text, in its file format |
 | `bye` | both | Done or stopping |
 
 The rules are in a state machine on each side and tested without a connection:
 
-- The sender sends nothing before `hello`, and only what is asked for, once.
-- The receiver accepts only items it asked for, exactly as long as announced (`chars`), at most 2,000,000 characters
-  each and 10,000,000 in all, at most 20 items.
+- The one who shares sends nothing before `hello`, and only what is asked for, once.
+- The one who takes accepts only items it asked for, exactly as long as announced (`chars`), at most 2,000,000
+  characters each and 10,000,000 in all, at most 20 items.
 - Anything else ends the exchange with an error: unknown message, wrong order, other version.
 - Names are cut and stripped of control characters; they are only ever shown as plain text.
+
+### What changes in the protocol for Community
+
+- **Both directions on one connection.** Every connection runs a sharing side and a taking side at the same time. The
+  messages need to say which side they are meant for (a `bye` is ambiguous today), or the two sides get their own channel
+  (the data channel library has named actions, so one action per side).
+- **A longer offer.** An offer carries more than 20 items and the SHA-256 of each. The limit per connection stays, so one
+  device cannot flood the list: at most 50 offered items per device, at most one transfer at a time, a rate limit.
+- **Check by hash.** The one who takes compares the SHA-256 of what arrived with the offered one before the reader runs.
 
 ## Safety
 
 - **No path to the belt.** Sharing code (`src/net/`, `src/core/share/`) may not import the FTMS commands
   (`core/protocol/`) or the treadmill connection (`device/`). `tests/architecture.test.ts` fails if it does.
-- **Data, never code.** An item is text that goes through the same reader as a file (`readPackage` for routes). It cannot
-  change speed limits or settings, and it starts nothing.
-- **Nothing on its own.** The receiver picks, then confirms. No automatic import, no "accept all from this person".
-- **While the belt runs**, the share dialog can be used like any other dialog, but a connection or a failure never
-  touches the control path (display only, wrapped like the rest of the display code).
+- **Data, never code.** An item is text that goes through the same reader as a file. It cannot change speed limits or
+  settings, and it starts nothing. A workout from someone else keeps your speed limit: its speeds are held to it.
+- **Nothing on its own.** You pick, then confirm. No automatic import, no "accept all from this person".
+- **Strangers can send offers.** So every limit above applies per device, the content is checked like a file, and what
+  is offensive can only be hidden locally. A name is plain text. Items from the community are shown as *not verified*; a
+  catalogue could later mark those whose SHA-256 it knows.
+- **While the belt runs**, the share and Community views can be used like any other view, but a connection or a failure
+  never touches the control path (display only, wrapped like the rest of the display code).
 
 ## What is still to do
 
-Done: the workout package (`WORKOUT-PACKAGE.md`), so both kinds have a format.
+Done: the share code, the messages and rules of one exchange, both package formats.
 
-1. **Connection** in `src/net/`: a thin adapter around Trystero that turns the protocol's messages into data channel
-   messages, with the pinned relay list. The library is loaded on demand.
-2. **Screens**: *Share* in the route and workout lists, *Receive* in the menu, the dialog with code, status and the choice
-   of what to take. Texts in German, English and French.
-3. **CSP** for the pinned relays in `src/platform/csp.ts` and a test for it.
-4. **Hardware-free checks**: two browser tabs on one machine exchange a route; a wrong code, a closed dialog and a stopped
-   sender end cleanly.
+1. **Protocol for Community**: both directions, offers with hashes and limits, check by hash. With tests, before any
+   connection exists.
+2. **Connection** in `src/net/`: a thin adapter around Trystero that turns the protocol's messages into data channel
+   messages, with the pinned relay list; a room for a language and a room for a code. The library is loaded on demand.
+3. **Screens**: the Community view (switch with the one-sentence notice, list with filters, take), *Share with the
+   community* on routes and workouts, *Share with a code* and *Receive with a code*. Texts in German, English and French.
+4. **CSP** for the pinned relays in `src/platform/csp.ts` and a test for it; the script that checks the relays.
+5. **Checks without hardware**: two browser tabs on one machine see each other in the room and exchange a route; a wrong
+   code, a closed view and a stopped sender end cleanly.
 
 ## Later, maybe
 
-- A catalogue of community routes (see `ROUTE-PACKAGE.md`), which would use the same packages.
+- A catalogue of community routes (see `ROUTE-PACKAGE.md`): its list of hashes would mark items as verified and could name
+  a place to fetch them when no device has them.
+- Finding devices on the same network (mDNS) in the desktop app, without a relay.
 - Running together with live figures. Others would only ever see figures; they would never control a belt.
