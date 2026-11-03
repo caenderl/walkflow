@@ -27,13 +27,25 @@ export interface SpeedChartOptions {
   endLabel: string;
 }
 
+/**
+ * The size to draw at, in CSS pixels and in device pixels; null while the canvas is not on screen (its size is 0). The
+ * size must never be taken from the canvas's own pixels then: they already include the pixel ratio, so every redraw of a
+ * hidden canvas made it larger (a 560 px chart grew to a million pixels).
+ */
+export function canvasLayout(clientWidth: number, clientHeight: number, dpr: number): { W: number; H: number; bw: number; bh: number } | null {
+  if (!(clientWidth > 0) || !(clientHeight > 0)) return null;
+  const ratio = Number.isFinite(dpr) && dpr > 0 ? dpr : 1;
+  return { W: clientWidth, H: clientHeight, bw: Math.round(clientWidth * ratio), bh: Math.round(clientHeight * ratio) };
+}
+
 /** Draws at the size the CSS gives the canvas, in device pixels, so it stays sharp at any width. */
 function prepare(c: HTMLCanvasElement) {
   const g = c.getContext('2d');
   if (!g) return null;
-  const dpr = window.devicePixelRatio || 1;
-  const W = c.clientWidth || c.width, H = c.clientHeight || c.height;
-  const bw = Math.round(W * dpr), bh = Math.round(H * dpr);
+  const layout = canvasLayout(c.clientWidth, c.clientHeight, window.devicePixelRatio);
+  if (!layout) return null;
+  const { W, H, bw, bh } = layout;
+  const dpr = bw / W;
   if (c.width !== bw || c.height !== bh) { c.width = bw; c.height = bh; }
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, W, H);

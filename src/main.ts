@@ -947,7 +947,8 @@ setupViews(v => {
   workouts.setVisible(v === 'workouts');
   routes.setVisible(v === 'routes');
   // The plan or the runs may have changed in another view
-  if (v === 'training') { void routes.refreshGoal(); void workouts.reload(); }
+  // The chart is not drawn while it is hidden, so it is drawn now, before the first frame of the view
+  if (v === 'training') { void routes.refreshGoal(); void workouts.reload(); redrawChart(); }
 });
 loadSettings();
 renderInfo();
