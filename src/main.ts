@@ -7,7 +7,7 @@ import { desktop, setupDesktop } from './ui/desktop';
 import { choose, confirmDialog } from './ui/components/dialogs';
 import type { TcxSport } from './core/history/export';
 import { setupExportControls } from './ui/history/export-controls';
-import { cmdPause, cmdRequestControl, cmdStart, cmdStop, describeMachineStatus, hex, OP, parseMachineStatus, parseTrainingStatus, type TreadmillData } from './core/protocol/ftms';
+import { cmdPause, cmdRequestControl, cmdStart, cmdStop, describeMachineStatus, hex, parseMachineStatus, parseTrainingStatus, type TreadmillData } from './core/protocol/ftms';
 import { setupHistory } from './ui/history/history';
 import { lang, onLanguageChange, retranslate, t, type Text } from './i18n/i18n';
 import { routeDescription, routeName } from './core/routes/route-examples';
@@ -17,10 +17,11 @@ import { setupInterval } from './ui/workouts/interval-ui';
 import { fmtDistance, fmtLength, fmtTime, ProgramRunner, programLength, type ProgramStep } from './core/training/program';
 import { setupPwa } from './ui/pwa';
 import type { RunSource, RunTag } from './core/history/runs';
-import { checkConsoleCommand, controlAvailability, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION, isDisclaimerAccepted, parseHexBytes, StandstillDetector } from './core/safety/safety';
+import { controlAvailability, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION, isDisclaimerAccepted, StandstillDetector } from './core/safety/safety';
 import { ACTIVE_STORAGE_KEY, readActive, type Active } from './core/training/selection';
 import { setupBackground } from './ui/background';
 import { setupInclineCard } from './ui/live/incline-card';
+import { setupConsole } from './ui/live/console';
 import { Session } from './ui/live/session';
 import { setupSpeedControls } from './ui/live/speed-controls';
 import { renderInfo } from './ui/settings/info';
@@ -28,7 +29,7 @@ import { setupSettings } from './ui/settings/settings-ui';
 import { SimulatorAdapter } from './device/sim';
 import { initTheme, onThemeChange } from './ui/theme';
 import { BeltBanner } from './core/safety/belt-banner';
-import { $, $button, $input, log, store } from './ui/ui';
+import { $, $button, log, store } from './ui/ui';
 import { onUnitsChange, parseUnits, setUnits, toDist, toSpeed, UNITS_STORAGE_KEY } from './i18n/units';
 import { askBeforeStart } from './core/safety/quiet';
 import { setupRoutes } from './ui/routes/route-ui';
@@ -537,37 +538,6 @@ function applyStopPlacement() {
   document.documentElement.dataset.stop = stopPlacement(view, uiConnected);
 }
 
-// ---------- Console ----------
-async function rawSend() {
-  const c = session.client;
-  if (!c) return;
-  const bytes = parseHexBytes($input('raw').value);
-  if (!bytes) { log(t.console.invalidHex); return; }
-  const check = checkConsoleCommand(bytes, {
-    maxKmh: effectiveMax(),
-    maxStep: governor.maxStep,
-    baseKmh: governor.base(),
-    msSinceLastSpeedCommand: governor.msSinceLastCommand(),
-  });
-  if (check.action === 'block') { log(`❌ ${check.reason}`); return; }
-  const data = new Uint8Array(bytes);
-  if (check.action === 'confirm-start') {
-    if (!(await confirmStart(undefined, { always: true }))) return;
-    governor.reset();
-    if (await c.send(data)) session.beltStarted = true;
-    return;
-  }
-  if (bytes[0] === OP.STOP_PAUSE && (bytes[1] === 0x01 || bytes[1] === 0x02)) {
-    runner.abort(() => t.console.stopped);
-    governor.reset();
-    standstill.disarm();
-    if (await c.send(data, { urgent: true })) session.beltStarted = false;
-    return;
-  }
-  if (check.setSpeed !== undefined) governor.noteExternalCommand(check.setSpeed);
-  void c.send(data);
-}
-
 // ---------- Events ----------
 // The header menus never cover the controls (Start/Pause/Stop, ±)
 const controls = () => [document.querySelector('.dock')];
@@ -605,8 +575,14 @@ $button('stop').onclick = () => void doStop();
 
 setupExportControls(samples, redrawChart);
 
-$button('rawSend').onclick = () => void rawSend();
-$input('raw').addEventListener('keydown', e => { if (e.key === 'Enter') $button('rawSend').click(); });
+setupConsole({
+  session,
+  governor,
+  effectiveMax,
+  confirmStart,
+  abortRun: reason => runner.abort(reason),
+  disarmStandstill: () => standstill.disarm(),
+});
 
 document.addEventListener('keydown', e => {
   if (!connected()) return;
