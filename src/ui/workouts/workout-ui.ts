@@ -5,6 +5,7 @@
 import { confirmDialog } from '../components/dialogs';
 import { lang, onLanguageChange, t } from '../../i18n/i18n';
 import { fmtLength, formatProgram, parseProgram, programLength, type ProgramStep } from '../../core/training/program';
+import { toRow, toStep, type Row, type Unit } from '../../core/training/workout-rows';
 import { fromShort, fromSpeed, toShort, toSpeed } from '../../i18n/units';
 import { routeName } from '../../core/routes/route-examples';
 import { getRouteStore } from '../../data/route-store';
@@ -37,38 +38,11 @@ export interface WorkoutsHost {
   changed(): void;
 }
 
-type Unit = 'min' | 's' | 'm';
-
-/** A step as the editor shows it: amount in a unit */
-interface Row {
-  unit: Unit;
-  amount: number;
-  speed: number;
-  /** Percent; undefined = none */
-  incline?: number;
-}
-
 interface Draft {
   /** null = new workout */
   id: string | null;
   name: string;
   rows: Row[];
-}
-
-function toRow(step: ProgramStep): Row {
-  const incline = step.incline === undefined ? {} : { incline: step.incline };
-  if (step.meters !== undefined) return { unit: 'm', amount: step.meters, speed: step.speed, ...incline };
-  return step.sec % 60 === 0
-    ? { unit: 'min', amount: step.sec / 60, speed: step.speed, ...incline }
-    : { unit: 's', amount: step.sec, speed: step.speed, ...incline };
-}
-
-/** null = the numbers are not usable */
-function toStep(row: Row): ProgramStep | null {
-  if (!Number.isFinite(row.amount) || !Number.isFinite(row.speed) || row.amount < 0) return null;
-  const incline = row.incline !== undefined && Number.isFinite(row.incline) ? { incline: row.incline } : {};
-  if (row.unit === 'm') return { meters: Math.round(row.amount), speed: row.speed, ...incline };
-  return { sec: Math.round(row.amount * (row.unit === 'min' ? 60 : 1)), speed: row.speed, ...incline };
 }
 
 const templateSteps = (id: string): ProgramStep[] | undefined => TEMPLATES.find(tpl => tpl.id === id)?.steps;
