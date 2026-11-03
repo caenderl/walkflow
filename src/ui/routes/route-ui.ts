@@ -11,6 +11,7 @@ import { GPX_MAX_CHARS, parseGpx, serializeGpx } from '../../core/routes/gpx';
 import { packageFileName, packageFromRoute, readPackage, serializePackage } from '../../core/routes/route-package';
 import { lang, onLanguageChange, t } from '../../i18n/i18n';
 import { adoptExample, descriptionAfterEdit, exampleRoute, examplesToSeed, markSeeded, readSeeded, routeDescription, routeName, ROUTE_EXAMPLES, SEEDED_STORAGE_KEY } from '../../core/routes/route-examples';
+import { nameFromFile, safeFileName } from '../../core/routes/route-files';
 import { createProfile, svgEl } from './route-profile';
 import { createMapSlot, type MapSlot } from './route-map';
 import { isDark, onThemeChange } from '../theme';
@@ -32,14 +33,6 @@ export const SELECTED_STORAGE_KEY = 'walkflow.route';
 const MAP_STORAGE_KEY = 'walkflow.map';
 /** How often the standing against today's goal is read again while data keeps coming in */
 const GOAL_REFRESH_MS = 60_000;
-
-function safeFileName(name: string): string {
-  const base = name.replace(/[^\p{L}\p{N}_-]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 60);
-  return `${base || 'route'}.gpx`;
-}
-
-/** The name a route gets when the file has none: the file name without its extension */
-export const nameFromFile = (fileName: string) => fileName.replace(/\.(gpx|xml)$/i, '').replace(/[_-]+/g, ' ').trim().slice(0, ROUTE_NAME_MAX).trim();
 
 export interface RoutesHost {
   /** Effective speed limit in km/h: the estimate is made at the speed the belt will really run */
