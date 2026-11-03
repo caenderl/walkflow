@@ -243,8 +243,9 @@ connection (`src/net/`), the relays and the content security policy, and what is
 (`core/share/community.ts`, see "What is offered and what is saved").
 
 1. **Screens**. Done: the Community view (switch with the notice, the room language, the list with filters and *Hide*, *Take* with
-   confirmation; `ui/community/community.ts`). Still to do: *Share with the community* on routes and workouts, and *Share with
-   a code* and *Receive with a code*. Texts in German, English and French.
+   confirmation; `ui/community/community.ts`) and *Share with the community* in the ⋯ menu of a route or workout (asked about
+   the first time, with a badge *Shared*). Still to do: *Share with a code* and *Receive with a code*. Texts in German,
+   English and French.
 2. **Checks without hardware** in the app: two windows exchange a route through the screens; a wrong code, a closed view and
    a stopped sender end cleanly. The desktop app has to be checked too (WebRTC and the relays from Electron).
 

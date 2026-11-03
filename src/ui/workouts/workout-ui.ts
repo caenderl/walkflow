@@ -92,12 +92,13 @@ export function setupWorkouts(host: WorkoutsHost) {
   }
 
   // ---------- Library ----------
-  function listItem(name: string, steps: ProgramStep[], id: string, actions: HTMLElement[]) {
+  function listItem(name: string, steps: ProgramStep[], id: string, actions: HTMLElement[], shared = false) {
     const isSelected = id === selected && host.wanted();
     const li = el('li', { className: 'wk-item' });
     li.append(
       el('div', { className: 'wk-info' },
-        el('div', { className: 'wk-name' }, name, ...(isSelected ? [' ', el('span', { className: 'badge rec', textContent: t.workouts.useHint })] : [])),
+        el('div', { className: 'wk-name' }, name, ...(isSelected ? [' ', el('span', { className: 'badge rec', textContent: t.workouts.useHint })] : []),
+          ...(shared ? [' ', el('span', { className: 'badge', textContent: t.community.sharedBadge })] : [])),
         el('div', { className: 'hint', textContent: t.program.summary(steps.length, fmtLength(programLength(steps))) })),
       el('div', { className: 'wk-actions' }, ...actions),
     );
@@ -118,14 +119,24 @@ export function setupWorkouts(host: WorkoutsHost) {
       useButton(w.id),
       button(t.workouts.edit, () => startEdit({ id: w.id, name: workoutName(w, lang), rows: w.steps.map(toRow), source: w })),
       overflowMenu(t.routes.moreActions, [
+        { icon: 'share', label: w.shared ? t.community.unshare : t.community.share, run: () => void toggleShare(w) },
         { icon: 'package', label: t.workouts.exportPackage, run: () => download(serializeWorkoutPackage(workoutPackage(w)), 'application/json', workoutPackageFileName(workoutName(w, lang))) },
         { icon: 'trash', label: t.workouts.delete, run: () => void remove(w), danger: true },
       ]),
-    ])));
+    ], w.shared === true)));
     $('wkExamples').replaceChildren(...TEMPLATES.map(tpl => listItem(exampleName(tpl.id), tpl.steps, TEMPLATE_PREFIX + tpl.id, [
       useButton(TEMPLATE_PREFIX + tpl.id),
       button(t.workouts.copy, () => startEdit({ id: null, name: t.workouts.copyName(exampleName(tpl.id)), rows: tpl.steps.map(toRow) })),
     ])));
+  }
+
+  /** Sharing with the community is the person's choice for each workout, and asked about the first time */
+  async function toggleShare(w: Workout) {
+    if (!w.shared && !(await confirmDialog(t.community.shareWorkoutTitle, [t.community.shareWorkoutText(workoutName(w, lang))], t.community.shareConfirm))) return;
+    const { shared: _was, ...rest } = w;
+    try { await (await ready).put(w.shared ? rest : { ...w, shared: true }); } catch (e) { $('wkImportStatus').textContent = t.workouts.failed(String(e)); return; }
+    await reload();
+    $('wkImportStatus').textContent = w.shared ? t.community.shareStopped : t.community.shareStarted;
   }
 
   async function remove(w: Workout) {

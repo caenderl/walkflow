@@ -230,7 +230,8 @@ export function setupRoutes(host: RoutesHost) {
         el('div', { className: 'wk-info' },
           el('div', { className: 'wk-name' },
             ...(flag ? [el('img', { className: 'flag', src: flag, alt: countryName(r.country!, lang), title: countryName(r.country!, lang) })] : []), routeName(r, lang),
-            ...(r.id === selectedId && host.wanted() ? [' ', el('span', { className: 'badge rec', textContent: t.routes.useHint })] : [])),
+            ...(r.id === selectedId && host.wanted() ? [' ', el('span', { className: 'badge rec', textContent: t.routes.useHint })] : []),
+            ...(r.shared ? [' ', el('span', { className: 'badge', textContent: t.community.sharedBadge })] : [])),
           el('div', { className: 'rt-meta' },
             el('span', { className: 'rt-length', textContent: fmtDistance(stats.total) }),
             el('span', { className: 'hint', textContent: t.routes.duration(minutes, kmh) }),
@@ -242,6 +243,7 @@ export function setupRoutes(host: RoutesHost) {
           toggle,
           overflowMenu(t.routes.moreActions, [
             { icon: 'route', label: t.routes.export, run: () => download(serializeGpx(r), 'application/gpx+xml', safeFileName(r.name)) },
+            { icon: 'share', label: r.shared ? t.community.unshare : t.community.share, run: () => void toggleShare(r) },
             { icon: 'package', label: t.routes.exportPackage, run: () => download(serializePackage(packageFromRoute(r)), 'application/json', packageFileName(r.name)) },
             { icon: 'trash', label: t.routes.delete, run: () => void remove(r), danger: true },
           ])),
@@ -258,6 +260,15 @@ export function setupRoutes(host: RoutesHost) {
   function setStatus(text: (() => string) | null) {
     statusText = text;
     $('rtStatus').textContent = text ? text() : '';
+  }
+
+  /** Sharing with the community is the person's choice for each route, and asked about the first time: a route shows where it is */
+  async function toggleShare(r: Route) {
+    if (!r.shared && !(await confirmDialog(t.community.shareRouteTitle, [t.community.shareRouteText(routeName(r, lang))], t.community.shareConfirm))) return;
+    const { shared: _was, ...rest } = r;
+    try { await (await ready).put(r.shared ? rest : { ...r, shared: true }); } catch (e) { setStatus(() => t.routes.failed(String(e))); return; }
+    await reload();
+    setStatus(() => (r.shared ? t.community.shareStopped : t.community.shareStarted));
   }
 
   async function remove(r: Route) {
