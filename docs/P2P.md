@@ -66,6 +66,23 @@ Every device in a room connects to every other (a browser handles a limited numb
 per language is plenty. If it grows, rooms are split further (language and country: `…/de/AT`), which doubles as the
 filter. A device limits itself to a fixed number of connections and ignores the rest.
 
+### The list (`core/share/directory.ts`)
+
+The connection feeds the offers of every connected device into a `Directory`, and the Community view draws what it returns.
+
+- **One entry per file**, by SHA-256, whatever each device calls it, with the devices that have it. A device that offers
+  the same file twice counts once.
+- **What is shown about a file** is what most devices agree on (name, kind, length, place, country, tags); with no
+  majority the description seen first. What a device says about a file is what a stranger says: one device cannot rename a
+  file for everyone, and the length and hash that a transfer is checked against are the ones that device offered.
+- **Order:** files that more devices have come first, then by name, then by hash.
+- **Filters:** kind, country, tag and text (every word must be in the name, the place or the tags; case and accents do
+  not matter, `ß` is `ss`). The facets say what there is to filter by and how many files each has.
+- **Hiding:** a file the person hides stays out of the list and the facets, also when the device that had it leaves and
+  another offers it. The list of hidden hashes is kept by the caller (a setting) and given to the `Directory` when it starts.
+- **Who to ask:** `candidates(hash)` gives the devices that have a file and the id it has on each connection, in the
+  order they were seen, so that the next one can be tried when one is gone or fails.
+
 ## Direct: with a code
 
 *Share* on an item shows a code such as `K7M2Q-XR4NT`; the receiver types it. Ten characters from an alphabet without
@@ -186,21 +203,18 @@ Anything above ends the exchange with an error (`tooLarge`, `invalid`, `unexpect
 ## What is still to do
 
 Done: the share code, the messages and rules of the exchange (both roles on one connection, offers with hashes and limits,
-check by hash), both package formats.
+check by hash), both package formats, the list of what is offered (`Directory`).
 
-1. **The list** (`core/share/directory.ts`): merges the offers of all connected devices into one list, de-duplicated by
-   hash, with the number of devices that have each item, filters (kind, country, tag, text) and the room per language.
-   Pure and tested.
-2. **Connection** in `src/net/`: a thin adapter around Trystero that turns the protocol's messages into data channel
+1. **Connection** in `src/net/`: a thin adapter around Trystero that turns the protocol's messages into data channel
    messages, with the pinned relay list; a room for a language and a room for a code. The library is loaded on demand.
    The handshake timeout, dropping and ignoring devices that break a rule, and the limit of connections belong here.
-3. **What was taken from the community**: a route or workout is saved with the hash it arrived with and a mark that it came
+2. **What was taken from the community**: a route or workout is saved with the hash it arrived with and a mark that it came
    from the community; the offer is the marked items whose file is still byte-identical (a package written by the app comes out
    byte for byte the same when it is read and written again; this is tested for routes and workouts).
-4. **Screens**: the Community view (switch with the one-sentence notice, list with filters, take), *Share with the
+3. **Screens**: the Community view (switch with the one-sentence notice, list with filters, take), *Share with the
    community* on routes and workouts, *Share with a code* and *Receive with a code*. Texts in German, English and French.
-5. **CSP** for the pinned relays in `src/platform/csp.ts` and a test for it; the script that checks the relays.
-6. **Checks without hardware**: two browser tabs on one machine see each other in the room and exchange a route; a wrong
+4. **CSP** for the pinned relays in `src/platform/csp.ts` and a test for it; the script that checks the relays.
+5. **Checks without hardware**: two browser tabs on one machine see each other in the room and exchange a route; a wrong
    code, a closed view and a stopped sender end cleanly.
 
 ## Later, maybe
