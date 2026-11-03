@@ -24,7 +24,7 @@ Other FTMS treadmills may work but are not tested.
 
 ## Features
 
-- Connect/disconnect, start/pause/stop, speed via slider, presets and ±0.5, incline
+- Connect/disconnect, start/pause/stop (Start waits while the belt moves or a program runs, Pause is there while the belt may be running, Stop is always available while connected), speed via slider, presets and ±0.5, incline
 - Incline: the treadmill is asked whether it accepts an incline (FTMS features and its supported range). If it does not, the incline card, the incline figure and the incline fields of the workout editor are not shown (the editor hides them once a real treadmill has said so). If it does, the incline is set with a slider over the treadmill’s range, or, for a treadmill with fixed levels, from buttons for as many levels as you set in Settings → General → Incline levels (0 to 10, spread evenly from the lowest to the highest incline the treadmill reports; the percent of each level will be configurable later). The value sent is always held inside the range the treadmill reported.
 - Connecting, language and theme live in small menus in the header: click the connection status, or the settings button at the top right
 - Workouts: a saved list of steps, each ending after a time or after a distance (the treadmill’s own distance counter), with a speed. Editor with examples, library, import/export as text (`5 min 4.0`, `400 m 3.5`), and a week plan (minutes per weekday) that is ticked off from the history. A step can carry an optional incline (`incl 2`), which is saved and shown but not sent to the treadmill yet (untested on the target hardware). Each weekday of the plan can suggest a workout or route; the training view offers today’s suggestion, and the day is still done by minutes.

@@ -96,6 +96,9 @@ The settings dialog and the training view only change what is shown, plus one se
 - [ ] Choose a route and switch the map on: the map is the main element of the training view, also while the route is walked. During a workout with steps the steps are shown instead.
 
 - [ ] **Banner over the figures** (display only, nothing is sent). Press **Start** (confirm): the box with the speed turns green with “Mach dich bereit, das Band startet gleich …” and fades out over about 4.5 s, earlier if the belt already moves. Is it gone about when the belt starts to move? Press **Stop** (button, Space or Esc, also the stop on the device and the safety key) while the belt runs: the box turns red (“Band stoppt …”), the stronger the slower the belt is, “Band steht” when it stands, and after 3 s the normal display. Stop must work exactly as fast as before. Without a connection (also after pulling the Bluetooth) the box has a grey overlay “Nicht verbunden. Jetzt verbinden”, and the link opens the connection menu.
+
+- [ ] **Buttons follow the belt.** With a connection and the belt standing, **Start** is available and **Pause** is greyed out. After a start Start is greyed out (while the belt runs, also while the treadmill counts down, and while a program runs) and Pause is available. **Stop** must never be greyed out while connected, in no state: press it with the belt standing and while it runs. Start the belt with the treadmill’s own remote: does Start grey out in the app once the speed is reported? Stop it on the treadmill: does Start come back (also if the treadmill reports nothing when it stands: after 5 s)?
+
 ### Units (km/h or mph)
 
 **Settings → General → Units** only changes what is shown and typed. Everything stored, sent and checked stays km/h and metres: the limit of 6 km/h, the step of 0.5 km/h per command, the lines in the log of the experiment console. Please check with the belt running in **Imperial**:

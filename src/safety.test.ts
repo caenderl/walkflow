@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  beltMaybeRunning, checkConsoleCommand, clampSpeed, decideLimitChange, DEFAULT_MAX_STEP, DEFAULT_SPEED_LIMIT,
+  beltMaybeRunning, checkConsoleCommand, controlAvailability, clampSpeed, decideLimitChange, DEFAULT_MAX_STEP, DEFAULT_SPEED_LIMIT,
   DISCLAIMER_VERSION, effectiveMax, isDisclaimerAccepted, loadLimit, parseHexBytes, parseLimit, parseMaxStep,
   planRamp, RAMP_INTERVAL_MS, serializeLimit, SpeedGovernor, StandstillDetector, type ConsoleContext,
 } from './safety';
@@ -486,5 +486,60 @@ describe('first-run notice', () => {
     expect(isDisclaimerAccepted(String(DISCLAIMER_VERSION - 1))).toBe(false);
     expect(isDisclaimerAccepted(null)).toBe(false);
     expect(isDisclaimerAccepted('yes')).toBe(false);
+  });
+});
+
+
+describe('controlAvailability: which of Start, Pause and Stop can be pressed', () => {
+  const idle = { connected: true, measuredKmh: 0, measuredAgeMs: 500, startedByApp: false, startingNow: false, programActive: false };
+
+  it('Stop can always be pressed while there is a connection, whatever else is going on', () => {
+    for (const measuredKmh of [undefined, 0, 0.2, 3, 12]) {
+      for (const measuredAgeMs of [0, 4000, 60_000]) {
+        for (const startedByApp of [false, true]) {
+          for (const startingNow of [false, true]) {
+            for (const programActive of [false, true]) {
+              const a = controlAvailability({ connected: true, measuredKmh, measuredAgeMs, startedByApp, startingNow, programActive });
+              expect(a.stop, JSON.stringify({ measuredKmh, measuredAgeMs, startedByApp, startingNow, programActive })).toBe(true);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('nothing can be pressed without a connection', () => {
+    expect(controlAvailability({ ...idle, connected: false, measuredKmh: 3, programActive: true })).toEqual({ start: false, pause: false, stop: false });
+  });
+
+  it('with the belt standing: Start, no Pause (nothing to pause)', () => {
+    expect(controlAvailability(idle)).toEqual({ start: true, pause: false, stop: true });
+    expect(controlAvailability({ ...idle, measuredKmh: undefined })).toEqual({ start: true, pause: false, stop: true });
+  });
+
+  it('with the belt running: Pause, no Start', () => {
+    expect(controlAvailability({ ...idle, measuredKmh: 3 })).toEqual({ start: false, pause: true, stop: true });
+  });
+
+  it('a belt that creeps below 0.3 km/h is not "running" for Start, but Pause stays: when in doubt it is running', () => {
+    expect(controlAvailability({ ...idle, measuredKmh: 0.2 })).toEqual({ start: true, pause: true, stop: true });
+  });
+
+  it('an old reading does not lock Start: after 5 s without news the speed does not count as known', () => {
+    expect(controlAvailability({ ...idle, measuredKmh: 3, measuredAgeMs: 5000 }).start).toBe(false);
+    expect(controlAvailability({ ...idle, measuredKmh: 3, measuredAgeMs: 5001 }).start).toBe(true);
+    expect(controlAvailability({ ...idle, measuredKmh: 3, measuredAgeMs: 60_000 }).pause).toBe(true);
+  });
+
+  it('a start that was sent but where the belt has not moved yet: Pause, no second Start', () => {
+    expect(controlAvailability({ ...idle, startingNow: true })).toEqual({ start: false, pause: true, stop: true });
+  });
+
+  it('a running program: Pause, no Start', () => {
+    expect(controlAvailability({ ...idle, programActive: true })).toEqual({ start: false, pause: true, stop: true });
+  });
+
+  it('a start by the app without any reading yet counts as "maybe running" for Pause, not as running for Start', () => {
+    expect(controlAvailability({ ...idle, measuredKmh: undefined, startedByApp: true })).toEqual({ start: true, pause: true, stop: true });
   });
 });

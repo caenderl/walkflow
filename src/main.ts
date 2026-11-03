@@ -20,7 +20,7 @@ import { fmtDistance, fmtLength, fmtTime, ProgramRunner, programLength, type Pro
 import { setupPwa } from './pwa';
 import type { RunSource, RunTag } from './runs';
 import {
-  beltMaybeRunning, checkConsoleCommand, decideLimitChange, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION,
+  beltMaybeRunning, checkConsoleCommand, controlAvailability, decideLimitChange, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION,
   effectiveMax as calcEffectiveMax, isDisclaimerAccepted, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE, LIMIT_MAX, LIMIT_MIN, LIMIT_STORAGE_KEY,
   loadLimit, MAX_STEP_MAX, MAX_STEP_MIN, MAX_STEP_STORAGE_KEY, parseHexBytes, parseMaxStep, RAMP_INTERVAL_MS,
   serializeLimit, SpeedGovernor, StandstillDetector,
@@ -62,6 +62,8 @@ let beltStarted = false;
 /** The banner over the live figures: ready to start, stopping, not connected. Display only. */
 const banner = new BeltBanner();
 let lastMeasured: number | undefined;
+/** When the speed was last reported (performance.now), to tell a fresh reading from an old one */
+let lastMeasuredAt = 0;
 let controlLost = false;
 let hiddenSince: number | null = null;
 let hiddenWhileRunning: 'warned' | 'paused' | null = null;
@@ -152,6 +154,7 @@ function onTreadmillData(r: TreadmillData) {
   if (r.speed !== undefined) {
     banner.speed(r.speed, now());
     lastMeasured = r.speed;
+    lastMeasuredAt = now();
     governor.noteMeasured(r.speed);
     if (standstill.feed(r.speed, now()) && runner.active) {
       log(t.program.standstillLog);
@@ -173,6 +176,24 @@ function onTreadmillData(r: TreadmillData) {
   }
 }
 
+/**
+ * Start waits while the belt moves, a start was just sent or a program runs; Pause is there while the belt may be running.
+ * Stop is not touched here: setUi enables it with the connection, and nothing takes it away (controlAvailability).
+ */
+function renderControls() {
+  try {
+    const a = controlAvailability({
+      connected: connected(),
+      measuredKmh: lastMeasured,
+      measuredAgeMs: now() - lastMeasuredAt,
+      startedByApp: beltStarted,
+      startingNow: banner.state(now()).kind === 'start',
+      programActive: runner.active,
+    });
+    $button('start').disabled = !a.start;
+    $button('pause').disabled = !a.pause;
+  } catch { /* display only */ }
+}
 
 /** Follows the banner state: kind, colour, text and how strong it is. Display only: nothing here may get in the way of a stop. */
 function renderBanner() {
@@ -631,6 +652,7 @@ function setUi(isConnected: boolean) {
   $button('demo').disabled = isConnected;
   $button('disconnect').disabled = !isConnected;
   document.querySelectorAll<HTMLButtonElement | HTMLInputElement>('.needs-conn').forEach(el => { el.disabled = !isConnected; });
+  renderControls();
 }
 
 /** Status in the header; narrow screens show the short form (the device name is in the connection menu). */
@@ -934,7 +956,7 @@ renderStats();
 applyLimits();
 redrawChart();
 setInterval(() => { redrawChart(); recorder.tick(Date.now()); }, 1000);
-setInterval(renderBanner, 100);
+setInterval(() => { renderBanner(); renderControls(); }, 100);
 new ResizeObserver(redrawChart).observe($('chart'));
 
 const env = { ua: navigator.userAgent, hasApi: !!navigator.bluetooth, secure: isSecureContext, touchPoints: navigator.maxTouchPoints };

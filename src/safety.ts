@@ -326,6 +326,35 @@ export function beltMaybeRunning(s: { startedByApp: boolean; lastMeasuredKmh: nu
   return s.startedByApp || (s.lastMeasuredKmh ?? 0) > 0;
 }
 
+/** A measured speed from which the belt counts as moving (km/h) */
+const MOVING_KMH = 0.3;
+/** A speed reading older than this does not count as known: a treadmill that stops reporting must not lock Start */
+const READING_FRESH_MS = 5000;
+
+/**
+ * Which of the three control buttons can be pressed. Stop can always be pressed while there is a connection: nothing
+ * about the belt's state, however sure the app is, takes it away. Start waits while the belt is known to move, a start
+ * was just sent or a program runs (no second start on top of it). Pause is there whenever the belt may be running.
+ */
+export function controlAvailability(s: {
+  connected: boolean;
+  measuredKmh: number | undefined;
+  /** How long ago the speed was measured */
+  measuredAgeMs: number;
+  startedByApp: boolean;
+  /** A start was sent and the belt has not had time to move yet */
+  startingNow: boolean;
+  programActive: boolean;
+}): { start: boolean; pause: boolean; stop: boolean } {
+  if (!s.connected) return { start: false, pause: false, stop: false };
+  const moving = s.measuredKmh !== undefined && s.measuredKmh >= MOVING_KMH && s.measuredAgeMs <= READING_FRESH_MS;
+  return {
+    start: !moving && !s.startingNow && !s.programActive,
+    pause: beltMaybeRunning({ startedByApp: s.startedByApp, lastMeasuredKmh: s.measuredKmh }) || s.startingNow || s.programActive,
+    stop: true,
+  };
+}
+
 /**
  * Detects that the belt stands still during a program (e.g. stopped with the remote or the safety key),
  * so the program sends no further commands.
