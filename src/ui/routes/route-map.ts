@@ -5,6 +5,12 @@ import { t } from '../../i18n/i18n';
 import { isDefaultMapStyle } from '../../core/routes/map-config';
 import type { RouteMap } from './map-view';
 import type { Route } from '../../core/routes/routes';
+import { isDark } from '../theme';
+
+/** The map styles of this build (light and dark); null = no map in this build */
+export const mapStyles = __MAP_STYLES__;
+/** The style for the current theme */
+export const pickStyle = () => { const dark = isDark(); return { url: dark ? mapStyles!.dark : mapStyles!.light, dark }; };
 
 export interface MapSlot {
   /** The route to draw; null = none */

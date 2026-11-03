@@ -10,19 +10,20 @@ import { overflowMenu } from '../components/overflow-menu';
 import { serializeGpx } from '../../core/routes/gpx';
 import { packageFileName, packageFromRoute, serializePackage } from '../../core/routes/route-package';
 import { lang, onLanguageChange, t } from '../../i18n/i18n';
-import { routeDescription, routeName } from '../../core/routes/route-examples';
+import { routeName } from '../../core/routes/route-examples';
 import { editedRoute } from '../../core/routes/route-edit';
 import { safeFileName } from '../../core/routes/route-files';
 import { createProfile, svgEl } from './route-profile';
 import { backfillCountries, seedExamples } from './library-upkeep';
+import { buildDetail, describe, fillDetail, type Detail } from './route-detail';
+import { buildEditor, type Editor, type EditorHost } from './route-editor';
 import { setupRouteImport } from './route-import';
-import { createMapSlot, type MapSlot } from './route-map';
-import { isDark, onThemeChange } from '../theme';
-import { toSpeed } from '../../i18n/units';
+import { createMapSlot, mapStyles, pickStyle, type MapSlot } from './route-map';
+import { onThemeChange } from '../theme';
 import { fmtDistance, type ProgramStep } from '../../core/training/program';
 import { getRouteStore, type RouteStore } from '../../data/route-store';
 import {
-  analyzeRoute, DistanceTracker, gradeAhead, minutesLeft, pointAt, readRoute, ROUTE_DESCRIPTION_MAX,
+  analyzeRoute, DistanceTracker, gradeAhead, minutesLeft, pointAt, readRoute,
   ROUTE_SPEED_MAX, ROUTE_SPEED_MIN, routeSpeed, walkSeconds, walkSteps, type Route, type RouteStats,
 } from '../../core/routes/routes';
 import { getRunStore } from '../../data/run-store';
@@ -68,9 +69,6 @@ export function setupRoutes(host: RoutesHost) {
   // ---------- Map ----------
   // The map belongs to the route. In the training view it is the main element once it is switched on (the choice is
   // kept); in the routes view a route in the library can be opened to show it. Nothing is loaded before one of the two.
-  const mapStyles = __MAP_STYLES__;
-  /** The style for the current theme */
-  const pickStyle = () => { const dark = isDark(); return { url: dark ? mapStyles!.dark : mapStyles!.light, dark }; };
   let mapOn = mapStyles !== null && store.get(MAP_STORAGE_KEY) === '1';
   const training = { slot: null as MapSlot | null, toggle: $button('routeMapToggle'), note: $('routeMapNote'), problem: null as string | null };
   if (mapStyles) {
@@ -171,26 +169,8 @@ export function setupRoutes(host: RoutesHost) {
   // ---------- Routes view ----------
 
   // ---------- Walking speed and description of a route ----------
-  interface Editor { id: string; el: HTMLElement; speed: HTMLInputElement; text: HTMLTextAreaElement; status: HTMLElement }
   let editor: Editor | null = null;
-
-  function buildEditor(r: Route): Editor {
-    // Stored in km/h, typed and shown in the units of the settings
-    const shown = (kmh: number) => String(Math.round(toSpeed(kmh) * 100) / 100);
-    const speed = el('input', { type: 'number', min: shown(ROUTE_SPEED_MIN), max: shown(ROUTE_SPEED_MAX), step: '0.1', value: shown(routeSpeed(r)) });
-    speed.setAttribute('inputmode', 'decimal');
-    const text = el('textarea', { maxLength: ROUTE_DESCRIPTION_MAX, rows: 3, placeholder: t.routes.descriptionPlaceholder, value: routeDescription(r, lang)?.text ?? '' });
-    const status = el('p', { className: 'hint' });
-    status.setAttribute('role', 'status');
-    const save = button(t.routes.save, () => void saveEditor(r.id));
-    save.classList.add('primary');
-    const root = el('div', { className: 'rt-edit grid' },
-      el('label', { className: 'hint field' }, el('span', { textContent: t.routes.speed }), speed),
-      el('label', { className: 'hint field' }, el('span', { textContent: t.routes.description }), text),
-      el('div', { className: 'row' }, save, button(t.common.cancel, () => { editor = null; renderList(); })),
-      status);
-    return { id: r.id, el: root, speed, text, status };
-  }
+  const editorHost = (id: string): EditorHost => ({ save: () => void saveEditor(id), cancel: () => { editor = null; renderList(); } });
 
   async function saveEditor(id: string) {
     const route = routes.find(r => r.id === id);
@@ -207,26 +187,7 @@ export function setupRoutes(host: RoutesHost) {
   }
 
   // ---------- Routes view: the library, one route can be opened to show its map, profile and figures ----------
-  interface Detail { id: string; el: HTMLElement; profile: ReturnType<typeof createProfile>; noEle: HTMLElement; facts: HTMLElement; problem: HTMLElement; top: HTMLElement; slot: MapSlot | null }
   let detail: Detail | null = null;
-
-  function buildDetail(id: string): Detail {
-    const profileBox = el('div', { className: 'profile' });
-    const noEle = el('p', { className: 'hint' });
-    const mapBox = el('div', { className: 'route-map', role: 'region' });
-    const problem = el('p', { className: 'hint' });
-    problem.hidden = true;
-    const facts = el('dl', { className: 'records' });
-    // Walking speed and description (or their editor) at the top of the right column
-    const top = el('div', { className: 'rt-top' });
-    // Map on the left, what there is to know about the route on the right; one column when there is no map or little room
-    const info = el('div', { className: 'rt-info' }, top, profileBox, facts, noEle);
-    const root = el('div', { className: `rt-detail${mapStyles ? ' with-map' : ''}` },
-      ...(mapStyles ? [el('div', { className: 'rt-map-col' }, mapBox, problem)] : []), info);
-    const slot = mapStyles ? createMapSlot(mapBox, pickStyle, message => { problem.textContent = message ?? ''; problem.hidden = !message; }) : null;
-    slot?.setEnabled(true);
-    return { id, el: root, profile: createProfile(profileBox), noEle, facts, problem, top, slot };
-  }
 
   function closeDetail() {
     detail?.slot?.setEnabled(false);
@@ -237,46 +198,6 @@ export function setupRoutes(host: RoutesHost) {
   function toggleDetail(r: Route) {
     if (detail?.id === r.id) closeDetail(); else { closeDetail(); detail = buildDetail(r.id); }
     renderList();
-  }
-
-  /** The description as an element (none without one); the lang attribute is set when the text is in a language we know */
-  function describe(r: Route, className: string, tag: 'p' | 'div' = 'p'): HTMLElement[] {
-    const d = routeDescription(r, lang);
-    if (!d) return [];
-    const e = el(tag, { className, textContent: d.text });
-    if (d.lang) e.lang = d.lang;
-    return [e];
-  }
-
-  /** Walking speed and description as text, with the icon that opens the editor */
-  function summary(r: Route): HTMLElement[] {
-    return [
-      el('div', { className: 'rt-speed' },
-        el('div', {}, el('span', { className: 'hint', textContent: t.routes.speedLabel }), el('strong', { textContent: t.control.speed(routeSpeed(r)) })),
-        iconButton('edit', t.routes.edit, () => { editor = buildEditor(r); renderList(); })),
-      ...describe(r, 'rt-desc-full'),
-    ];
-  }
-
-  function fillDetail(route: Route, stats: RouteStats) {
-    if (!detail) return;
-    detail.profile.draw({ route, stats });
-    detail.profile.mark(null);
-    // The note is only there when there is nothing to show instead
-    detail.noEle.hidden = stats.hasElevation;
-    detail.noEle.textContent = t.routes.noElevation;
-    detail.top.replaceChildren(...(editor?.id === route.id ? [editor.el] : summary(route)));
-    detail.el.querySelector('.route-map')?.setAttribute('aria-label', t.routes.mapLabel);
-    // The length is in the route's row; what is left are the figures of the elevation
-    const facts: [string, string][] = stats.hasElevation ? [
-      [t.routes.ascent, t.routes.meters(stats.ascent)],
-      [t.routes.descent, t.routes.meters(stats.descent)],
-      [t.routes.highest, t.routes.meters(stats.max!)],
-      [t.routes.lowest, t.routes.meters(stats.min!)],
-    ] : [];
-    detail.facts.hidden = !facts.length;
-    detail.facts.replaceChildren(...facts.flatMap(([k, v]) => [el('dt', { textContent: k }), el('dd', { textContent: v })]));
-    detail.slot?.setRoute(route);
   }
 
   /** The shape of the route, drawn from its points (no map, nothing is requested) */
@@ -325,7 +246,10 @@ export function setupRoutes(host: RoutesHost) {
             { icon: 'trash', label: t.routes.delete, run: () => void remove(r), danger: true },
           ])),
       );
-      if (open && detail) { item.append(detail.el); fillDetail(r, stats); }
+      if (open && detail) {
+        item.append(detail.el);
+        fillDetail(detail, r, stats, editor?.id === r.id ? editor.el : null, () => { editor = buildEditor(r, editorHost(r.id)); renderList(); });
+      }
       return item;
     }));
   }
