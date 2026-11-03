@@ -9,20 +9,19 @@ import type { TcxSport } from './core/history/export';
 import { setupExportControls } from './ui/history/export-controls';
 import { cmdPause, cmdRequestControl, cmdStart, cmdStop, describeMachineStatus, hex, parseMachineStatus, parseTrainingStatus, type TreadmillData } from './core/protocol/ftms';
 import { setupHistory } from './ui/history/history';
-import { lang, onLanguageChange, retranslate, t, type Text } from './i18n/i18n';
-import { routeDescription, routeName } from './core/routes/route-examples';
+import { onLanguageChange, retranslate, t, type Text } from './i18n/i18n';
 import { bindText, clearText, initLanguage } from './ui/i18n-dom';
 import { setupMenu, setupPrefs } from './ui/settings/menus';
 import { setupInterval } from './ui/workouts/interval-ui';
-import { fmtDistance, fmtLength, fmtTime, ProgramRunner, programLength, type ProgramStep } from './core/training/program';
+import { fmtTime, ProgramRunner } from './core/training/program';
 import { setupPwa } from './ui/pwa';
-import type { RunSource, RunTag } from './core/history/runs';
+import type { RunSource } from './core/history/runs';
 import { controlAvailability, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION, isDisclaimerAccepted, StandstillDetector } from './core/safety/safety';
-import { ACTIVE_STORAGE_KEY, readActive, type Active } from './core/training/selection';
 import { setupBackground } from './ui/background';
 import { setupInclineCard } from './ui/live/incline-card';
 import { setupConsole } from './ui/live/console';
 import { Session } from './ui/live/session';
+import { loadChosen, setupStage } from './ui/live/stage';
 import { setupSpeedControls } from './ui/live/speed-controls';
 import { renderInfo } from './ui/settings/info';
 import { setupSettings } from './ui/settings/settings-ui';
@@ -55,8 +54,6 @@ let lastSample = 0;
 let runSource: RunSource = 'ble';
 let view: View = 'training';
 let uiConnected = false;
-/** What the training view is about: a workout, a route, or nothing (free training). Chosen in the workouts and routes views. */
-let active: Active = readActive(store.get(ACTIVE_STORAGE_KEY));
 /** The stage can only be drawn once everything it reads has been set up */
 let booted = false;
 
@@ -81,18 +78,20 @@ const speed = setupSpeedControls({
 const governor = speed.governor;
 function effectiveMax() { return speed.effectiveMax(); }
 
+/** What the training view is about; the workouts and routes views ask for it while they are set up */
+const chosen = loadChosen();
 const workouts = setupWorkouts({
   maxSpeed: () => effectiveMax(),
-  useRoute: id => { routes.use(id); setActive('route'); },
-  useWorkout: () => setActive('workout'),
-  wanted: () => active === 'workout',
-  changed: () => { if (booted) renderStage(); },
+  useRoute: id => { routes.use(id); stage.setActive('route'); },
+  useWorkout: () => stage.setActive('workout'),
+  wanted: () => chosen.get() === 'workout',
+  changed: () => { if (booted) stage.render(); },
 });
 const routes = setupRoutes({
   maxSpeed: () => effectiveMax(),
-  changed: () => { if (booted) renderStage(); },
-  chosen: () => setActive('route'),
-  wanted: () => active === 'route',
+  changed: () => { if (booted) stage.render(); },
+  chosen: () => stage.setActive('route'),
+  wanted: () => chosen.get() === 'route',
 });
 
 const connected = () => session.connected();
@@ -107,9 +106,12 @@ const runner = new ProgramRunner({
   currentTarget: () => governor.target,
   distance: () => cur.dist,
   // Only what the person has to know stays on screen; start, stop and progress are shown by the banner and the workout panel
-  status: (text, attention) => { if (text && attention) bindText($('progStatus'), text); else clearText($('progStatus')); renderStage(); },
+  status: (text, attention) => { if (text && attention) bindText($('progStatus'), text); else clearText($('progStatus')); stage.render(); },
   log,
 });
+
+// What the training view shows and starts: the chosen workout or route
+const stage = setupStage({ chosen, workouts, routes, interval, runner, recorder, governor, standstill, connected, effectiveMax, confirmStart, redrawChart });
 
 const incline = setupInclineCard({
   send: bytes => session.send(bytes),
@@ -301,97 +303,6 @@ function confirmStart(intro?: string, opts?: { always?: boolean }): Promise<bool
   ], t.start.confirm), opts);
 }
 
-/** What the Start button starts, if what was chosen still exists */
-function effectiveActive(): Active {
-  if (active === 'workout' && workouts.selectedInfo()) return 'workout';
-  if (active === 'route' && routes.current()) return 'route';
-  return null;
-}
-
-function setActive(kind: Active) {
-  active = kind;
-  store.set(ACTIVE_STORAGE_KEY, kind ?? '');
-  routes.refresh();
-  workouts.refresh();
-  renderStage();
-}
-
-/** What the training view shows (the stage in index.html): the chosen workout or route with its details, and as the main
- *  element the steps of a workout, the map of a route (if the map is on) or the speed chart. Display only. */
-let activeRun: { kind: RunTag['kind']; name: string } | null = null;
-function renderStage() {
-  const kind = effectiveActive();
-  const p = runner.progress();
-  const runningSteps = p !== null && activeRun?.kind === 'workout';
-  const mode = runningSteps || kind === 'workout' ? 'interval' : kind === 'route' && routes.mapActive() ? 'map' : 'chart';
-  const stage = $('stage');
-  const was = stage.dataset.mode;
-  stage.dataset.mode = mode;
-  stage.dataset.kind = kind ?? '';
-
-  const workout = kind === 'workout' ? workouts.selectedInfo() : null;
-  const route = kind === 'route' ? routes.current() : null;
-  $('stageHead').hidden = $('stageInfo').hidden = !kind;
-  $('shKind').textContent = kind === 'workout' ? t.history.tagWorkout : t.history.tagRoute;
-  $('shName').textContent = workout?.name ?? (route ? routeName(route.route, lang) : '');
-  $('shInfo').textContent = workout ? t.program.summary(workout.steps.length, fmtLength(programLength(workout.steps))) : route?.info ?? '';
-  const desc = route ? routeDescription(route.route, lang) : null;
-  $('shDesc').textContent = desc?.text ?? '';
-  $('shDesc').hidden = !desc;
-  if (desc?.lang) $('shDesc').lang = desc.lang; else $('shDesc').removeAttribute('lang');
-  const clear = $button('shClear');
-  clear.textContent = t.stage.clear;
-  clear.disabled = runner.active;
-
-  $('stageInterval').hidden = mode !== 'interval';
-  if (runningSteps) interval.render(p, governor.target);
-  else if (workout) interval.renderPreview(workout.steps);
-  $('stageChart').hidden = mode !== 'chart';
-  $('stageFreeHint').hidden = kind !== null;
-  // The label stays "Start" (a longer one does not fit the button); what it starts is the tooltip
-  $('startLabel').textContent = t.control.start;
-  $('start').title = kind === 'workout' ? t.program.start : kind === 'route' ? t.routes.walk : '';
-  if (mode === 'chart' && was !== 'chart') redrawChart();
-}
-
-/**
- * Workouts and routes start the same way: confirmation, connection check, then the runner with its ramp, limit and
- * stop rules. `tag` says what the run was, so the history can show it. A route is a workout of one distance step.
- */
-async function runSteps(steps: ProgramStep[], tag: Omit<RunTag, 'completed'>, intro: string, onStart?: () => void) {
-  const max = effectiveMax();
-  const text = intro + (steps.some(s => s.speed > max) ? ` ${t.program.capped(max)}` : '');
-  if (!(await confirmStart(text))) return;
-  if (!connected()) return;
-  onStart?.();
-  const token = recorder.begin(tag);
-  const mine = activeRun = { kind: tag.kind, name: tag.name };
-  interval.reset();
-  const result = await runner.run(steps);
-  // A newer run may have replaced this one in the meantime
-  if (activeRun === mine) activeRun = null;
-  renderStage();
-  recorder.complete(token, result === 'finished');
-  standstill.disarm();
-  // The run is saved by now (or has failed): today's goal in the route card may have moved
-  void recorder.settled().then(() => routes.refreshGoal());
-}
-
-async function runProgram() {
-  const selected = workouts.selectedInfo();
-  if (!selected?.steps.length) { bindText($('progStatus'), () => t.program.empty); return; }
-  await runSteps(selected.steps, { kind: 'workout', id: selected.id, name: selected.name },
-    t.program.confirm(selected.steps.length, fmtLength(programLength(selected.steps))));
-}
-
-async function runRoute() {
-  const walk = routes.walkRequest();
-  if (!walk) { bindText($('progStatus'), () => t.routes.cannotWalk); return; }
-  const shown = Math.min(walk.kmh, effectiveMax());
-  await runSteps(walk.steps, { kind: 'route', id: walk.route.id, name: routeName(walk.route, lang) },
-    t.routes.walkConfirm(routeName(walk.route, lang), fmtDistance(walk.steps[0]?.meters ?? 0), shown), () => routes.restart());
-}
-
 // ---------- First run ----------
 async function ensureDisclaimer(): Promise<boolean> {
   if (isDisclaimerAccepted(store.get(DISCLAIMER_STORAGE_KEY))) return true;
@@ -547,7 +458,7 @@ $button('openData').onclick = () => settings.open('data');
 // The belt runs: settings are locked (the dialog itself checks this when it opens)
 const renderSettingsLock = () => settings.setLocked(connected() && maybeRunning());
 setInterval(renderSettingsLock, 500);
-onLanguageChange(() => { settings.relabel(); renderStage(); });
+onLanguageChange(() => { settings.relabel(); stage.render(); });
 onThemeChange(redrawChart);
 
 $button('connect').onclick = () => { connMenu.close(); void connect('ble'); };
@@ -563,13 +474,13 @@ $button('simKey').onclick = () => sim?.pullSafetyKey();
 $button('start').onclick = async () => {
   // A program that is running is not started again; stop it first
   if (runner.active) return;
-  const kind = effectiveActive();
-  if (kind === 'workout') { await runProgram(); return; }
-  if (kind === 'route') { await runRoute(); return; }
+  const kind = stage.effectiveActive();
+  if (kind === 'workout') { await stage.runProgram(); return; }
+  if (kind === 'route') { await stage.runRoute(); return; }
   if (!(await confirmStart())) return;
   if (connected()) await doStart();
 };
-$button('shClear').onclick = () => setActive(null);
+$button('shClear').onclick = () => stage.setActive(null);
 $button('pause').onclick = () => void doPause();
 $button('stop').onclick = () => void doStop();
 
@@ -618,7 +529,7 @@ onLanguageChange(() => {
 // ---------- Init ----------
 setStatus(() => t.connection.notConnected);
 booted = true;
-renderStage();
+stage.render();
 setupViews(v => {
   view = v;
   applyStopPlacement();
