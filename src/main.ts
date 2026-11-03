@@ -2,7 +2,7 @@ import './style.css';
 import { TreadmillClient, WebBluetoothAdapter, type BleAdapter, type TreadmillEvents } from './device/ble';
 import { bluetoothSupportHint } from './ui/browser';
 import { drawChart } from './ui/components/chart';
-import { APP_NAME, APP_VERSION, BUILD_TARGET, DONATION_URL, GITHUB_REPO } from './platform/config';
+import { APP_NAME, APP_VERSION } from './platform/config';
 import { desktop, setupDesktop } from './ui/desktop';
 import { choose, confirmDialog } from './ui/components/dialogs';
 import { buildTcx, exportFilename, toCsv, type Sample, type TcxSport } from './core/history/export';
@@ -26,6 +26,7 @@ import {
   serializeLimit, SpeedGovernor, StandstillDetector,
 } from './core/safety/safety';
 import { ACTIVE_STORAGE_KEY, readActive, type Active } from './core/training/selection';
+import { renderInfo } from './ui/settings/info';
 import { setupSettings } from './ui/settings/settings-ui';
 import { SimulatorAdapter } from './device/sim';
 import { initTheme, onThemeChange } from './ui/theme';
@@ -804,36 +805,6 @@ function maxStepChanged() {
   renderLimitFields();
   store.set(MAX_STEP_STORAGE_KEY, String(v));
   applyLimits();
-}
-
-// ---------- Info ----------
-function renderInfo() {
-  const ul = $('infoDisclaimer');
-  ul.replaceChildren(...t.disclaimer.points.map(text => {
-    const li = document.createElement('li');
-    li.textContent = text;
-    return li;
-  }));
-  $('infoTested').textContent = t.info.tested(t.info.testedDevice, t.info.testedFeatures, t.info.untestedFeatures);
-  $('infoAffiliation').textContent = t.info.notAffiliated;
-  $('footerVersion').textContent = t.info.footer(APP_VERSION);
-
-  const source = GITHUB_REPO ? `https://github.com/${GITHUB_REPO}` : '';
-  $('infoSource').replaceChildren(...(source ? [t.info.source, link(source, source.replace('https://', ''))] : []));
-  const links: HTMLElement[] = [];
-  if (BUILD_TARGET === 'web') links.push(link(t.info.imprintHref, t.info.imprint), link(t.info.privacyHref, t.info.privacyLink));
-  if (source) links.push(link(source, t.info.sourceLink));
-  // Web build only, and only if configured. Nothing in return, no feature depends on it.
-  if (BUILD_TARGET === 'web' && DONATION_URL) links.push(link(DONATION_URL, t.info.donation));
-  $('footerLinks').replaceChildren(...links.flatMap((a, i) => (i ? [' · ', a] : [a])));
-}
-
-function link(href: string, text: string) {
-  const a = document.createElement('a');
-  a.href = href;
-  a.textContent = text;
-  if (/^https?:/.test(href)) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
-  return a;
 }
 
 // ---------- Events ----------
