@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stepBars, upcoming } from './interval';
+import { endingSoon, stepBars, upcoming } from './interval';
 
 describe('stepBars', () => {
   it('is empty without steps', () => {
@@ -41,5 +41,23 @@ describe('upcoming', () => {
   it('is empty at the last step, and before the first one it starts from the beginning', () => {
     expect(upcoming(steps, 4, 3)).toEqual([]);
     expect(upcoming(steps, -1, 2).map(s => s.speed)).toEqual([1, 2]);
+  });
+});
+
+describe('endingSoon', () => {
+  it('is true for the last 10 seconds of a timed step, 0:10 included', () => {
+    expect(endingSoon({ sec: 10 })).toBe(true);
+    expect(endingSoon({ sec: 1 })).toBe(true);
+    expect(endingSoon({ sec: 0 })).toBe(true);
+  });
+
+  it('is false before that', () => {
+    expect(endingSoon({ sec: 11 })).toBe(false);
+    expect(endingSoon({ sec: 600 })).toBe(false);
+  });
+
+  it('is false for a distance step, and when nothing is left to count', () => {
+    expect(endingSoon({ meters: 5 })).toBe(false);
+    expect(endingSoon(null)).toBe(false);
   });
 });

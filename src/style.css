@@ -420,6 +420,10 @@ html:not(.i18n-ready) body { visibility:hidden; animation:i18n-reveal 0s 1.5s fo
 .iv-head h2 { margin:0; font-size:1.1rem; color:var(--fg); text-transform:none; letter-spacing:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .iv-now { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; }
 .iv-right { text-align:right; }
+/* Last 10 seconds of a timed step: red and blinking (steady red when motion is reduced) */
+.iv-v.iv-ending { color:var(--stop); animation:iv-blink 1s steps(1, end) infinite; }
+@keyframes iv-blink { 50% { opacity:.25; } }
+@media (prefers-reduced-motion: reduce) { .iv-v.iv-ending { animation:none; } }
 .iv-v { font-size:clamp(3rem, 6vw, 5.5rem); font-weight:650; line-height:1; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
 .iv-now .l, .iv-next .l { color:var(--mute); font-size:.8rem; margin-top:2px; }
 #ivBar { width:100%; height:10px; accent-color:var(--accent); }

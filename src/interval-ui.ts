@@ -2,7 +2,7 @@
 // current one marked, and the next steps. Display only; it reads the runner's progress and changes nothing.
 
 import { t } from './i18n';
-import { stepBars, upcoming } from './interval';
+import { endingSoon, stepBars, upcoming } from './interval';
 import { fmtDistance, fmtLength, fmtTime, programLength, type ProgramProgress, type ProgramStep } from './program';
 import { $ } from './ui';
 
@@ -43,6 +43,7 @@ export function setupInterval() {
       $('ivSpeed').textContent = steps[0] ? t.u.speedValue(steps[0].speed, 1) : '–';
       $('ivLeft').textContent = fmtLength(programLength(steps));
       $('ivLeftLabel').textContent = t.interval.total;
+      $('ivLeft').classList.remove('iv-ending');
       ($('ivBar') as HTMLProgressElement).value = 0;
       drawStrip(steps);
       rects.forEach(r => r.setAttribute('class', 'iv-todo'));
@@ -60,6 +61,7 @@ export function setupInterval() {
       $('ivLeft').textContent = !left ? '–' : 'sec' in left ? fmtTime(left.sec) : fmtDistance(left.meters);
       $('ivLeftLabel').textContent = !left ? '' : 'sec' in left ? t.interval.timeLeft : t.interval.distanceLeft;
       ($('ivBar') as HTMLProgressElement).value = Math.round(p.fraction * 1000);
+      $('ivLeft').classList.toggle('iv-ending', step !== undefined && endingSoon(left));
 
       drawStrip(p.steps);
       rects.forEach((r, i) => r.setAttribute('class', i < p.index ? 'iv-done' : i === p.index ? 'iv-now-bar' : 'iv-todo'));
