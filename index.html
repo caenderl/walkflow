@@ -112,7 +112,7 @@
             <div class="stat"><div class="v" id="vTime">–</div><div class="l" data-i18n="stats.time">Time</div></div>
             <div class="stat"><div class="v" id="vDist">–</div><div class="l" data-i18n="stats.dist">km</div></div>
             <div class="stat"><div class="v" id="vKcal">–</div><div class="l" data-i18n="stats.kcal">kcal</div></div>
-            <div class="stat"><div class="v" id="vIncl">–</div><div class="l" data-i18n="stats.incline">Incline %</div></div>
+            <div class="stat" id="statIncl"><div class="v" id="vIncl">–</div><div class="l" data-i18n="stats.incline">Incline %</div></div>
             <div class="stat"><div class="v" id="vHr">–</div><div class="l" data-i18n="stats.heartRate">Heart rate (bpm)</div></div>
           </div>
         </div>
@@ -235,7 +235,7 @@
         </div>
         <div class="row"><button id="wkAdd" type="button" data-i18n="workouts.addStep">Add step</button></div>
         <p class="hint" id="wkTotal"></p>
-        <p class="hint" data-i18n="workouts.inclHint">The incline is optional and not sent to the treadmill yet.</p>
+        <p class="hint incl-only" data-i18n="workouts.inclHint">The incline is optional and not sent to the treadmill yet.</p>
         <details>
           <summary data-i18n="workouts.textTitle">As text</summary>
           <div class="grid">
@@ -306,10 +306,11 @@
         <div class="hint"><span data-i18n-rich="control.keys">Keyboard: Space or Esc = stop, ↑ / ↓ = speed ±0.5 (not in the slider or a text field).</span> <span id="globalStopHint"></span></div>
         <div class="hint" data-i18n="control.rampHint">The app approaches larger jumps in steps (see settings). Stop always takes effect immediately.</div>
       </section>
-      <section class="card grid incline">
+      <section class="card grid incline" id="inclCard" hidden>
         <h2 data-i18n="incline.title">Incline (experimental)</h2>
         <div class="mid" id="inclTarget">0.0 %</div>
         <input type="range" id="inclSlider" class="needs-conn" min="0" max="15" step="1" value="0" disabled aria-label="Target incline" data-i18n-aria="incline.sliderLabel">
+        <div id="inclLevels" class="seg seg-auto" role="radiogroup" data-i18n-aria="incline.levelsAria" aria-label="Incline levels" hidden></div>
         <div class="hint" id="inclInfo"></div>
       </section>
     </div>
@@ -347,6 +348,12 @@
         <div>
           <div class="menu-label" id="unitsLabel" data-i18n="unitSystem.label">Units</div>
           <div id="unitsOptions" class="seg" role="radiogroup" aria-labelledby="unitsLabel"></div>
+        </div>
+        <div class="incl-only">
+          <label class="hint field"><span data-i18n="incline.levelsLabel">Incline levels (%)</span>
+            <input type="text" id="inclLevelsInput" inputmode="decimal" autocomplete="off" placeholder="0 2.5 5 7.5 10">
+          </label>
+          <div class="hint" data-i18n="incline.levelsHint"></div>
         </div>
       </section>
 

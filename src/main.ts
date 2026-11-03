@@ -29,6 +29,7 @@ import { ACTIVE_STORAGE_KEY, readActive, type Active } from './selection';
 import { setupSettings } from './settings-ui';
 import { SimulatorAdapter } from './sim';
 import { initTheme, onThemeChange } from './theme';
+import { clampIncline, formatLevels, inclineSupport, parseLevels, usableLevels, type InclineSupport } from './incline';
 import { $, $button, $input, download, log, store } from './ui';
 import { fromSpeed, onUnitsChange, parseUnits, setUnits, speedFromInput, speedPresets, speedStep, toDist, toSpeed, UNITS_STORAGE_KEY } from './units';
 import { askBeforeStart } from './quiet';
@@ -43,6 +44,9 @@ setUnits(parseUnits(store.get(UNITS_STORAGE_KEY)));
 
 const HIDDEN_MODE_KEY = 'walkflow.hiddenMode';
 const TCX_SPORT_KEY = 'walkflow.tcxSport';
+const INCLINE_LEVELS_KEY = 'walkflow.inclineLevels';
+/** 'no' once a real treadmill reported no incline: then nothing about the incline is shown */
+const INCLINE_SEEN_KEY = 'walkflow.inclineSupport';
 const now = () => performance.now();
 
 // ---------- State ----------
@@ -61,6 +65,9 @@ let hiddenWhileRunning: 'warned' | 'paused' | null = null;
 let sliderDragging = false;
 let inclRange: Range | null = null;
 let inclShown = 0;
+let inclSupport: InclineSupport = { settable: false, reported: false };
+/** The levels the person set for the treadmill's incline; empty = the slider over the range the treadmill reports */
+let inclLevels: number[] = [];
 const cur: Omit<Sample, 'ts'> = {};   // latest measured values
 const samples: Sample[] = [];          // recording since the page was opened (1 Hz), for the chart and export
 let lastSample = 0;
@@ -167,6 +174,7 @@ function renderStats() {
   $('vSpeed').textContent = connected() ? f(cur.speed === undefined ? undefined : toSpeed(cur.speed), 1) : '–';
   $('vDist').textContent = f(cur.dist === undefined ? undefined : toDist(cur.dist), 2);
   $('vIncl').textContent = f(cur.incl, 1);
+  $('statIncl').hidden = !inclSupport.reported && cur.incl === undefined;
   $('vTime').textContent = cur.time === undefined ? '–' : fmtTime(cur.time);
   $('vHr').textContent = cur.hr === undefined ? '–' : String(cur.hr);
   $('vKcal').textContent = cur.kcal === undefined ? '–' : String(cur.kcal);
@@ -248,12 +256,30 @@ function stepSpeed(delta: number) {
 }
 
 function renderIncline() {
+  $('inclCard').hidden = !inclSupport.settable;
   $('inclTarget').textContent = t.incline.value(inclShown);
-  $('inclInfo').textContent = inclRange ? t.incline.range(inclRange.min, inclRange.max, inclRange.step) : t.incline.unknown;
+  const { levels, dropped } = usableLevels(inclLevels, inclRange ?? undefined);
+  const box = $('inclLevels');
+  box.hidden = levels.length === 0;
+  $input('inclSlider').hidden = levels.length > 0;
+  box.replaceChildren(...levels.map(l => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'needs-conn';
+    b.disabled = !uiConnected;
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(Math.abs(l - inclShown) < 0.05));
+    b.textContent = t.incline.value(l);
+    b.onclick = () => void setIncline(l);
+    return b;
+  }));
+  const info = inclRange ? t.incline.range(inclRange.min, inclRange.max, inclRange.step) : t.incline.unknown;
+  $('inclInfo').textContent = dropped > 0 ? `${info} ${t.incline.levelsDropped(dropped)}` : info;
 }
 
-function setIncline(pct: number) {
-  if (!client) return Promise.resolve(false);
+function setIncline(requested: number) {
+  const pct = clampIncline(requested, inclRange ?? undefined);
+  if (!client || !inclSupport.settable || Number.isNaN(pct)) return Promise.resolve(false);
   $input('inclSlider').value = String(pct);
   inclShown = pct;
   renderIncline();
@@ -445,14 +471,18 @@ async function connect(kind: 'ble' | 'demo') {
     const info = await c.connect();
 
     if (info.speedRange) { devMin = info.speedRange.min; devMax = info.speedRange.max; }
+    inclSupport = inclineSupport(info.features, info.inclRange);
+    if (!inclSupport.settable && !inclSupport.reported) log(t.incline.unsupportedLog);
+    if (runSource === 'ble') rememberInclineSupport();
     if (info.inclRange) {
       const { min: mn, max: mx, step: st } = info.inclRange;
       const sl = $input('inclSlider');
       sl.min = String(mn); sl.max = String(mx); sl.step = String(st || 0.5); sl.value = String(Math.max(mn, 0));
       inclRange = info.inclRange;
       inclShown = parseFloat(sl.value);
-      renderIncline();
     }
+    renderIncline();
+    renderStats();
 
     beltStarted = false; lastMeasured = undefined; controlLost = false;
     governor.reset();
@@ -484,7 +514,19 @@ function resetIncline() {
   sl.min = '0'; sl.max = '15'; sl.step = '1'; sl.value = '0';
   inclRange = null;
   inclShown = 0;
+  inclSupport = { settable: false, reported: false };
   renderIncline();
+}
+
+/** What the last real treadmill said about the incline: remembered so that the editor can hide it while disconnected. */
+function rememberInclineSupport() {
+  store.set(INCLINE_SEEN_KEY, inclSupport.settable || inclSupport.reported ? 'yes' : 'no');
+  applyInclineSeen();
+}
+
+function applyInclineSeen() {
+  if (store.get(INCLINE_SEEN_KEY) === 'no') document.documentElement.dataset.incline = 'no';
+  else delete document.documentElement.dataset.incline;
 }
 
 function onDisconnected() {
@@ -673,6 +715,9 @@ function loadSettings() {
   renderLimitFields();
   const hm = store.get(HIDDEN_MODE_KEY);
   if (hm === 'warn' || hm === 'pause') $<HTMLSelectElement>('hiddenMode').value = hm;
+  inclLevels = parseLevels(store.get(INCLINE_LEVELS_KEY) ?? '');
+  $input('inclLevelsInput').value = formatLevels(inclLevels);
+  applyInclineSeen();
   const sp = store.get(TCX_SPORT_KEY);
   if (sp === 'Running' || sp === 'Other') $<HTMLSelectElement>('tcxSport').value = sp;
 }
@@ -784,6 +829,13 @@ $input('cap').onchange = () => void limitChanged();
 $input('maxStep').onchange = maxStepChanged;
 $<HTMLSelectElement>('hiddenMode').onchange = e => store.set(HIDDEN_MODE_KEY, (e.target as HTMLSelectElement).value);
 
+$input('inclLevelsInput').onchange = e => {
+  const input = e.target as HTMLInputElement;
+  inclLevels = parseLevels(input.value);
+  store.set(INCLINE_LEVELS_KEY, formatLevels(inclLevels));
+  input.value = formatLevels(inclLevels);
+  renderIncline();
+};
 $input('inclSlider').oninput = e => { $('inclTarget').textContent = t.incline.value(parseFloat((e.target as HTMLInputElement).value)); };
 $input('inclSlider').onchange = e => void setIncline(parseFloat((e.target as HTMLInputElement).value));
 
@@ -845,6 +897,7 @@ setupViews(v => {
 loadSettings();
 renderInfo();
 renderIncline();
+renderStats();
 applyLimits();
 redrawChart();
 setInterval(() => { redrawChart(); recorder.tick(Date.now()); }, 1000);

@@ -132,6 +132,7 @@ button.big { min-height:52px; font-size:1.05rem; }
 .menu-list button[aria-checked="true"]::after { content:""; width:6px; height:11px; margin:-3px 6px 0 0; border:solid var(--primary); border-width:0 2.5px 2.5px 0; transform:rotate(45deg); }
 .menu hr { border:0; border-top:1px solid var(--card-border); margin:10px 0; }
 .seg { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:2px; padding:3px; background:var(--btn); border:1px solid var(--btn-border); border-radius:12px; }
+.seg-auto { grid-template-columns:repeat(auto-fit, minmax(64px, 1fr)); }
 .seg button { min-height:36px; padding:6px 4px; border:0; border-radius:9px; background:transparent; font-size:.875rem; }
 .seg button[aria-checked="true"] { background:var(--card); font-weight:600; box-shadow:0 1px 2px var(--shadow); }
 /* View switch (src/views.ts): a segmented control */
@@ -275,6 +276,9 @@ html:is([data-view="history"], [data-view="workouts"], [data-view="routes"]) :is
 .wk-n { color:var(--mute); font-variant-numeric:tabular-nums; text-align:center; }
 .wk-move { display:flex; gap:4px; }
 .wk-move button { padding:6px 10px; min-width:36px; }
+/* The last connected treadmill reported no incline: nothing about it is shown (data-incline is set by main.ts) */
+html[data-incline="no"] .incl-only, html[data-incline="no"] .wk-incl { display:none; }
+@media (min-width: 720px) { html[data-incline="no"] .wk-step { grid-template-columns:1.6rem minmax(0, 1fr) 4.5rem minmax(0, 1fr) auto; } }
 .wk-step input, .wk-step select { width:100%; min-width:0; }
 .plan-day {
   display:grid; grid-template-columns:minmax(0, 1fr) 5rem; grid-template-areas:"name minutes" "progress mark" "suggest suggest";

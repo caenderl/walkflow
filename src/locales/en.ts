@@ -112,6 +112,11 @@ export const en = {
     value: (pct: number) => `${n(pct, 1)} %`,
     unknown: 'Range: unknown. The log tells you whether the treadmill accepts incline via FTMS (Set Inclination: OK or not supported).',
     range: (min: number, max: number, step: number) => `Range: ${n(min)} – ${n(max)} % (step ${n(step)})`,
+    levelsLabel: 'Incline levels (%)',
+    levelsHint: 'The levels your treadmill offers, in percent (not degrees: 10 % is about 5.7°), separated by spaces, e.g. 0 2.5 5. With levels the incline is chosen from them instead of a slider. Empty: the range the treadmill reports.',
+    levelsAria: 'Incline levels',
+    levelsDropped: (count: number) => `Left out, outside the treadmill’s range: ${count}.`,
+    unsupportedLog: 'This treadmill does not report incline control: the incline controls are hidden.',
   },
   program: {
     title: 'Workout',

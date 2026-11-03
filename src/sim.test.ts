@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TreadmillClient, type TreadmillEvents } from './ble';
 import { cmdPause, cmdRequestControl, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, parseMachineStatus, type TreadmillData } from './ftms';
+import { inclineSupport } from './incline';
 import { SimulatorAdapter } from './sim';
 
 function setup(opts = {}) {
@@ -34,6 +35,31 @@ describe('Simulator + TreadmillClient', () => {
     expect(info.features?.targetNames).toEqual(['Speed', 'Inclination']);
     expect(info.hasHeartRate).toBe(false);
     expect(logs).toContain('Manufacturer: Walkflow');
+  });
+
+  it('tells that it can set the incline, as the app asks the treadmill before it shows the controls', async () => {
+    const { client } = setup();
+    const p = client.connect();
+    await vi.advanceTimersByTimeAsync(500);
+    const info = await p;
+    expect(inclineSupport(info.features, info.inclRange)).toEqual({ settable: true, reported: true });
+  });
+
+  it('can be a treadmill without incline: no feature, no range, nothing in the data, Set Inclination refused', async () => {
+    const { client, logs, last } = setup({ incline: false });
+    const p = client.connect();
+    await vi.advanceTimersByTimeAsync(500);
+    const info = await p;
+    expect(info.inclRange).toBeUndefined();
+    expect(info.features?.targetNames).toEqual(['Speed']);
+    expect(inclineSupport(info.features, info.inclRange)).toEqual({ settable: false, reported: false });
+    void client.send(cmdRequestControl());
+    void client.send(cmdStart());
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(last().incl).toBeUndefined();
+    void client.send(cmdSetInclination(2));
+    await vi.advanceTimersByTimeAsync(500);
+    expect(logs.some(l => l.includes('Set Inclination') && !l.includes('OK'))).toBe(true);
   });
 
   it('without Request Control: not permitted', async () => {

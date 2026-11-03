@@ -23,7 +23,8 @@ If the treadmill sends different status bytes or none at all, please note the he
 
 ## Not yet tested
 
-- [ ] **Incline.** Move the slider. `← Set Inclination: OK` or `not supported`? What does `Inclination range` say when connecting?
+- [ ] **Incline (asks the treadmill).** After connecting, the log has `Features: …`, `Controllable: …` and, if readable, `Inclination range: …`. Note all three lines. If `Controllable` has no `Inclination`, the card “Incline”, the incline figure and the incline fields of the workout editor must not be shown, and the log says `This treadmill does not report incline control`. If it has `Inclination`, the card appears: move the slider; `← Set Inclination: OK` or `not supported`? Does the treadmill’s incline really change, and does the figure in the app follow?
+- [ ] **Incline levels.** Settings → General → Incline levels: enter the levels of the treadmill in percent (for the sPad 500: five values, e.g. from its manual). The card then shows one button per level instead of the slider. Press each: `→ 03 …` in the log with the right value (percent × 10, little endian), and the treadmill goes to that level? A level outside the treadmill’s range must be left out with a note.
 - [ ] **Heart rate.** Does the log say `Heart rate service subscribed`? Do values come in?
 - [ ] **Countdown.** How long does the treadmill count down after start? The program waits 4.5 s before setting the first speed.
 - [ ] **Program transitions.** Program `0.5 2` / `0.5 3` / `0.5 2`. Changes at the right time? Cancel a program with the stop button on the device: does it end (status line or `Belt stopped, program ended`)?

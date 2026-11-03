@@ -113,6 +113,11 @@ export const fr: Messages = {
     value: (pct: number) => `${n(pct, 1)} %`,
     unknown: 'Plage : inconnue. Le journal indique si le tapis accepte l’inclinaison via FTMS (Set Inclination: OK ou non pris en charge).',
     range: (min: number, max: number, step: number) => `Plage : ${n(min)} – ${n(max)} % (pas ${n(step)})`,
+    levelsLabel: 'Niveaux d’inclinaison (%)',
+    levelsHint: 'Les niveaux de votre tapis, en pourcentage (pas en degrés : 10 % font environ 5,7°), séparés par des espaces, p. ex. 0 2.5 5. Avec des niveaux, l’inclinaison se choisit parmi eux au lieu d’un curseur. Vide : la plage indiquée par le tapis.',
+    levelsAria: 'Niveaux d’inclinaison',
+    levelsDropped: (count: number) => `Ignorés, hors de la plage du tapis : ${count}.`,
+    unsupportedLog: 'Ce tapis n’indique pas de réglage de l’inclinaison : les commandes d’inclinaison sont masquées.',
   },
   program: {
     title: 'Séance type',

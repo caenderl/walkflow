@@ -111,6 +111,11 @@ export const de: Messages = {
     value: (pct: number) => `${n(pct, 1)} %`,
     unknown: 'Range: unbekannt. Ob das Band die Steigung per FTMS annimmt, sagt dir das Log (Set Inclination: OK oder nicht unterstützt).',
     range: (min: number, max: number, step: number) => `Range: ${n(min)} – ${n(max)} % (Step ${n(step)})`,
+    levelsLabel: 'Steigungsstufen (%)',
+    levelsHint: 'Die Stufen deines Laufbands in Prozent (nicht Grad: 10 % sind etwa 5,7°), mit Leerzeichen getrennt, z. B. 0 2.5 5. Mit Stufen wählst du die Steigung daraus statt per Regler. Leer: der Bereich, den das Band meldet.',
+    levelsAria: 'Steigungsstufen',
+    levelsDropped: (count: number) => `Ausgelassen, da außerhalb des Bereichs des Bands: ${count}.`,
+    unsupportedLog: 'Dieses Laufband meldet keine Steigungssteuerung: Die Steigung wird nicht angezeigt.',
   },
   program: {
     title: 'Workout',

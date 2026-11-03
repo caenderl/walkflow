@@ -12,6 +12,8 @@ export interface SimOptions {
   speedRange: [min: number, max: number, step: number];
   /** % */
   inclRange: [min: number, max: number, step: number];
+  /** false: a treadmill that cannot be set to an incline and reports none */
+  incline: boolean;
   heartRate: boolean;
   countdownMs: number;
   /** Belt acceleration in km/h per second */
@@ -27,6 +29,7 @@ const DEFAULTS: SimOptions = {
   name: 'Walkflow Simulator',
   speedRange: [1, 8, 0.1],
   inclRange: [0, 10, 1],
+  incline: true,
   heartRate: false,
   countdownMs: 3000,
   accel: 1,
@@ -183,10 +186,10 @@ class SimDevice implements BleDevice {
     if (service === FTMS_SERVICE) {
       // Machine: Total Distance, Inclination, Expended Energy, Elapsed Time (+ Heart Rate)
       // Target: Speed, Inclination
-      const machine = 0x0004 | 0x0008 | 0x0200 | 0x1000 | (this.opts.heartRate ? 0x0400 : 0);
-      if (characteristic === CH.feature) return dv([machine & 0xff, machine >> 8, 0, 0, 0x03, 0, 0, 0]);
+      const machine = 0x0004 | (this.opts.incline ? 0x0008 : 0) | 0x0200 | 0x1000 | (this.opts.heartRate ? 0x0400 : 0);
+      if (characteristic === CH.feature) return dv([machine & 0xff, machine >> 8, 0, 0, this.opts.incline ? 0x03 : 0x01, 0, 0, 0]);
       if (characteristic === CH.speedRange) return dv([...le16(smin * 100), ...le16(smax * 100), ...le16(sstep * 100)]);
-      if (characteristic === CH.inclRange) return dv([...le16(imin * 10), ...le16(imax * 10), ...le16(istep * 10)]);
+      if (characteristic === CH.inclRange && this.opts.incline) return dv([...le16(imin * 10), ...le16(imax * 10), ...le16(istep * 10)]);
     }
     throw new Error('Characteristic not found');
   }
@@ -229,6 +232,7 @@ class SimDevice implements BleDevice {
         return 1;
       }
       case OP.SET_INCL: {
+        if (!this.opts.incline) return 2;
         if (b.length !== 3) return 3;
         const pct = new DataView(new Uint8Array(b).buffer).getInt16(1, true) / 10;
         if (pct < imin || pct > imax) return 3;
@@ -244,7 +248,7 @@ class SimDevice implements BleDevice {
     this.notify(FTMS_SERVICE, CH.treadmillData, [...buildTreadmillData({
       speed: Math.round(b.speed * 100) / 100,
       dist: Math.floor(b.dist),
-      incl: b.incline,
+      incl: this.opts.incline ? b.incline : undefined,
       rampAngle: 0,
       kcal: Math.floor(b.kcal),
       time: Math.floor(b.elapsed),
