@@ -28,9 +28,9 @@
   <symbol id="i-package" viewBox="0 0 24 24"><path d="M12 3l8 4v10l-8 4-8-4V7l8-4zM4 7l8 4 8-4M12 11v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M7 7l.8 12.2a1 1 0 0 0 1 .8h6.4a1 1 0 0 0 1-.8L17 7M10.5 11v5M13.5 11v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
-<!-- Texts come from src/locales/*.ts (data-i18n*); the English text here is only the fallback. -->
+<!-- Texts come from src/i18n/locales/*.ts (data-i18n*); the English text here is only the fallback. -->
 <div class="app">
-  <!-- Outside the training view while connected (src/views.ts stopPlacement): Stop stays in reach.
+  <!-- Outside the training view while connected (src/ui/views.ts stopPlacement): Stop stays in reach.
        Sticky at the top on wide screens, fixed to the bottom edge on narrow ones. Above the header and above
        the header menus, so an open menu can never cover it. -->
   <div id="stopBar" class="stopbar" role="region" aria-label="Treadmill" data-i18n-aria="stopBar.label">
@@ -72,7 +72,7 @@
         </div>
       </div>
     </span>
-    <!-- Settings: a large dialog (src/settings-ui.ts). Locked while the belt is running. -->
+    <!-- Settings: a large dialog (src/ui/settings/settings-ui.ts). Locked while the belt is running. -->
     <span class="menu-anchor settings-anchor" id="settingsAnchor">
       <button id="settingsBtn" class="icon-btn" type="button" aria-haspopup="dialog" aria-label="Settings" data-i18n-aria="settings.open"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg></button>
     </span>
@@ -109,7 +109,7 @@
 
       <section class="card live">
         <!-- Over the figures: green while the belt gets ready to start (fading out), red while it stops (getting stronger),
-             grey without a connection (src/belt-banner.ts, set in src/main.ts) -->
+             grey without a connection (src/core/safety/belt-banner.ts, set in src/main.ts) -->
         <div class="belt-banner bb-offline" id="beltBanner" role="status">
           <div class="bb-text" id="bbText"></div>
           <button type="button" class="linkish bb-connect" id="openConn" data-i18n="connection.connectNow">Connect now</button>
@@ -199,7 +199,7 @@
         </details>
       </div>
 
-      <!-- History view (src/history.ts). While connected, the stop bar keeps Stop in reach. -->
+      <!-- History view (src/ui/history/history.ts). While connected, the stop bar keeps Stop in reach. -->
       <section class="card history-part hist-overview">
         <h2 data-i18n="history.title">History</h2>
         <div class="periods">
@@ -230,7 +230,7 @@
         <button id="runMore" type="button" data-i18n="history.more" hidden>Show more</button>
       </section>
 
-      <!-- Workouts view (src/workout-ui.ts): library, editor and week plan. A workout is started from the training view. -->
+      <!-- Workouts view (src/ui/workouts/workout-ui.ts): library, editor and week plan. A workout is started from the training view. -->
       <section class="card grid workouts-part">
         <div class="head-row">
           <h2 data-i18n="workouts.mineTitle">My workouts</h2>
@@ -277,7 +277,7 @@
         <p class="hint" id="planSummary" role="status"></p>
       </section>
 
-      <!-- Routes view (src/route-ui.ts): GPX import and export, the library. Progress is shown in the training view. -->
+      <!-- Routes view (src/ui/routes/route-ui.ts): GPX import and export, the library. Progress is shown in the training view. -->
       <section class="card grid routes-part">
         <div class="head-row">
           <h2 data-i18n="routes.mineTitle">My routes</h2>
@@ -340,7 +340,7 @@
     <span id="footerLinks"></span>
   </footer>
 </div>
-<!-- Settings (src/settings-ui.ts): one large dialog with sections. The element ids are the same as when these were cards in
+<!-- Settings (src/ui/settings/settings-ui.ts): one large dialog with sections. The element ids are the same as when these were cards in
      the page; the code that reads and writes them does not care where they sit. -->
 <dialog id="settingsDlg" class="settings-dlg" aria-labelledby="settingsTitle">
   <div class="sd-head">

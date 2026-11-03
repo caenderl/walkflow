@@ -1,6 +1,6 @@
 // The desktop app in watch mode: the Vite dev server serves the web app (a change in src/ shows at once, no reload of the
 // window needed), esbuild rebuilds main and preload when electron/ changes and Electron is restarted. Only for development:
-// an installed app never loads the dev server (src/dev-url.ts).
+// an installed app never loads the dev server (src/platform/dev-url.ts).
 // Usage: npm run electron:dev   (WALKFLOW_DEV_PORT sets another port than 5175)
 import { spawn } from 'node:child_process';
 import electron from 'electron';

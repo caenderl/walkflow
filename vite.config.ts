@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import type { Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
-import { buildCsp } from './src/csp.ts';
-import { mapOrigins, resolveMapStyles } from './src/map-config.ts';
+import { buildCsp } from './src/platform/csp.ts';
+import { mapOrigins, resolveMapStyles } from './src/core/routes/map-config.ts';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
@@ -81,7 +81,7 @@ export default defineConfig({
     }),
   ],
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
     // theme.test.ts reads style.css (?raw); without this Vitest replaces CSS with an empty string
     css: true,
   },

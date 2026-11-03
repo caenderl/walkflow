@@ -5,14 +5,14 @@ import {
   app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeTheme, powerSaveBlocker, protocol, screen, session, shell,
   type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions,
 } from 'electron';
-import { detectLanguage, isLang, setLanguage, t } from '../src/i18n';
-import { buildCsp } from '../src/csp';
-import { devToolsAllowed } from '../src/dev-mode';
-import { devOrigin } from '../src/dev-url';
-import { mapOrigins, resolveMapStyles } from '../src/map-config';
-import { mimeFor } from '../src/mime';
-import { OPEN_MAX_BYTES, packagePaths } from '../src/open-files';
-import { isNewerVersion } from '../src/version';
+import { detectLanguage, isLang, setLanguage, t } from '../src/i18n/i18n';
+import { buildCsp } from '../src/platform/csp';
+import { devToolsAllowed } from '../src/core/safety/dev-mode';
+import { devOrigin } from '../src/platform/dev-url';
+import { mapOrigins, resolveMapStyles } from '../src/core/routes/map-config';
+import { mimeFor } from '../src/platform/mime';
+import { OPEN_MAX_BYTES, packagePaths } from '../src/platform/open-files';
+import { isNewerVersion } from '../src/platform/version';
 
 declare const __GITHUB_REPO__: string;
 /** The raw build settings WALKFLOW_MAP_STYLE and WALKFLOW_MAP_STYLE_DARK; resolved here the same way as for the renderer (vite.config.ts) */

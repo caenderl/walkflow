@@ -1,42 +1,42 @@
 import './style.css';
-import { TreadmillClient, WebBluetoothAdapter, type BleAdapter, type TreadmillEvents } from './ble';
-import { bluetoothSupportHint } from './browser';
-import { drawChart } from './chart';
-import { APP_NAME, APP_VERSION, BUILD_TARGET, DONATION_URL, GITHUB_REPO } from './config';
-import { desktop, setupDesktop } from './desktop';
-import { choose, confirmDialog } from './dialogs';
-import { buildTcx, exportFilename, toCsv, type Sample, type TcxSport } from './export';
+import { TreadmillClient, WebBluetoothAdapter, type BleAdapter, type TreadmillEvents } from './device/ble';
+import { bluetoothSupportHint } from './ui/browser';
+import { drawChart } from './ui/components/chart';
+import { APP_NAME, APP_VERSION, BUILD_TARGET, DONATION_URL, GITHUB_REPO } from './platform/config';
+import { desktop, setupDesktop } from './ui/desktop';
+import { choose, confirmDialog } from './ui/components/dialogs';
+import { buildTcx, exportFilename, toCsv, type Sample, type TcxSport } from './core/history/export';
 import {
   cmdPause, cmdRequestControl, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, describeMachineStatus, hex,
   OP, parseMachineStatus, parseTrainingStatus, type Range, type TreadmillData,
-} from './ftms';
-import { setupHistory } from './history';
-import { lang, onLanguageChange, retranslate, t, type Text } from './i18n';
-import { routeDescription, routeName } from './route-examples';
-import { bindText, clearText, initLanguage } from './i18n-dom';
-import { setupMenu, setupPrefs } from './menus';
-import { setupInterval } from './interval-ui';
-import { fmtDistance, fmtLength, fmtTime, ProgramRunner, programLength, type ProgramStep } from './program';
-import { setupPwa } from './pwa';
-import type { RunSource, RunTag } from './runs';
+} from './core/protocol/ftms';
+import { setupHistory } from './ui/history/history';
+import { lang, onLanguageChange, retranslate, t, type Text } from './i18n/i18n';
+import { routeDescription, routeName } from './core/routes/route-examples';
+import { bindText, clearText, initLanguage } from './ui/i18n-dom';
+import { setupMenu, setupPrefs } from './ui/settings/menus';
+import { setupInterval } from './ui/workouts/interval-ui';
+import { fmtDistance, fmtLength, fmtTime, ProgramRunner, programLength, type ProgramStep } from './core/training/program';
+import { setupPwa } from './ui/pwa';
+import type { RunSource, RunTag } from './core/history/runs';
 import {
   beltMaybeRunning, checkConsoleCommand, controlAvailability, decideLimitChange, DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION,
   effectiveMax as calcEffectiveMax, isDisclaimerAccepted, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE, LIMIT_MAX, LIMIT_MIN, LIMIT_STORAGE_KEY,
   loadLimit, MAX_STEP_MAX, MAX_STEP_MIN, MAX_STEP_STORAGE_KEY, parseHexBytes, parseMaxStep, RAMP_INTERVAL_MS,
   serializeLimit, SpeedGovernor, StandstillDetector,
-} from './safety';
-import { ACTIVE_STORAGE_KEY, readActive, type Active } from './selection';
-import { setupSettings } from './settings-ui';
-import { SimulatorAdapter } from './sim';
-import { initTheme, onThemeChange } from './theme';
-import { BeltBanner } from './belt-banner';
-import { clampIncline, inclineSupport, levelsFromCount, parseLevelCount, type InclineSupport } from './incline';
-import { $, $button, $input, download, log, store } from './ui';
-import { fromSpeed, onUnitsChange, parseUnits, setUnits, speedFromInput, speedPresets, speedStep, toDist, toSpeed, UNITS_STORAGE_KEY } from './units';
-import { askBeforeStart } from './quiet';
-import { setupRoutes } from './route-ui';
-import { setupViews, stopPlacement, type View } from './views';
-import { setupWorkouts } from './workout-ui';
+} from './core/safety/safety';
+import { ACTIVE_STORAGE_KEY, readActive, type Active } from './core/training/selection';
+import { setupSettings } from './ui/settings/settings-ui';
+import { SimulatorAdapter } from './device/sim';
+import { initTheme, onThemeChange } from './ui/theme';
+import { BeltBanner } from './core/safety/belt-banner';
+import { clampIncline, inclineSupport, levelsFromCount, parseLevelCount, type InclineSupport } from './core/safety/incline';
+import { $, $button, $input, download, log, store } from './ui/ui';
+import { fromSpeed, onUnitsChange, parseUnits, setUnits, speedFromInput, speedPresets, speedStep, toDist, toSpeed, UNITS_STORAGE_KEY } from './i18n/units';
+import { askBeforeStart } from './core/safety/quiet';
+import { setupRoutes } from './ui/routes/route-ui';
+import { setupViews, stopPlacement, type View } from './ui/views';
+import { setupWorkouts } from './ui/workouts/workout-ui';
 
 initTheme();
 initLanguage();

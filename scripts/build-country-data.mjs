@@ -1,7 +1,7 @@
 // Builds the offline country data from Natural Earth (public domain) and copies the flags that go with it.
 //   node scripts/build-country-data.mjs <ne_50m_admin_0_countries.geojson> <ne_10m_admin_0_countries.geojson> <flag-icons/flags/4x3>
-// Writes src/data/countries.json (borders, simplified to about 3 km, coordinates in 0.001° steps, delta-coded) and
-// src/flags/<code>.svg (flag-icons, MIT). The 50 m data is too rough for the small states (the Vatican is a kilometre
+// Writes src/core/routes/data/countries.json (borders, simplified to about 3 km, coordinates in 0.001° steps, delta-coded) and
+// src/ui/routes/flags/<code>.svg (flag-icons, MIT). The 50 m data is too rough for the small states (the Vatican is a kilometre
 // off), so every country that fits into one degree is taken from the 10 m data instead.
 // Run it again only to update the data; the results are committed.
 
@@ -79,7 +79,7 @@ for (const [code, polys50] of Object.entries(by50)) {
 }
 
 mkdirSync('src/data', { recursive: true });
-mkdirSync('src/flags', { recursive: true });
-writeFileSync('src/data/countries.json', JSON.stringify({ scale: SCALE, countries }));
-for (const code of Object.keys(countries)) copyFileSync(join(flagsDir, `${code.toLowerCase()}.svg`), `src/flags/${code.toLowerCase()}.svg`);
+mkdirSync('src/ui/routes/flags', { recursive: true });
+writeFileSync('src/core/routes/data/countries.json', JSON.stringify({ scale: SCALE, countries }));
+for (const code of Object.keys(countries)) copyFileSync(join(flagsDir, `${code.toLowerCase()}.svg`), `src/ui/routes/flags/${code.toLowerCase()}.svg`);
 console.log(`${Object.keys(countries).length} countries, ${points} points before simplifying`);

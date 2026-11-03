@@ -12,5 +12,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["electron", "src/version.ts", "src/i18n.ts", "src/locales", "src/csp.ts", "src/map-config.ts", "src/mime.ts"]
+  "include": ["electron", "src/i18n/i18n.ts", "src/i18n/locales", "src/platform/version.ts", "src/platform/csp.ts", "src/platform/mime.ts", "src/platform/dev-url.ts", "src/platform/open-files.ts", "src/core/routes/map-config.ts", "src/core/safety/dev-mode.ts"]
 }

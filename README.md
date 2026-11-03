@@ -89,13 +89,13 @@ npm run dev
 | `npm run electron:dev` | Start Electron in watch mode: changes in `src/` show at once (hot reload), a change in `electron/` restarts the app |
 | `npm run dist` | Installer for the current system in `release/` |
 | `npm run icons` | Regenerate the icons (`scripts/make-icons.mjs`) |
-| `node scripts/build-country-data.mjs <50m> <10m> <flags>` | Rebuild `src/data/countries.json` and `src/flags/` from Natural Earth and flag-icons (only to update the data) |
+| `node scripts/build-country-data.mjs <50m> <10m> <flags>` | Rebuild `src/core/routes/data/countries.json` and `src/ui/routes/flags/` from Natural Earth and flag-icons (only to update the data) |
 
 Without a treadmill: click “Demo (no treadmill)”. The simulator speaks real FTMS bytes and can simulate a connection loss and the safety key.
 
 ### Map
 
-The map of a route is optional. In the training view it is off until a person switches it on (the choice is kept in the browser); in the routes view it opens under a route when the arrow icon of the route is pressed. Nothing is requested from the map server before that. The map is [MapLibre GL JS](https://maplibre.org/) (BSD 3-Clause), loaded on demand as a separate chunk, with the free vector tiles of [OpenFreeMap](https://openfreemap.org/): a light style (Positron) in the light theme and a dark one in the dark theme, with a little more colour added in the app (blue water, green parks, warm roads in light; deep blue and green in dark; `src/map-tint.ts`), so the route stands out. The colours are set after the style has loaded and only for these two built-in styles; no extra request is made, and a style you set yourself is shown as it is. It only shows the route and the position; it sends nothing to the treadmill.
+The map of a route is optional. In the training view it is off until a person switches it on (the choice is kept in the browser); in the routes view it opens under a route when the arrow icon of the route is pressed. Nothing is requested from the map server before that. The map is [MapLibre GL JS](https://maplibre.org/) (BSD 3-Clause), loaded on demand as a separate chunk, with the free vector tiles of [OpenFreeMap](https://openfreemap.org/): a light style (Positron) in the light theme and a dark one in the dark theme, with a little more colour added in the app (blue water, green parks, warm roads in light; deep blue and green in dark; `src/core/routes/map-tint.ts`), so the route stands out. The colours are set after the style has loaded and only for these two built-in styles; no extra request is made, and a style you set yourself is shown as it is. It only shows the route and the position; it sends nothing to the treadmill.
 
 The styles are chosen when the app is built, not in the running app, because the Content-Security-Policy lets the app talk to exactly the map servers of the build. Set `WALKFLOW_MAP_STYLE` (light theme) and, if you like, `WALKFLOW_MAP_STYLE_DARK` for `npm run build` or `npm run dist`:
 
@@ -109,44 +109,34 @@ An invalid value stops the build. The privacy texts name the default server; cha
 
 ### Structure
 
-| File | Contents |
+The source is split into layers, each in its own folder; a layer only uses the ones below it. The full description, the rules and where new code goes are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); `tests/architecture.test.ts` checks them.
+
+| Folder | Contents |
 | --- | --- |
-| `src/ftms.ts` | FTMS protocol as pure functions: parsers, commands, features/ranges, status |
-| `src/ble.ts` | `BleAdapter` interface, `WebBluetoothAdapter`, serial write queue, connection sequence |
-| `src/safety.ts` | Limits, ramp (`SpeedGovernor`), console checks, standstill detection |
-| `src/program.ts` | Workout steps (time or distance): text format and the runner (time steps by timestamps, distance steps by the treadmill’s counter) |
-| `src/map-config.ts`, `src/csp.ts`, `src/map-geo.ts`, `src/map-view.ts`, `src/route-map.ts` | Optional map: build setting for the style URL, the Content-Security-Policy, route as map data, the map itself (loaded on demand), the slots on the route card and in the routes view |
-| `src/country.ts`, `src/flags.ts`, `src/data/countries.json`, `src/flags/` | Country of a route from its start, offline (simplified Natural Earth borders, loaded when needed), and the flag images |
-| `src/route-examples.ts` | Example routes that come with the app (data from OpenStreetMap), put into the library once on the first start |
-| `src/routes.ts`, `src/gpx.ts`, `src/route-store.ts`, `src/route-ui.ts` | Routes: validation, route maths and progress tracker, GPX reading (tag scanner, no DTD) and writing, IndexedDB storage, routes view and route card |
-| `src/workouts.ts`, `src/workout-store.ts`, `src/workout-ui.ts`, `src/db.ts` | Saved workouts and week plan: validation, IndexedDB storage (shared database with the runs), workouts view |
-| `src/sim.ts` | Simulated FTMS treadmill (demo mode, tests) |
-| `src/export.ts` | CSV and TCX |
-| `src/runs.ts` | Runs: detection from the live samples, compact storage form, backup file |
-| `src/stats.ts` | Totals, weeks, streaks, records |
-| `src/run-store.ts` | IndexedDB storage of the runs (in memory if the browser does not allow it) |
-| `src/views.ts`, `src/history.ts` | View switch via the URL hash, where Stop is shown per view, history view |
-| `src/menus.ts` | Header menus (connection, language and theme) |
-| `src/i18n.ts`, `src/i18n-dom.ts`, `src/locales/` | Language selection, texts per language, binding to the HTML |
-| `src/theme.ts`, `src/style.css` | Theme choice; all colours are tokens in `style.css` |
-| `src/main.ts`, `ui.ts`, `chart.ts`, `dialogs.ts` | Thin UI layer, vanilla TS |
-| `src/desktop.ts` | Renderer side of the Electron integration |
-| `electron/` | Main process and preload |
+| `src/i18n/` | Language selection, texts per language (`locales/`), units (km/h or mph) |
+| `src/core/` | Pure logic without browser: FTMS protocol, safety rules, workouts and programs, routes and route packages, runs and statistics |
+| `src/platform/` | Pure helpers around the app's shell: build settings, version, security policy, file types, desktop file opening |
+| `src/device/` | The treadmill: Bluetooth adapter and the simulator |
+| `src/data/` | Storage in the browser (IndexedDB) |
+| `src/ui/` | Everything that draws or listens: views per feature, components, theme, desktop integration; vanilla TS |
+| `src/main.ts` | Wires it all together |
+| `electron/` | Main process and preload of the desktop app (uses only pure code of `src/`) |
+| `tests/` | Tests about the project itself (structure rules); unit tests sit next to their code |
 | `public/legal/<lang>/` | Legal notice and privacy pages per language (placeholders) |
 
-A second BLE path (e.g. native) only implements `BleAdapter`/`BleDevice` from `src/ble.ts`.
+A second BLE path (e.g. native) only implements `BleAdapter`/`BleDevice` from `src/device/ble.ts`.
 
 ### Translations
 
-All texts live in `src/locales/en.ts`, `de.ts` and `fr.ts`. `en.ts` defines the structure; TypeScript and `src/i18n.test.ts` check that every language has every text and that every `data-i18n` key in `index.html` exists. Safety texts must keep the same meaning and strength in every language.
+All texts live in `src/i18n/locales/en.ts`, `de.ts` and `fr.ts`. `en.ts` defines the structure; TypeScript and `src/i18n/i18n.test.ts` check that every language has every text and that every `data-i18n` key in `index.html` exists. Safety texts must keep the same meaning and strength in every language.
 
-Adding a language: copy `src/locales/en.ts`, translate it, register it in `src/i18n.ts` (`LANGS`, `MESSAGES`), add legal pages under `public/legal/<lang>/` and, for the macOS Bluetooth prompt, `build/lproj/<lang>.lproj/InfoPlist.strings`.
+Adding a language: copy `src/i18n/locales/en.ts`, translate it, register it in `src/i18n/i18n.ts` (`LANGS`, `MESSAGES`), add legal pages under `public/legal/<lang>/` and, for the macOS Bluetooth prompt, `build/lproj/<lang>.lproj/InfoPlist.strings`.
 
 The FTMS terms in the log (`Set Speed`, `Request Control` …) stay English in every language. CSV column names are English too, as they are part of the file format.
 
 ### Themes
 
-Every colour is a token at the top of `src/style.css`, defined once as `light-dark(light, dark)`. The theme only sets `color-scheme` (`data-theme` on `<html>`; none = follow the system), so form controls and scrollbars follow too. The chart reads the same tokens; the legal pages use a copy in `public/legal/legal.css`. `src/theme.test.ts` checks that every token used is defined and that the main text and control colours reach WCAG contrast (4.5:1 for text, 3:1 for controls) in both themes. Alarm and stop stay strong red in both. A third theme (e.g. high contrast) would override the tokens under `:root[data-theme="…"]`.
+Every colour is a token at the top of `src/style.css`, defined once as `light-dark(light, dark)`. The theme only sets `color-scheme` (`data-theme` on `<html>`; none = follow the system), so form controls and scrollbars follow too. The chart reads the same tokens; the legal pages use a copy in `public/legal/legal.css`. `src/ui/theme.test.ts` checks that every token used is defined and that the main text and control colours reach WCAG contrast (4.5:1 for text, 3:1 for controls) in both themes. Alarm and stop stay strong red in both. A third theme (e.g. high contrast) would override the tokens under `:root[data-theme="…"]`.
 
 ## Publishing
 
@@ -198,4 +188,4 @@ There is no entitlement to support and no feature depends on support.
 
 [MIT](LICENSE)
 
-The example routes in `src/route-examples.ts` are track data from [OpenStreetMap](https://www.openstreetmap.org/copyright), © OpenStreetMap contributors, available under the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/). The app shows this next to each example. The country flags in front of the routes are from [flag-icons](https://github.com/lipis/flag-icons) (MIT, licence in `src/flags/LICENSE`). The borders that decide which flag a route gets are from [Natural Earth](https://www.naturalearthdata.com/) (public domain), simplified by `scripts/build-country-data.mjs`; the country is worked out on the device from the start of the route and nothing is sent anywhere. The map uses OpenFreeMap tiles, which are also based on OpenStreetMap data and show their credits on the map.
+The example routes in `src/core/routes/route-examples.ts` are track data from [OpenStreetMap](https://www.openstreetmap.org/copyright), © OpenStreetMap contributors, available under the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/). The app shows this next to each example. The country flags in front of the routes are from [flag-icons](https://github.com/lipis/flag-icons) (MIT, licence in `src/ui/routes/flags/LICENSE`). The borders that decide which flag a route gets are from [Natural Earth](https://www.naturalearthdata.com/) (public domain), simplified by `scripts/build-country-data.mjs`; the country is worked out on the device from the start of the route and nothing is sent anywhere. The map uses OpenFreeMap tiles, which are also based on OpenStreetMap data and show their credits on the map.

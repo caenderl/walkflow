@@ -1,6 +1,6 @@
 /* Themes: every colour is a token defined once as light-dark(light, dark). The theme only sets color-scheme:
-   no data-theme = follow the system, data-theme="dark"/"light" = fixed (src/theme.ts).
-   Alarm and stop stay strong red in both themes. src/theme.test.ts checks the contrast of the main pairs. */
+   no data-theme = follow the system, data-theme="dark"/"light" = fixed (src/ui/theme.ts).
+   Alarm and stop stay strong red in both themes. src/ui/theme.test.ts checks the contrast of the main pairs. */
 :root {
   color-scheme: light dark;
   --bg: light-dark(#f3f4f7, #12141a);
@@ -108,7 +108,7 @@ textarea { font-family:ui-monospace, monospace; font-size:13px; height:110px; re
 .icon-btn { width:44px; height:44px; padding:0; }
 .icon-btn .icon { width:20px; height:20px; }
 
-/* Header menus (src/menus.ts) */
+/* Header menus (src/ui/settings/menus.ts) */
 .menu-anchor { position:relative; }
 .menu {
   position:absolute; top:calc(100% + 8px); left:0; z-index:30; width:340px; max-width:calc(100vw - 24px);
@@ -138,7 +138,7 @@ button.big { min-height:52px; font-size:1.05rem; }
 .range-row output { min-width:4em; text-align:right; color:var(--fg); font-variant-numeric:tabular-nums; }
 .seg button { min-height:36px; padding:6px 4px; border:0; border-radius:9px; background:transparent; font-size:.875rem; }
 .seg button[aria-checked="true"] { background:var(--card); font-weight:600; box-shadow:0 1px 2px var(--shadow); }
-/* View switch (src/views.ts): a segmented control */
+/* View switch (src/ui/views.ts): a segmented control */
 .views { display:flex; gap:2px; padding:3px; background:var(--btn); border:1px solid var(--btn-border); border-radius:999px; }
 .views a { padding:5px 14px; border-radius:999px; color:var(--fg); text-decoration:none; font-size:.9rem; font-weight:500; text-align:center; }
 .views a:hover { background:var(--btn-hover); }
@@ -165,7 +165,7 @@ button.big { min-height:52px; font-size:1.05rem; }
 .linkish { display:inline; min-height:0; padding:0; border:0; background:none; color:var(--link); font:inherit; text-decoration:underline; cursor:pointer; }
 .linkish:hover:not(:disabled) { background:none; }
 
-/* Stop bar: outside the training view while connected (data-stop, src/views.ts). Above the menus (z-index 30). */
+/* Stop bar: outside the training view while connected (data-stop, src/ui/views.ts). Above the menus (z-index 30). */
 .stopbar {
   display:none; align-items:center; gap:10px 18px; flex-wrap:wrap; position:sticky; top:12px; z-index:40;
   background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:8px 8px 8px 18px;
@@ -191,7 +191,7 @@ html:not([data-stop="controls"]) .layout { grid-template-columns:minmax(0, 1fr);
 
 /* Live values: large enough to read from the treadmill */
 .live { display:grid; gap:20px; position:relative; }
-/* The banner over the live figures (src/belt-banner.ts); its opacity is set by the script */
+/* The banner over the live figures (src/core/safety/belt-banner.ts); its opacity is set by the script */
 .belt-banner { position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:16px; border-radius:inherit; text-align:center; pointer-events:none; }
 .belt-banner[hidden] { display:none; }
 .bb-text { font-size:clamp(1.5rem, 3.4vw, 2.6rem); font-weight:650; line-height:1.15; letter-spacing:-.01em; }
@@ -347,12 +347,12 @@ html[data-incline="no"] .incl-only, html[data-incline="no"] .wk-incl { display:n
 .dlg .chooser { padding:0; }
 .chooser button { width:100%; text-align:left; }
 .dlg .link { display:block; margin:0 0 12px; padding:4px 0; background:none; border:0; color:var(--link); text-decoration:underline; font-size:.9rem; cursor:pointer; }
-/* Used by src/theme.ts to resolve a token to a colour (e.g. for the chart canvas) */
+/* Used by src/ui/theme.ts to resolve a token to a colour (e.g. for the chart canvas) */
 .color-probe { position:absolute; width:0; height:0; overflow:hidden; pointer-events:none; }
 
 @media (min-width: 1280px) { .hero-stats { grid-template-columns:repeat(5, minmax(0, 1fr)); } }
 @media (min-width: 1280px) { .st-long { display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; } }
-/* The header menus open next to their buttons and stay left of the controls column (src/menus.ts moves them
+/* The header menus open next to their buttons and stay left of the controls column (src/ui/settings/menus.ts moves them
    if not): below 1280 px the short status */
 @media (max-width: 1279px) {
   .st-long { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
@@ -449,7 +449,7 @@ html:not(.i18n-ready) body { visibility:hidden; animation:i18n-reveal 0s 1.5s fo
 .iv-next ol { margin:6px 0 0; padding:0; list-style:none; display:grid; gap:4px; font-variant-numeric:tabular-nums; }
 .iv-next li.none { color:var(--mute); }
 
-/* ---------- Settings dialog (src/settings-ui.ts) ---------- */
+/* ---------- Settings dialog (src/ui/settings/settings-ui.ts) ---------- */
 .settings-dlg {
   padding:0; border:1px solid var(--card-border); border-radius:20px; background:var(--card); color:var(--fg);
   width:min(920px, calc(100vw - 32px)); height:min(680px, calc(100vh - 48px)); max-width:none; max-height:none;
@@ -490,7 +490,7 @@ html:not(.i18n-ready) body { visibility:hidden; animation:i18n-reveal 0s 1.5s fo
 
 /* Quiet mode (settings): no safety notice. Everything that limits or stops the belt stays. */
 html[data-quiet="1"] #safetyNotice { display:none; }
-/* The experiment console only in developer mode (src/settings-ui.ts) */
+/* The experiment console only in developer mode (src/ui/settings/settings-ui.ts) */
 html:not([data-dev="1"]) #consoleCard { display:none; }
 
 /* The demo note sits in the controls panel (training view): one column, the buttons below the text */
@@ -560,7 +560,7 @@ html:not([data-dev="1"]) #consoleCard { display:none; }
 .rt-item .icon-btn .icon { width:22px; height:22px; transition:transform .15s; }
 .rt-item .icon-btn[aria-expanded="true"] .icon { transform:rotate(180deg); }
 
-/* The "⋯" menu (src/overflow-menu.ts) */
+/* The "⋯" menu (src/ui/components/overflow-menu.ts) */
 .overflow { position:relative; }
 .overflow > summary {
   display:inline-flex; align-items:center; justify-content:center; min-width:40px; min-height:40px; padding:0 10px; margin:0;
