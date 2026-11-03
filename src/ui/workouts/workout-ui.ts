@@ -5,14 +5,14 @@
 import { confirmDialog } from '../components/dialogs';
 import { onLanguageChange, t } from '../../i18n/i18n';
 import { fmtLength, formatProgram, parseProgram, programLength, type ProgramStep } from '../../core/training/program';
-import { toRow, toStep, type Row, type Unit } from '../../core/training/workout-rows';
-import { fromShort, fromSpeed, toShort, toSpeed } from '../../i18n/units';
+import { toRow, toStep, type Row } from '../../core/training/workout-rows';
 import { getRouteStore } from '../../data/route-store';
 import type { Route } from '../../core/routes/routes';
 import { getRunStore } from '../../data/run-store';
 import type { RunSummary } from '../../core/history/runs';
 import { $, $button, $input } from '../ui';
 import { button, el, iconButton } from '../components/elements';
+import { stepRow } from './step-row';
 import { setupWeekPlan } from './week-plan';
 import { store } from '../store';
 import { getWorkoutStore, type WorkoutStore } from '../../data/workout-store';
@@ -151,7 +151,7 @@ export function setupWorkouts(host: WorkoutsHost) {
     if (!d) return;
     $('wkEditorTitle').textContent = d.id ? t.workouts.editorEdit : t.workouts.editorNew;
     $input('wkName').value = d.name;
-    $('wkSteps').replaceChildren(...d.rows.map((row, i) => stepRow(d, row, i)));
+    $('wkSteps').replaceChildren(...d.rows.map((_, i) => stepRow(d.rows, i, { totalsChanged: renderTotals, rowsChanged: renderEditor })));
     renderTotals();
     $<HTMLTextAreaElement>('wkText').value = formatProgram(draftSteps(d).filter((s): s is ProgramStep => s !== null));
     if (statusText) $('wkStatus').textContent = statusText();
@@ -166,53 +166,6 @@ export function setupWorkouts(host: WorkoutsHost) {
       t.workouts.total(fmtLength(programLength(steps))),
       ...(steps.some(s => s.speed > max) ? [t.workouts.capped(max)] : []),
     ].join(' ');
-  }
-
-  function stepRow(d: Draft, row: Row, i: number) {
-    const num = (value: number, step: string, label: string, onInput: (v: number) => void, placeholder = '', min = '0') => {
-      const input = el('input', { type: 'number', min, step, placeholder, value: Number.isFinite(value) ? String(value) : '' });
-      input.setAttribute('aria-label', `${t.workouts.step(i + 1)}: ${label}`);
-      input.setAttribute('inputmode', 'decimal');
-      input.oninput = () => { onInput(input.valueAsNumber); renderTotals(); };
-      return input;
-    };
-    // Row values are metric (metres, km/h); the fields show the units of the settings. A length is metres or feet.
-    const rounded = (v: number, digits: number) => (Number.isFinite(v) ? Math.round(v * 10 ** digits) / 10 ** digits : v);
-    const amount = num(row.unit === 'm' ? rounded(toShort(row.amount), 1) : row.amount, 'any', t.workouts.amount, v => { row.amount = row.unit === 'm' ? fromShort(v) : v; });
-    const unit = el('select');
-    unit.setAttribute('aria-label', `${t.workouts.step(i + 1)}: ${t.workouts.unit}`);
-    for (const [value, text] of [['min', t.workouts.unitMin], ['s', t.workouts.unitSec], ['m', t.workouts.unitMeters]] as const) {
-      unit.append(el('option', { value, textContent: text, selected: row.unit === value }));
-    }
-    // The number stays as it is shown when the unit changes: 5 min becomes 5 m (or 5 ft)
-    unit.onchange = () => { row.unit = unit.value as Unit; row.amount = row.unit === 'm' ? fromShort(amount.valueAsNumber) : amount.valueAsNumber; renderTotals(); };
-
-    const move = (by: number) => {
-      const j = i + by;
-      if (j < 0 || j >= d.rows.length) return;
-      [d.rows[i], d.rows[j]] = [d.rows[j]!, d.rows[i]!];
-      renderEditor();
-    };
-    const icon = (text: string, label: string, onClick: () => void, disabled = false) => {
-      const b = button(text, onClick, disabled);
-      b.setAttribute('aria-label', `${t.workouts.step(i + 1)}: ${label}`);
-      b.title = label;
-      return b;
-    };
-    const incline = num(row.incline ?? NaN, '0.1', t.workouts.incline, v => { row.incline = Number.isFinite(v) ? v : undefined; }, t.workouts.inclShort, '-10');
-    incline.max = '40';
-    incline.classList.add('wk-incl');
-    return el('li', { className: 'wk-step' },
-      el('span', { className: 'wk-n', textContent: String(i + 1) }),
-      amount,
-      unit,
-      num(rounded(toSpeed(row.speed), 2), '0.1', t.workouts.speed, v => { row.speed = rounded(fromSpeed(v), 2); }, t.u.speedUnit()),
-      incline,
-      el('span', { className: 'wk-move' },
-        icon('↑', t.workouts.up, () => move(-1), i === 0),
-        icon('↓', t.workouts.down, () => move(1), i === d.rows.length - 1),
-        icon('✕', t.workouts.remove, () => { d.rows.splice(i, 1); renderEditor(); })),
-    );
   }
 
   async function save() {
