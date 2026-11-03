@@ -3,6 +3,8 @@
 // bounded list of steps, nothing else ever reaches the runner.
 
 import { newId } from '../id';
+import type { Lang } from '../../i18n/i18n';
+import { readCredit, readLangMap, type Credit } from '../routes/routes';
 import type { ProgramStep } from './program';
 import type { RunSummary } from '../history/runs';
 import { countable, weekStart } from '../history/stats';
@@ -13,10 +15,17 @@ export interface Workout {
   steps: ProgramStep[];
   /** Unix ms of the last change */
   updated: number;
+  /** Language code → name, for a workout that came as a package; `name` is the plain one (without a language, else English, else the first) */
+  names?: Record<string, string>;
+  /** Language code → description ("und" = a language that is not known) */
+  texts?: Record<string, string>;
+  /** Who made it and under which terms; travels with the workout when it is exported again */
+  meta?: Credit;
 }
 
 export const WORKOUT_MAX_STEPS = 200;
 export const WORKOUT_NAME_MAX = 60;
+export const WORKOUT_TEXT_MAX = 1000;
 /** Per step. The speed is capped to the personal limit when the program runs; this only bounds what is stored. */
 const MAX_SPEED = 30;
 const MAX_STEP_SEC = 86_400;
@@ -55,7 +64,35 @@ export function readWorkout(v: unknown): Workout | null {
     if (!step) return null;
     out.push(step);
   }
-  return { id, name: trimmed, steps: out, updated };
+  const workout: Workout = { id, name: trimmed, steps: out, updated };
+  const names = readLangMap(v.names, WORKOUT_NAME_MAX, true);
+  if (names) workout.names = names;
+  const texts = readLangMap(v.texts, WORKOUT_TEXT_MAX);
+  if (texts) workout.texts = texts;
+  const meta = readCredit(v.meta);
+  if (Object.keys(meta).length) workout.meta = meta;
+  return workout;
+}
+
+/** The name to show: the one in the language of the app if the workout has it, else its plain name */
+export function workoutName(w: Workout, lang: Lang): string {
+  return w.names?.[lang] ?? w.name;
+}
+
+/** The description to show: the language of the app, else a text without a known language, else English, else any. `lang` is null for a text without one. */
+export function workoutDescription(w: Workout, lang: Lang): { text: string; lang: string | null } | null {
+  const texts = w.texts;
+  const key = texts && [lang, 'und', 'en', ...Object.keys(texts).sort()].find(k => texts[k]);
+  return texts && key ? { text: texts[key]!, lang: key === 'und' ? null : key } : null;
+}
+
+/**
+ * What to store after the name was edited. A workout with names in several languages whose field was left as shown keeps
+ * them (its name keeps following the language); any other name is the person's own from then on.
+ */
+export function nameAfterEdit(w: Workout, typed: string, lang: Lang): { name: string; names?: Record<string, string> } {
+  const name = typed.trim();
+  return w.names && name === workoutName(w, lang) ? { name: w.name, names: w.names } : { name };
 }
 
 /** Valid workouts in order of first appearance; with the same id the later one wins. */

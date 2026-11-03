@@ -1,6 +1,6 @@
 # Sharing between devices (peer to peer)
 
-Status: design and the pure core are in (`src/core/share/`); the connection and the screens are still to do.
+Status: design, the pure core (`src/core/share/`) and both package formats are in; the connection and the screens are still to do.
 
 ## What it is for
 
@@ -77,14 +77,14 @@ The rules are in a state machine on each side and tested without a connection:
 
 ## What is still to do
 
-1. **Workout package** (`walkflow-workout`, like the route package: a language map for the name, the steps, author,
-   licence), with a reader and tests. Until then only routes can be shared.
-2. **Connection** in `src/net/`: a thin adapter around Trystero that turns the protocol's messages into data channel
+Done: the workout package (`WORKOUT-PACKAGE.md`), so both kinds have a format.
+
+1. **Connection** in `src/net/`: a thin adapter around Trystero that turns the protocol's messages into data channel
    messages, with the pinned relay list. The library is loaded on demand.
-3. **Screens**: *Share* in the route and workout lists, *Receive* in the menu, the dialog with code, status and the choice
+2. **Screens**: *Share* in the route and workout lists, *Receive* in the menu, the dialog with code, status and the choice
    of what to take. Texts in German, English and French.
-4. **CSP** for the pinned relays in `src/platform/csp.ts` and a test for it.
-5. **Hardware-free checks**: two browser tabs on one machine exchange a route; a wrong code, a closed dialog and a stopped
+3. **CSP** for the pinned relays in `src/platform/csp.ts` and a test for it.
+4. **Hardware-free checks**: two browser tabs on one machine exchange a route; a wrong code, a closed dialog and a stopped
    sender end cleanly.
 
 ## Later, maybe

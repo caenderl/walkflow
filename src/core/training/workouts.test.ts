@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { RunSummary } from '../history/runs';
 import {
-  decodeSuggestion, encodeSuggestion, newWorkoutId, planFromMinutes, readPlan, readWorkout, readWorkouts, TEMPLATES, todayGoal, todaySuggestion, weekProgress, WORKOUT_MAX_STEPS,
+  decodeSuggestion, encodeSuggestion, nameAfterEdit, newWorkoutId, planFromMinutes, readPlan, readWorkout, readWorkouts, TEMPLATES, todayGoal, todaySuggestion,
+  weekProgress, workoutDescription, workoutName, WORKOUT_MAX_STEPS, WORKOUT_NAME_MAX, WORKOUT_TEXT_MAX,
   type PlanSuggestion,
 } from './workouts';
 
@@ -206,5 +207,59 @@ describe('suggestion values', () => {
 
   it('decodes nothing from an empty or malformed value', () => {
     for (const v of ['', 'workout', 'workout:', ':id', 'gym:1', 'id']) expect(decodeSuggestion(v)).toBeNull();
+  });
+});
+
+describe('names, descriptions and credit of a workout', () => {
+  const packaged = {
+    ...good,
+    names: { en: 'Easy', de: 'Leicht', fr: 'Facile' },
+    texts: { en: 'Two blocks.', de: 'Zwei Blöcke.', und: 'Freitext' },
+    meta: { author: 'Ann', license: 'CC0-1.0', source: 'Own', tags: ['easy', 'Bad Tag', 'easy'] },
+  };
+
+  it('keeps names, texts and credit, checked like everything else', () => {
+    expect(readWorkout(packaged)).toEqual({
+      ...good,
+      names: { en: 'Easy', de: 'Leicht', fr: 'Facile' },
+      texts: { en: 'Two blocks.', de: 'Zwei Blöcke.', und: 'Freitext' },
+      meta: { author: 'Ann', license: 'CC0-1.0', source: 'Own', tags: ['easy'] },
+    });
+  });
+
+  it('leaves out keys that are not a language, empty texts and a credit without content', () => {
+    const w = readWorkout({ ...good, names: { 'de-CH': 'x', en: 'Easy', fr: '  ' }, texts: { en: '' }, meta: { author: ' ', tags: [3] } })!;
+    expect(w.names).toEqual({ en: 'Easy' });
+    expect(w).not.toHaveProperty('texts');
+    expect(w).not.toHaveProperty('meta');
+  });
+
+  it('cuts a name and a description to length', () => {
+    const w = readWorkout({ ...good, names: { en: 'n'.repeat(200) }, texts: { en: 't'.repeat(5000) } })!;
+    expect(w.names!.en).toHaveLength(WORKOUT_NAME_MAX);
+    expect(w.texts!.en).toHaveLength(WORKOUT_TEXT_MAX);
+  });
+
+  it('shows the name in the language of the app, else the plain name', () => {
+    const w = readWorkout(packaged)!;
+    expect(workoutName(w, 'de')).toBe('Leicht');
+    expect(workoutName({ ...w, names: { en: 'Easy' } }, 'fr')).toBe('Easy');
+    expect(workoutName(readWorkout(good)!, 'de')).toBe('Easy');
+  });
+
+  it('shows the description in the language of the app, else without a language, else English, else any', () => {
+    const w = readWorkout(packaged)!;
+    expect(workoutDescription(w, 'de')).toEqual({ text: 'Zwei Blöcke.', lang: 'de' });
+    expect(workoutDescription(w, 'fr')).toEqual({ text: 'Freitext', lang: null });
+    expect(workoutDescription({ ...w, texts: { en: 'Two blocks.' } }, 'fr')).toEqual({ text: 'Two blocks.', lang: 'en' });
+    expect(workoutDescription({ ...w, texts: { gsw: 'Zwöi' } }, 'fr')).toEqual({ text: 'Zwöi', lang: 'gsw' });
+    expect(workoutDescription(readWorkout(good)!, 'de')).toBeNull();
+  });
+
+  it('keeps the names when the field was left as shown and makes a changed name the person\'s own', () => {
+    const w = readWorkout(packaged)!;
+    expect(nameAfterEdit(w, ' Leicht ', 'de')).toEqual({ name: 'Easy', names: w.names });
+    expect(nameAfterEdit(w, 'Mein Training', 'de')).toEqual({ name: 'Mein Training' });
+    expect(nameAfterEdit(readWorkout(good)!, 'Neu', 'de')).toEqual({ name: 'Neu' });
   });
 });

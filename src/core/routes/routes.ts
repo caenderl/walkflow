@@ -80,21 +80,39 @@ export function plainName(names: Readonly<Record<string, string>>): string | und
   return key ? names[key] : undefined;
 }
 
+/** Who made it and under which terms: author, licence, source and tags of a route or a workout. Plain text, cut to length. */
+export interface Credit {
+  author?: string;
+  /** Free text, e.g. an SPDX identifier */
+  license?: string;
+  /** Where it comes from, e.g. the attribution of the data */
+  source?: string;
+  /** For filtering: lower-case words */
+  tags?: string[];
+}
+
+export function readCredit(v: unknown): Credit {
+  const credit: Credit = {};
+  if (!isObject(v)) return credit;
+  for (const key of ['author', 'license'] as const) {
+    const text = cleanText(v[key], ROUTE_META_MAX).replace(/\s+/g, ' ');
+    if (text) credit[key] = text;
+  }
+  const source = cleanText(v.source, ROUTE_SOURCE_MAX).replace(/\s+/g, ' ');
+  if (source) credit.source = source;
+  if (Array.isArray(v.tags)) {
+    const tags = [...new Set(v.tags.filter((t): t is string => typeof t === 'string' && TAG_KEY.test(t)))].slice(0, ROUTE_TAGS_MAX);
+    if (tags.length) credit.tags = tags;
+  }
+  return credit;
+}
+
 function readMeta(v: unknown): RouteMeta | undefined {
   if (!isObject(v)) return undefined;
   const meta: RouteMeta = {};
   const place = readLangMap(v.place, ROUTE_META_MAX, true);
   if (place) meta.place = place;
-  for (const key of ['author', 'license'] as const) {
-    const text = cleanText(v[key], ROUTE_META_MAX).replace(/\s+/g, ' ');
-    if (text) meta[key] = text;
-  }
-  const source = cleanText(v.source, ROUTE_SOURCE_MAX).replace(/\s+/g, ' ');
-  if (source) meta.source = source;
-  if (Array.isArray(v.tags)) {
-    const tags = [...new Set(v.tags.filter((t): t is string => typeof t === 'string' && TAG_KEY.test(t)))].slice(0, ROUTE_TAGS_MAX);
-    if (tags.length) meta.tags = tags;
-  }
+  Object.assign(meta, readCredit(v));
   return Object.keys(meta).length ? meta : undefined;
 }
 
