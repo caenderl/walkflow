@@ -2,14 +2,14 @@ import './style.css';
 import { TreadmillClient, WebBluetoothAdapter, type BleAdapter, type TreadmillEvents } from './device/ble';
 import { bluetoothSupportHint } from './ui/browser';
 import { drawChart } from './ui/components/chart';
-import { APP_NAME, APP_VERSION } from './platform/config';
+import { APP_VERSION } from './platform/config';
 import { desktop, setupDesktop } from './ui/desktop';
 import { choose, confirmDialog } from './ui/components/dialogs';
 import type { Sample, TcxSport } from './core/history/export';
 import { setupExportControls } from './ui/history/export-controls';
 import {
-  cmdPause, cmdRequestControl, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, describeMachineStatus, hex,
-  OP, parseMachineStatus, parseTrainingStatus, type Range, type TreadmillData,
+  cmdPause, cmdRequestControl, cmdSetSpeed, cmdStart, cmdStop, describeMachineStatus, hex,
+  OP, parseMachineStatus, parseTrainingStatus, type TreadmillData,
 } from './core/protocol/ftms';
 import { setupHistory } from './ui/history/history';
 import { lang, onLanguageChange, retranslate, t, type Text } from './i18n/i18n';
@@ -28,13 +28,13 @@ import {
 } from './core/safety/safety';
 import { ACTIVE_STORAGE_KEY, readActive, type Active } from './core/training/selection';
 import { setupBackground } from './ui/background';
+import { setupInclineCard } from './ui/live/incline-card';
 import { renderInfo } from './ui/settings/info';
 import { setupSettings } from './ui/settings/settings-ui';
 import { SimulatorAdapter } from './device/sim';
 import { initTheme, onThemeChange } from './ui/theme';
 import { BeltBanner } from './core/safety/belt-banner';
-import { clampIncline, inclineSupport, levelsFromCount, parseLevelCount, type InclineSupport } from './core/safety/incline';
-import { $, $button, $input, download, log, store } from './ui/ui';
+import { $, $button, $input, log, store } from './ui/ui';
 import { fromSpeed, onUnitsChange, parseUnits, setUnits, speedFromInput, speedPresets, speedStep, toDist, toSpeed, UNITS_STORAGE_KEY } from './i18n/units';
 import { askBeforeStart } from './core/safety/quiet';
 import { setupRoutes } from './ui/routes/route-ui';
@@ -46,9 +46,6 @@ initLanguage();
 // Units before anything is drawn
 setUnits(parseUnits(store.get(UNITS_STORAGE_KEY)));
 
-const INCLINE_LEVELS_KEY = 'walkflow.inclineLevelCount';
-/** 'no' once a real treadmill reported no incline: then nothing about the incline is shown */
-const INCLINE_SEEN_KEY = 'walkflow.inclineSupport';
 const now = () => performance.now();
 
 // ---------- State ----------
@@ -66,11 +63,6 @@ let lastMeasured: number | undefined;
 let lastMeasuredAt = 0;
 let controlLost = false;
 let sliderDragging = false;
-let inclRange: Range | null = null;
-let inclShown = 0;
-let inclSupport: InclineSupport = { settable: false, reported: false };
-/** How many levels the person says the treadmill's incline has; 0 = the slider over the range the treadmill reports */
-let inclLevelCount = 0;
 const cur: Omit<Sample, 'ts'> = {};   // latest measured values
 const samples: Sample[] = [];          // recording since the page was opened (1 Hz), for the chart and export
 let lastSample = 0;
@@ -127,6 +119,11 @@ const runner = new ProgramRunner({
   // Only what the person has to know stays on screen; start, stop and progress are shown by the banner and the workout panel
   status: (text, attention) => { if (text && attention) bindText($('progStatus'), text); else clearText($('progStatus')); renderStage(); },
   log,
+});
+
+const incline = setupInclineCard({
+  send: bytes => (client ? client.send(bytes) : Promise.resolve(false)),
+  uiConnected: () => uiConnected,
 });
 
 // The tab goes to the background, the page is closed: keep the screen on while connected, warn or pause, save the run
@@ -222,7 +219,7 @@ function renderStats() {
   $('vSpeed').textContent = connected() ? f(cur.speed === undefined ? undefined : toSpeed(cur.speed), 1) : '–';
   $('vDist').textContent = f(cur.dist === undefined ? undefined : toDist(cur.dist), 2);
   $('vIncl').textContent = f(cur.incl, 1);
-  $('statIncl').hidden = !inclSupport.reported && cur.incl === undefined;
+  $('statIncl').hidden = !incline.supportReported() && cur.incl === undefined;
   $('vTime').textContent = cur.time === undefined ? '–' : fmtTime(cur.time);
   $('vHr').textContent = cur.hr === undefined ? '–' : String(cur.hr);
   $('vKcal').textContent = cur.kcal === undefined ? '–' : String(cur.kcal);
@@ -302,43 +299,6 @@ function requestSpeed(kmh: number) {
 
 function stepSpeed(delta: number) {
   requestSpeed((governor.target ?? governor.base()) + delta);
-}
-
-/** The setting "incline levels": the slider and the number beside it */
-function renderLevelCountField() {
-  $input('inclLevelsInput').value = String(inclLevelCount);
-  $('inclLevelsValue').textContent = inclLevelCount === 0 ? t.incline.levelsNone : String(inclLevelCount);
-}
-
-function renderIncline() {
-  $('inclCard').hidden = !inclSupport.settable;
-  $('inclTarget').textContent = t.incline.value(inclShown);
-  const levels = levelsFromCount(inclLevelCount, inclRange ?? undefined);
-  const box = $('inclLevels');
-  box.hidden = levels.length === 0;
-  $input('inclSlider').hidden = levels.length > 0;
-  box.replaceChildren(...levels.map((l, i) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'needs-conn';
-    b.disabled = !uiConnected;
-    b.setAttribute('role', 'radio');
-    b.setAttribute('aria-checked', String(Math.abs(l - inclShown) < 0.05));
-    b.textContent = String(i + 1);
-    b.title = b.ariaLabel = t.incline.levelButton(i + 1, l);
-    b.onclick = () => void setIncline(l);
-    return b;
-  }));
-  $('inclInfo').textContent = inclRange ? t.incline.range(inclRange.min, inclRange.max, inclRange.step) : t.incline.unknown;
-}
-
-function setIncline(requested: number) {
-  const pct = clampIncline(requested, inclRange ?? undefined);
-  if (!client || !inclSupport.settable || Number.isNaN(pct)) return Promise.resolve(false);
-  $input('inclSlider').value = String(pct);
-  inclShown = pct;
-  renderIncline();
-  return client.send(cmdSetInclination(pct));
 }
 
 // ---------- Start / stop / program ----------
@@ -513,21 +473,11 @@ async function connect(kind: 'ble' | 'demo') {
     client = c;
     runSource = kind === 'demo' ? 'demo' : 'ble';
     devMin = 1.0; devMax = 12.0;
-    resetIncline();
+    incline.reset();
     const info = await c.connect();
 
     if (info.speedRange) { devMin = info.speedRange.min; devMax = info.speedRange.max; }
-    inclSupport = inclineSupport(info.features, info.inclRange);
-    if (!inclSupport.settable && !inclSupport.reported) log(t.incline.unsupportedLog);
-    if (runSource === 'ble') rememberInclineSupport();
-    if (info.inclRange) {
-      const { min: mn, max: mx, step: st } = info.inclRange;
-      const sl = $input('inclSlider');
-      sl.min = String(mn); sl.max = String(mx); sl.step = String(st || 0.5); sl.value = String(Math.max(mn, 0));
-      inclRange = info.inclRange;
-      inclShown = parseFloat(sl.value);
-    }
-    renderIncline();
+    incline.onConnected(info, runSource === 'ble');
     renderStats();
 
     beltStarted = false; lastMeasured = undefined; controlLost = false;
@@ -553,26 +503,6 @@ async function connect(kind: 'ble' | 'demo') {
       setUi(false);
     }
   }
-}
-
-function resetIncline() {
-  const sl = $input('inclSlider');
-  sl.min = '0'; sl.max = '15'; sl.step = '1'; sl.value = '0';
-  inclRange = null;
-  inclShown = 0;
-  inclSupport = { settable: false, reported: false };
-  renderIncline();
-}
-
-/** What the last real treadmill said about the incline: remembered so that the editor can hide it while disconnected. */
-function rememberInclineSupport() {
-  store.set(INCLINE_SEEN_KEY, inclSupport.settable || inclSupport.reported ? 'yes' : 'no');
-  applyInclineSeen();
-}
-
-function applyInclineSeen() {
-  if (store.get(INCLINE_SEEN_KEY) === 'no') document.documentElement.dataset.incline = 'no';
-  else delete document.documentElement.dataset.incline;
 }
 
 function onDisconnected() {
@@ -715,9 +645,6 @@ function loadSettings() {
   const ms = parseMaxStep(store.get(MAX_STEP_STORAGE_KEY) ?? '');
   if (ms !== null) governor.maxStep = ms;
   renderLimitFields();
-  inclLevelCount = parseLevelCount(store.get(INCLINE_LEVELS_KEY));
-  renderLevelCountField();
-  applyInclineSeen();
 }
 
 async function limitChanged() {
@@ -796,16 +723,6 @@ document.querySelectorAll<HTMLButtonElement>('.preset').forEach(b => {
 $input('cap').onchange = () => void limitChanged();
 $input('maxStep').onchange = maxStepChanged;
 
-$input('inclLevelsInput').oninput = e => {
-  inclLevelCount = parseLevelCount((e.target as HTMLInputElement).value);
-  store.set(INCLINE_LEVELS_KEY, String(inclLevelCount));
-  renderLevelCountField();
-  renderIncline();
-};
-$input('inclSlider').oninput = e => { $('inclTarget').textContent = t.incline.value(parseFloat((e.target as HTMLInputElement).value)); };
-$input('inclSlider').onchange = e => void setIncline(parseFloat((e.target as HTMLInputElement).value));
-
-
 setupExportControls(samples, redrawChart);
 
 $button('rawSend').onclick = () => void rawSend();
@@ -835,11 +752,10 @@ onUnitsChange(u => {
 
 onLanguageChange(() => {
   renderLimitFields();
-  renderLevelCountField();
   renderInfo();
   renderRangeInfo();
   renderSpeed();
-  renderIncline();
+  incline.relabel();
   renderStats();
   redrawChart();
   background.relabel();
@@ -861,7 +777,7 @@ setupViews(v => {
 });
 loadSettings();
 renderInfo();
-renderIncline();
+incline.render();
 renderStats();
 applyLimits();
 redrawChart();
