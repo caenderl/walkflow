@@ -1,8 +1,7 @@
 # Sharing between devices (peer to peer)
 
 Status: design, the pure core (`src/core/share/`) and both package formats are in; the connection and the screens are
-still to do. The first version of the core was written for sending to one person with a code; the community mode below is
-the main mode and needs a small extension of the protocol (see "What changes in the protocol").
+still to do. The core was first written for sending to one person with a code and has been extended for the community mode below.
 
 ## What it is for
 
@@ -85,30 +84,43 @@ The id the other devices see is random for each session, so a device cannot be f
 
 ## The messages (`core/share/protocol.ts`)
 
+On one connection a device is two things at once: a **sharer** (it offers what it shares) and a **taker** (it asks for what
+the other device offers). Each role is a state machine of its own (`ShareSender`, `ShareReceiver`), and `SharePeer` hands
+every message to the role it is meant for (`sideOf`). Both are tested without a connection.
+
 | Message | From | Meaning |
 | --- | --- | --- |
-| `hello {v}` | the one who wants to take | I am here and speak version `v` |
-| `offer {items}` | the one who shares | What I have: `id`, `kind` (route, workout), `name`, `chars` |
-| `want {ids}` | the one who wants to take | Of these, I take those |
-| `item {id, text}` | the one who shares | The package, as text, in its file format |
-| `bye` | both | Done or stopping |
+| `hello {v}` | taker | I am here and speak version `v` |
+| `offer {items}` | sharer | What I share now: `id`, `kind` (route, workout), `name`, `chars`, `sha256`, and for the list `place`, `country`, `tags`. A new offer replaces the old one. |
+| `want {ids}` | taker | Of these, I take those |
+| `item {id, text}` | sharer | The package, as text, in its file format |
+| `gone {ids}` | sharer | These are not shared any more (an answer to a `want` that came too late) |
+| `bye {role}` | both | I stop being a sharer or a taker; the role says which, so the two ends cannot be mixed up |
 
-The rules are in a state machine on each side and tested without a connection:
+The rules:
 
-- The one who shares sends nothing before `hello`, and only what is asked for, once.
-- The one who takes accepts only items it asked for, exactly as long as announced (`chars`), at most 2,000,000
-  characters each and 10,000,000 in all, at most 20 items.
-- Anything else ends the exchange with an error: unknown message, wrong order, other version.
-- Names are cut and stripped of control characters; they are only ever shown as plain text.
+- The sharer sends nothing before `hello`, and only what is asked for, each item once per connection.
+- It tells the taker when what it shares changes (`update`), and answers a request for something that was offered but is
+  gone now with `gone`, without ending the exchange. A request for something that was never offered ends it.
+- The taker accepts only items it asked for, exactly as long as announced (`chars`). It asks for several items one request
+  after another but **one transfer at a time** (`busy` is its own error, nothing is sent and the exchange goes on).
+- Before an item is read, the taker compares its SHA-256 with the offered one (`matchesHash`); a mismatch ends the
+  exchange (`rejectItem`).
+- A misuse of our own side (a request for something that is gone, a second transfer) is refused locally and sends nothing.
+  Only what the other side does wrong ends the exchange, with a `bye`.
+- Names and places are cut and stripped of control characters; they are only ever shown as plain text.
 
-### What changes in the protocol for Community
+### Limits (per connection and device)
 
-- **Both directions on one connection.** Every connection runs a sharing side and a taking side at the same time. The
-  messages need to say which side they are meant for (a `bye` is ambiguous today), or the two sides get their own channel
-  (the data channel library has named actions, so one action per side).
-- **A longer offer.** An offer carries more than 20 items and the SHA-256 of each. The limit per connection stays, so one
-  device cannot flood the list: at most 50 offered items per device, at most one transfer at a time, a rate limit.
-- **Check by hash.** The one who takes compares the SHA-256 of what arrived with the offered one before the reader runs.
+| What | Limit |
+| --- | --- |
+| Items in an offer | 50 |
+| Items in a request, or in a `gone` | 10 |
+| Requests the sharer answers | 20 |
+| One item | 2,000,000 characters |
+| Everything one side sends to the other | 10,000,000 characters |
+
+Anything above ends the exchange with an error (`tooLarge`, `invalid`, `unexpected`, `version`).
 
 ## Safety
 
@@ -125,10 +137,12 @@ The rules are in a state machine on each side and tested without a connection:
 
 ## What is still to do
 
-Done: the share code, the messages and rules of one exchange, both package formats.
+Done: the share code, the messages and rules of the exchange (both roles on one connection, offers with hashes and limits,
+check by hash), both package formats.
 
-1. **Protocol for Community**: both directions, offers with hashes and limits, check by hash. With tests, before any
-   connection exists.
+1. **The list** (`core/share/directory.ts`): merges the offers of all connected devices into one list, de-duplicated by
+   hash, with the number of devices that have each item, filters (kind, country, tag, text) and the room per language.
+   Pure and tested.
 2. **Connection** in `src/net/`: a thin adapter around Trystero that turns the protocol's messages into data channel
    messages, with the pinned relay list; a room for a language and a room for a code. The library is loaded on demand.
 3. **Screens**: the Community view (switch with the one-sentence notice, list with filters, take), *Share with the

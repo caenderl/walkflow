@@ -2,6 +2,8 @@
 // The person shows or reads it out; it is never stored. Room and key are derived from it with different prefixes, so what
 // the relay sees (the room) says nothing about the key.
 
+import { sha256Hex } from './hash';
+
 /** No I, L, O, 0 or 1: nothing that can be mistaken for something else when it is read out or typed */
 export const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export const CODE_GROUPS = 2;
@@ -34,11 +36,6 @@ export function readShareCode(input: string): string | null {
   const chars = input.toUpperCase().replace(/[\s-]+/g, '');
   if (chars.length !== CODE_LENGTH || ![...chars].every(c => CODE_ALPHABET.includes(c))) return null;
   return groupCode(chars);
-}
-
-async function sha256Hex(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** The room the two devices meet in, and the password that protects the set-up of the connection */
