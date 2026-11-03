@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RunSummary } from '../history/runs';
 import {
-  newWorkoutId, planFromMinutes, readPlan, readWorkout, readWorkouts, TEMPLATES, todayGoal, todaySuggestion, weekProgress, WORKOUT_MAX_STEPS,
+  decodeSuggestion, encodeSuggestion, newWorkoutId, planFromMinutes, readPlan, readWorkout, readWorkouts, TEMPLATES, todayGoal, todaySuggestion, weekProgress, WORKOUT_MAX_STEPS,
   type PlanSuggestion,
 } from './workouts';
 
@@ -194,5 +194,17 @@ describe('todayGoal', () => {
 
   it('ignores demo runs', () => {
     expect(todayGoal(plan, [run(at(26, 7), 1800, 'demo')], at(26, 12))).toEqual({ target: 30, doneMin: 0, leftMin: 30 });
+  });
+});
+
+describe('suggestion values', () => {
+  it('encode and decode each other', () => {
+    for (const s of [{ kind: 'workout', id: 'w1' }, { kind: 'route', id: 'r-2' }, { kind: 'workout', id: 'tpl:intervals' }] as PlanSuggestion[]) {
+      expect(decodeSuggestion(encodeSuggestion(s))).toEqual(s);
+    }
+  });
+
+  it('decodes nothing from an empty or malformed value', () => {
+    for (const v of ['', 'workout', 'workout:', ':id', 'gym:1', 'id']) expect(decodeSuggestion(v)).toBeNull();
   });
 });

@@ -99,6 +99,16 @@ export interface PlanSuggestion {
   id: string;
 }
 
+/** A suggestion as the value of a form field: "workout:<id>" or "route:<id>" */
+export const encodeSuggestion = (s: PlanSuggestion) => `${s.kind}:${s.id}`;
+
+/** null for an empty or malformed value (the id itself may contain colons) */
+export function decodeSuggestion(value: string): PlanSuggestion | null {
+  const i = value.indexOf(':');
+  const kind = value.slice(0, i), id = value.slice(i + 1);
+  return i > 0 && id && (kind === 'workout' || kind === 'route') ? { kind, id } : null;
+}
+
 /**
  * Target minutes of moving time per weekday, Monday first. 0 = no target (rest day). A day may also point to a
  * workout or route as a suggestion; whether the day is done is still decided by the minutes alone.

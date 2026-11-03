@@ -3,22 +3,22 @@
 // here: "Use" just selects it. What the editor produces is checked by readWorkout before it is saved.
 
 import { confirmDialog } from '../components/dialogs';
-import { lang, onLanguageChange, t } from '../../i18n/i18n';
+import { onLanguageChange, t } from '../../i18n/i18n';
 import { fmtLength, formatProgram, parseProgram, programLength, type ProgramStep } from '../../core/training/program';
 import { toRow, toStep, type Row, type Unit } from '../../core/training/workout-rows';
 import { fromShort, fromSpeed, toShort, toSpeed } from '../../i18n/units';
-import { routeName } from '../../core/routes/route-examples';
 import { getRouteStore } from '../../data/route-store';
 import type { Route } from '../../core/routes/routes';
 import { getRunStore } from '../../data/run-store';
 import type { RunSummary } from '../../core/history/runs';
 import { $, $button, $input } from '../ui';
 import { button, el, iconButton } from '../components/elements';
+import { setupWeekPlan } from './week-plan';
 import { store } from '../store';
 import { getWorkoutStore, type WorkoutStore } from '../../data/workout-store';
 import {
-  newWorkoutId, planFromMinutes, readWorkout, TEMPLATES, todaySuggestion, weekProgress, WORKOUT_NAME_MAX,
-  type PlanSuggestion, type WeekPlan, type Workout,
+  newWorkoutId, readWorkout, TEMPLATES, WORKOUT_NAME_MAX,
+  type WeekPlan, type Workout,
 } from '../../core/training/workouts';
 
 export const SELECTED_STORAGE_KEY = 'walkflow.workout';
@@ -240,90 +240,19 @@ export function setupWorkouts(host: WorkoutsHost) {
     if (!d.id) select(w.id);
   }
 
-  // ---------- Week plan ----------
-  const encode = (s: PlanSuggestion) => `${s.kind}:${s.id}`;
-  function decode(value: string): PlanSuggestion | null {
-    const i = value.indexOf(':');
-    const kind = value.slice(0, i), id = value.slice(i + 1);
-    return i > 0 && id && (kind === 'workout' || kind === 'route') ? { kind, id } : null;
-  }
-
-  /** What a suggestion points to, undefined when it has been deleted */
-  function suggestionName(s: PlanSuggestion): string | undefined {
-    if (s.kind === 'route') return (r => (r ? routeName(r, lang) : undefined))(routes.find(r => r.id === s.id));
-    if (s.id.startsWith(TEMPLATE_PREFIX)) return templateSteps(s.id.slice(TEMPLATE_PREFIX.length)) ? exampleName(s.id.slice(TEMPLATE_PREFIX.length)) : undefined;
-    return workouts.find(w => w.id === s.id)?.name;
-  }
-
-  function suggestSelect(day: string, current: PlanSuggestion | null) {
-    const sel = el('select', { className: 'plan-suggest' });
-    sel.setAttribute('aria-label', t.workouts.suggestFor(day));
-    const group = (label: string, items: [string, string][]) => {
-      const g = el('optgroup', { label });
-      g.append(...items.map(([value, text]) => el('option', { value, textContent: text })));
-      return g;
-    };
-    const known: PlanSuggestion[] = [
-      ...workouts.map((w): PlanSuggestion => ({ kind: 'workout', id: w.id })),
-      ...TEMPLATES.map((tpl): PlanSuggestion => ({ kind: 'workout', id: TEMPLATE_PREFIX + tpl.id })),
-      ...routes.map((r): PlanSuggestion => ({ kind: 'route', id: r.id })),
-    ];
-    sel.append(el('option', { value: '', textContent: t.workouts.suggestNone }));
-    if (workouts.length) sel.append(group(t.program.mine, workouts.map(w => [encode({ kind: 'workout', id: w.id }), w.name])));
-    sel.append(group(t.program.examples, TEMPLATES.map(tpl => [encode({ kind: 'workout', id: TEMPLATE_PREFIX + tpl.id }), exampleName(tpl.id)])));
-    if (routes.length) sel.append(group(t.routes.mineTitle, routes.map(r => [encode({ kind: 'route', id: r.id }), routeName(r, lang)])));
-    // A target that is gone keeps its place, so changing another day does not silently drop it
-    if (current && !known.some(k => encode(k) === encode(current))) {
-      sel.append(el('option', { value: encode(current), textContent: t.workouts.suggestMissing }));
-    }
-    sel.value = current ? encode(current) : '';
-    sel.onchange = () => void savePlan();
-    return sel;
-  }
-
-  function renderToday() {
-    const sug = todaySuggestion(plan, Date.now());
-    const name = sug && suggestionName(sug);
-    $('todayPlan').hidden = !sug || !name;
-    if (!sug || !name) return;
-    $('todayPlanText').textContent = t.workouts.todaySuggest(sug.kind === 'route' ? t.history.tagRoute : t.history.tagWorkout, name);
-    const use = $button('todayPlanUse');
-    use.title = t.workouts.use;
-    use.setAttribute('aria-label', t.workouts.use);
-    use.onclick = () => { if (sug.kind === 'route') host.useRoute(sug.id); else { select(sug.id); host.useWorkout(); } };
-  }
-
-  function renderPlan() {
-    const progress = weekProgress(plan, runs, Date.now());
-    $('planList').replaceChildren(...progress.map((p, i) => {
-      const day = t.workouts.weekday(p.day);
-      const input = el('input', { type: 'number', min: '0', max: '600', step: '5', value: String(plan.minutes[i] ?? 0) });
-      input.setAttribute('inputmode', 'numeric');
-      input.setAttribute('aria-label', t.workouts.target(day));
-      input.onchange = () => void savePlan();
-      const done = Math.floor(p.doneSec / 60);
-      return el('li', { className: `plan-day${p.today ? ' today' : ''}${p.met ? ' met' : ''}` },
-        el('span', { className: 'plan-name' },
-          el('strong', { textContent: day }), ' ',
-          el('span', { className: 'hint', textContent: p.today ? t.workouts.today : t.workouts.dayDate(p.day) })),
-        input,
-        el('span', { className: 'plan-progress', textContent: p.target ? t.workouts.progress(done, p.target) : t.workouts.progressRest(done) }),
-        el('span', { className: 'plan-mark', textContent: p.met ? '✓' : '' }, ...(p.met ? [el('span', { className: 'sr-only', textContent: t.workouts.metLabel })] : [])),
-        suggestSelect(day, plan.suggest?.[i] ?? null),
-      );
-    }));
-    const planned = progress.filter(p => p.target > 0);
-    $('planSummary').textContent = t.workouts.summary(planned.filter(p => p.met).length, planned.length);
-  }
-
-  async function savePlan() {
-    plan = planFromMinutes(
-      [...$('planList').querySelectorAll('input')].map(i => i.valueAsNumber),
-      [...$('planList').querySelectorAll<HTMLSelectElement>('select.plan-suggest')].map(s => decode(s.value)),
-    );
-    try { await (await ready).setPlan(plan); } catch (e) { $('planSummary').textContent = t.workouts.failed(String(e)); return; }
-    renderPlan();
-  }
+  const weekPlan = setupWeekPlan({
+    plan: () => plan,
+    workouts: () => workouts,
+    routes: () => routes,
+    runs: () => runs,
+    examples: () => TEMPLATES.map(tpl => [TEMPLATE_PREFIX + tpl.id, exampleName(tpl.id)]),
+    workoutName: id => id.startsWith(TEMPLATE_PREFIX)
+      ? (templateSteps(id.slice(TEMPLATE_PREFIX.length)) ? exampleName(id.slice(TEMPLATE_PREFIX.length)) : undefined)
+      : workouts.find(w => w.id === id)?.name,
+    savePlan: async next => { plan = next; await (await ready).setPlan(next); },
+    useRoute: id => host.useRoute(id),
+    useWorkout: id => { select(id); host.useWorkout(); },
+  });
 
   // ---------- Loading ----------
   async function reload() {
@@ -340,8 +269,8 @@ export function setupWorkouts(host: WorkoutsHost) {
     keepSelectionValid();
     renderLists();
     renderEditor();
-    renderPlan();
-    renderToday();
+    weekPlan.render();
+    weekPlan.renderToday();
     host.changed();
   }
 
