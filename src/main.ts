@@ -5,7 +5,8 @@ import { drawChart } from './ui/components/chart';
 import { APP_NAME, APP_VERSION } from './platform/config';
 import { desktop, setupDesktop } from './ui/desktop';
 import { choose, confirmDialog } from './ui/components/dialogs';
-import { buildTcx, exportFilename, toCsv, type Sample, type TcxSport } from './core/history/export';
+import type { Sample, TcxSport } from './core/history/export';
+import { setupExportControls } from './ui/history/export-controls';
 import {
   cmdPause, cmdRequestControl, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, describeMachineStatus, hex,
   OP, parseMachineStatus, parseTrainingStatus, type Range, type TreadmillData,
@@ -45,7 +46,6 @@ initLanguage();
 setUnits(parseUnits(store.get(UNITS_STORAGE_KEY)));
 
 const HIDDEN_MODE_KEY = 'walkflow.hiddenMode';
-const TCX_SPORT_KEY = 'walkflow.tcxSport';
 const INCLINE_LEVELS_KEY = 'walkflow.inclineLevelCount';
 /** 'no' once a real treadmill reported no incline: then nothing about the incline is shown */
 const INCLINE_SEEN_KEY = 'walkflow.inclineSupport';
@@ -478,20 +478,6 @@ async function runRoute() {
     t.routes.walkConfirm(routeName(walk.route, lang), fmtDistance(walk.steps[0]?.meters ?? 0), shown), () => routes.restart());
 }
 
-// ---------- Export ----------
-function exportCsv() {
-  if (!samples.length) { log(t.settings.noData); return; }
-  download(toCsv(samples), 'text/csv', exportFilename(new Date(), 'csv'));
-}
-
-function exportTcx() {
-  const sport = $<HTMLSelectElement>('tcxSport').value as TcxSport;
-  const xml = buildTcx(samples, { sport, notes: t.settings.tcxNotes });
-  if (!xml) { log(t.settings.noMovement); return; }
-  const firstMoving = samples.find(s => (s.speed ?? 0) > 0);
-  download(xml, 'application/vnd.garmin.tcx+xml', exportFilename(new Date(firstMoving?.ts ?? Date.now()), 'tcx'));
-}
-
 // ---------- First run ----------
 async function ensureDisclaimer(): Promise<boolean> {
   if (isDisclaimerAccepted(store.get(DISCLAIMER_STORAGE_KEY))) return true;
@@ -775,8 +761,6 @@ function loadSettings() {
   inclLevelCount = parseLevelCount(store.get(INCLINE_LEVELS_KEY));
   renderLevelCountField();
   applyInclineSeen();
-  const sp = store.get(TCX_SPORT_KEY);
-  if (sp === 'Running' || sp === 'Other') $<HTMLSelectElement>('tcxSport').value = sp;
 }
 
 async function limitChanged() {
@@ -866,10 +850,7 @@ $input('inclSlider').oninput = e => { $('inclTarget').textContent = t.incline.va
 $input('inclSlider').onchange = e => void setIncline(parseFloat((e.target as HTMLInputElement).value));
 
 
-$button('csv').onclick = exportCsv;
-$button('tcx').onclick = exportTcx;
-$<HTMLSelectElement>('tcxSport').onchange = e => store.set(TCX_SPORT_KEY, (e.target as HTMLSelectElement).value);
-$button('clear').onclick = () => { samples.length = 0; redrawChart(); log(t.settings.cleared); };
+setupExportControls(samples, redrawChart);
 
 $button('rawSend').onclick = () => void rawSend();
 $input('raw').addEventListener('keydown', e => { if (e.key === 'Enter') $button('rawSend').click(); });
