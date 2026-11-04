@@ -84,10 +84,22 @@ describe('project structure', () => {
 
   it('keeps sharing away from the belt: nothing from other devices can reach the treadmill commands', () => {
     const bad: string[] = [];
+    const isBelt = (f: string) => BELT.some(b => rel(f).startsWith(b));
+    // Every file that sharing can run, however far down the imports (a type-only import runs nothing)
     for (const file of sources.filter(f => SHARING.some(s => rel(f).startsWith(s)))) {
-      for (const { spec } of importsOf(readFileSync(file, 'utf8'))) {
-        const target = resolveTs(file, spec);
-        if (target && BELT.some(b => rel(target).startsWith(b))) bad.push(`${rel(file)} → ${rel(target)}`);
+      const seen = new Set<string>([file]);
+      const queue: { file: string; via: string[] }[] = [{ file, via: [file] }];
+      while (queue.length) {
+        const cur = queue.shift()!;
+        for (const { spec, typeOnly } of importsOf(readFileSync(cur.file, 'utf8'))) {
+          const target = resolveTs(cur.file, spec);
+          if (!target || !target.startsWith(SRC) || seen.has(target)) continue;
+          // directly imported: also a type (the commands' types have no business in sharing either)
+          if (isBelt(target) && (cur.file === file || !typeOnly)) { bad.push([...cur.via, target].map(rel).join(' → ')); continue; }
+          if (typeOnly) continue;
+          seen.add(target);
+          queue.push({ file: target, via: [...cur.via, target] });
+        }
       }
     }
     expect(bad).toEqual([]);
