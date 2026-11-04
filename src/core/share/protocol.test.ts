@@ -140,10 +140,12 @@ describe('ShareSender', () => {
     expect(ready().receive({ t: 'want', ids: ['a', 'a'] })).toMatchObject({ error: 'invalid', done: true });
   });
 
-  it('sends each item once on a connection: asking again is refused', () => {
+  it('sends an item again when it is asked for again (a person who deleted it takes it back), within the limits of the connection', () => {
     const s = ready();
-    s.receive({ t: 'want', ids: ['a'] });
-    expect(s.receive({ t: 'want', ids: ['a'] })).toMatchObject({ error: 'invalid', done: true });
+    const first = s.receive({ t: 'want', ids: ['a'] });
+    const again = s.receive({ t: 'want', ids: ['a'] });
+    expect(again.error).toBeUndefined();
+    expect(again.send).toEqual(first.send);
   });
 
   it('allows only a limited number of requests on a connection', () => {
@@ -166,6 +168,16 @@ describe('ShareSender', () => {
     s.receive(HELLO);
     const step = s.update([item('c')]);
     expect(step.send).toMatchObject([{ t: 'offer', items: [{ id: 'c' }] }]);
+  });
+
+  it('sends no new offer when the offer has not changed (the library changes for other reasons all the time)', () => {
+    const s = ready([item('a'), item('b', '{"b":2}')]);
+    expect(s.update([item('a'), item('b', '{"b":2}')])).toEqual({ send: [] });
+    expect(s.update([item('a'), item('b', '{"b":2}')])).toEqual({ send: [] });
+    // a change in the offer is sent, and the new state is the one that is compared with from then on
+    expect(s.update([item('a')]).send).toMatchObject([{ t: 'offer', items: [{ id: 'a' }] }]);
+    expect(s.update([item('a')])).toEqual({ send: [] });
+    expect(s.update([item('a'), item('b', '{"b":2}')]).send).toHaveLength(1);
   });
 
   it('answers a request for something that is no longer shared with gone, and sends the rest', () => {
@@ -261,13 +273,24 @@ describe('ShareReceiver', () => {
     expect(r.want(['a']).send).toHaveLength(1);
   });
 
-  it('does not ask twice for the same item, nor for more at once than allowed', () => {
+  it('does not ask for more at once than allowed, nor for the same item twice in one request', () => {
     const many = Array.from({ length: MAX_WANT_IDS + 1 }, (_, i) => offered(`i${i}`));
     const r = offeredTo(many);
     expect(r.want(many.map(i => i.id))).toEqual({ send: [], error: 'invalid' });
-    r.want(['i0']);
-    r.receive({ t: 'item', id: 'i0', text: '{}' });
-    expect(r.want(['i0'])).toEqual({ send: [], error: 'invalid' });
+    expect(r.want(['i0', 'i0'])).toEqual({ send: [], error: 'invalid' });
+  });
+
+  it('asks again for an item it took before (it may have been deleted since), but the total limit still counts', () => {
+    const r = offeredTo([offered('a', 2)]);
+    r.want(['a']);
+    expect(r.receive({ t: 'item', id: 'a', text: '{}' }).received?.item.id).toBe('a');
+    expect(r.want(['a']).send).toEqual([{ t: 'want', ids: ['a'] }]);
+    const big = offeredTo([offered('b', MAX_ITEM_CHARS)]);
+    for (let i = 0; i < 5; i++) {
+      expect(big.want(['b']).error, `take ${i}`).toBeUndefined();
+      big.receive({ t: 'item', id: 'b', text: 'x'.repeat(MAX_ITEM_CHARS) });
+    }
+    expect(big.want(['b'])).toEqual({ send: [], error: 'tooLarge' });
   });
 
   it('does not ask for more than the total limit', () => {

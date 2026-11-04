@@ -200,7 +200,8 @@ every message to the role it is meant for (`sideOf`). Both are tested without a 
 
 The rules:
 
-- The sharer sends nothing before `hello`, and only what is asked for, each item once per connection.
+- The sharer sends nothing before `hello`, and only what is asked for. An item that is asked for again is sent again (a person may have deleted it and want it back);
+  the number of requests and the total size per connection bound it.
 - It tells the taker when what it shares changes (`update`), and answers a request for something that was offered but is
   gone now with `gone`, without ending the exchange. A request for something that was never offered ends it.
 - The taker accepts only items it asked for, exactly as long as announced (`chars`). It asks for several items one request

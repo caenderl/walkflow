@@ -160,7 +160,8 @@ export class ShareSender {
   private items: ShareItem[] = [];
   /** Everything that was in an offer on this connection, also what is not any more */
   private readonly everOffered = new Set<string>();
-  private readonly sent = new Set<string>();
+  /** The offer the other side has now, to send a new one only when it is different */
+  private lastOffer = '';
   private wants = 0;
   private sentChars = 0;
 
@@ -173,9 +174,15 @@ export class ShareSender {
     this.items = items.filter(i => i.text.length >= 1 && i.text.length <= MAX_ITEM_CHARS).slice(0, MAX_OFFER_ITEMS).map(i => ({ ...i, chars: i.text.length }));
   }
 
+  private offerMessage(): ShareMessage {
+    return { t: 'offer', items: this.items.map(({ text: _text, ...offered }) => offered) };
+  }
+
   private offer(): ShareMessage {
     for (const i of this.items) this.everOffered.add(i.id);
-    return { t: 'offer', items: this.items.map(({ text: _text, ...offered }) => offered) };
+    const msg = this.offerMessage();
+    this.lastOffer = JSON.stringify(msg);
+    return msg;
   }
 
   private fail(error: ShareError): Step {
@@ -186,7 +193,8 @@ export class ShareSender {
   /** What is shared has changed: the other side gets the new offer, as soon as it has said hello */
   update(items: readonly ShareItem[]): Step {
     this.set(items);
-    return { send: this.state === 'active' ? [this.offer()] : [] };
+    if (this.state !== 'active' || JSON.stringify(this.offerMessage()) === this.lastOffer) return { send: [] };
+    return { send: [this.offer()] };
   }
 
   receive(msg: ShareMessage): Step {
@@ -203,13 +211,12 @@ export class ShareSender {
 
   private answer(ids: string[]): Step {
     if (++this.wants > MAX_WANTS) return this.fail('tooLarge');
-    if (new Set(ids).size !== ids.length || !ids.every(id => this.everOffered.has(id) && !this.sent.has(id))) return this.fail('invalid');
+    if (new Set(ids).size !== ids.length || !ids.every(id => this.everOffered.has(id))) return this.fail('invalid');
     const have = ids.map(id => this.items.find(i => i.id === id)).filter((i): i is ShareItem => i !== undefined);
     const gone = ids.filter(id => !have.some(i => i.id === id));
     const chars = have.reduce((sum, i) => sum + i.text.length, 0);
     if (this.sentChars + chars > MAX_TOTAL_CHARS) return this.fail('tooLarge');
     this.sentChars += chars;
-    for (const i of have) this.sent.add(i.id);
     return { send: [...have.map(i => ({ t: 'item' as const, id: i.id, text: i.text })), ...(gone.length ? [{ t: 'gone' as const, ids: gone }] : [])] };
   }
 }
@@ -227,7 +234,6 @@ export interface TakerStep extends Step {
 export class ShareReceiver {
   private state: 'start' | 'waitingOffer' | 'idle' | 'receiving' | 'closed' = 'start';
   private offered: OfferedItem[] = [];
-  private readonly requested = new Set<string>();
   private pending = new Map<string, OfferedItem>();
   private total = 0;
 
@@ -256,14 +262,13 @@ export class ShareReceiver {
     if (this.state === 'receiving') return { send: [], error: 'busy' };
     if (this.state !== 'idle') return { send: [], error: 'unexpected' };
     if (!ids.length) return { send: [] };
-    if (ids.length > MAX_WANT_IDS || new Set(ids).size !== ids.length || ids.some(id => this.requested.has(id))) return { send: [], error: 'invalid' };
+    if (ids.length > MAX_WANT_IDS || new Set(ids).size !== ids.length) return { send: [], error: 'invalid' };
     const chosen = ids.map(id => this.offered.find(i => i.id === id));
     if (chosen.some(i => i === undefined)) return { send: [], error: 'gone' };
     const items = chosen as OfferedItem[];
     if (this.total + items.reduce((sum, i) => sum + i.chars, 0) > MAX_TOTAL_CHARS) return { send: [], error: 'tooLarge' };
     this.state = 'receiving';
     this.pending = new Map(items.map(i => [i.id, i]));
-    for (const id of ids) this.requested.add(id);
     return { send: [{ t: 'want', ids: [...ids] }] };
   }
 
