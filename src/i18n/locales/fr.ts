@@ -607,6 +607,7 @@ export const fr: Messages = {
     noHr: '(pas de service de fréquence cardiaque)',
     dropped: (hex: string) => `abandonné : ${hex} (arrêt/pause prioritaire)`,
     writeError: (msg: string) => `❌ Erreur d’écriture : ${msg}`,
+    writeTimeout: 'pas de réponse du tapis',
     notConnected: 'non connecté',
     noGatt: 'L’appareil n’a pas de serveur GATT',
   },

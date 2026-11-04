@@ -605,6 +605,7 @@ export const en = {
     noHr: '(no heart rate service)',
     dropped: (hex: string) => `dropped: ${hex} (stop/pause takes priority)`,
     writeError: (msg: string) => `❌ Write error: ${msg}`,
+    writeTimeout: 'no answer from the treadmill',
     notConnected: 'not connected',
     noGatt: 'Device has no GATT server',
   },

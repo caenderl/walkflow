@@ -207,6 +207,19 @@ export interface ConnectResult {
   hasHeartRate: boolean;
 }
 
+/**
+ * A write that gets no answer from the treadmill is given up on after this long, so that the writes behind it, above all
+ * Stop, are not held back for ever by one that never returns.
+ */
+export const WRITE_TIMEOUT_MS = 5000;
+
+/** The write, or an error if it has not finished in time. The timer never outlives the write. */
+function withTimeout(write: Promise<void>): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(t.ble.writeTimeout)), WRITE_TIMEOUT_MS); });
+  return Promise.race([write, timeout]).finally(() => clearTimeout(timer));
+}
+
 export class TreadmillClient {
   private device: BleDevice | null = null;
   private readonly queue = new SerialQueue();
@@ -292,14 +305,14 @@ export class TreadmillClient {
   /**
    * Writes to the Control Point. All writes go serially through a queue, with response.
    * `urgent` (stop/pause): waiting writes are dropped, the running one is awaited.
-   * Resolves to false on error or when dropped (both are logged), never throws.
+   * Resolves to false on error, timeout or when dropped (all are logged), never throws.
    */
   send(bytes: Uint8Array, opts: { urgent?: boolean } = {}): Promise<boolean> {
     const task = async () => {
       this.ev.log(`→ ${hex(bytes)}`);
       const d = this.device;
       if (!d?.connected) throw new Error(t.ble.notConnected);
-      await d.write(FTMS_SERVICE, CH.control, bytes);
+      await withTimeout(d.write(FTMS_SERVICE, CH.control, bytes));
     };
     return (opts.urgent ? this.queue.runUrgent(task) : this.queue.run(task)).then(
       () => true,

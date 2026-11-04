@@ -604,6 +604,7 @@ export const de: Messages = {
     noHr: '(kein Puls-Service)',
     dropped: (hex: string) => `verworfen: ${hex} (Stop/Pause hat Vorrang)`,
     writeError: (msg: string) => `❌ Schreibfehler: ${msg}`,
+    writeTimeout: 'keine Antwort vom Laufband',
     notConnected: 'nicht verbunden',
     noGatt: 'Gerät hat keinen GATT-Server',
   },

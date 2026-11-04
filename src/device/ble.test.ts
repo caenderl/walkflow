@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DroppedError, SerialQueue, TreadmillClient, type BleAdapter, type BleDevice, type TreadmillEvents, type Uuid } from './ble';
+import { DroppedError, SerialQueue, TreadmillClient, WRITE_TIMEOUT_MS, type BleAdapter, type BleDevice, type TreadmillEvents, type Uuid } from './ble';
 import { dataView, hex } from '../core/protocol/ftms';
 
 function deferred() {
@@ -181,5 +181,45 @@ describe('priority for stop/pause', () => {
     await expect(s1).resolves.toBe(true);
     await expect(stop).resolves.toBe(true);
     expect(dev.writes).toEqual(['start 02 2c 01', 'end 02 2c 01', 'start 08 01', 'end 08 01']);
+  });
+
+  it('a write that never answers does not hold back Stop for ever: it times out and Stop is written', async () => {
+    vi.useFakeTimers();
+    try {
+      const { dev, client, logs } = setup();
+      dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
+      await client.connect();
+      dev.writeImpl = d => (d[0] === 0x02 ? new Promise<void>(() => {}) : Promise.resolve());
+      const hung = client.send(new Uint8Array([0x02, 0x2c, 0x01]));
+      await Promise.resolve();
+      const stop = client.send(new Uint8Array([0x08, 0x01]), { urgent: true });
+      await vi.advanceTimersByTimeAsync(WRITE_TIMEOUT_MS - 1);
+      expect(dev.writes).toEqual(['start 02 2c 01']);
+      await vi.advanceTimersByTimeAsync(2);
+      await expect(hung).resolves.toBe(false);
+      await expect(stop).resolves.toBe(true);
+      expect(dev.writes).toEqual(['start 02 2c 01', 'start 08 01', 'end 08 01']);
+      expect(logs.some(l => l.startsWith('❌ Write error:'))).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a write that answers in time is not cut short, and the timer does not outlive it', async () => {
+    vi.useFakeTimers();
+    try {
+      const { dev, client } = setup();
+      dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
+      await client.connect();
+      const gate = deferred();
+      dev.writeImpl = () => gate.promise;
+      const a = client.send(new Uint8Array([0x07]));
+      await vi.advanceTimersByTimeAsync(WRITE_TIMEOUT_MS - 1);
+      gate.resolve();
+      await expect(a).resolves.toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
