@@ -232,13 +232,44 @@ describe('ProgramRunner', () => {
     await expect(done).resolves.toBe('aborted');
   });
 
-  it('start failed → program ends without a speed command', async () => {
+  it('start failed → program ends without a speed command, and the belt is stopped (the start command may have gone through)', async () => {
     const { runner, calls, lastStatus, lastNeedsAttention, advance } = setup({ startOk: false });
     const done = runner.run([{ sec: 10, speed: 3 }]);
     await advance(20_000);
-    expect(calls).toEqual(['start']);
+    expect(calls).toEqual(['start', 'stop']);
     expect(lastStatus()).toBe('Start failed, program ended');
     expect(lastNeedsAttention()).toBe(true);
+    await expect(done).resolves.toBe('aborted');
+  });
+
+  it('start threw → the same: program ends and the belt is stopped', async () => {
+    const { host, runner, calls, lastStatus, advance } = setup();
+    host.start = vi.fn(async () => { calls.push('start'); throw new Error('gatt'); });
+    const done = runner.run([{ sec: 10, speed: 3 }]);
+    await advance(20_000);
+    expect(calls).toEqual(['start', 'stop']);
+    expect(lastStatus()).toBe('Start failed, program ended');
+    await expect(done).resolves.toBe('aborted');
+  });
+
+  it('a stop that fails after a failed start does not leave the program running', async () => {
+    const { host, runner, advance, lastStatus } = setup({ startOk: false });
+    host.stop = vi.fn(async () => { throw new Error('gone'); });
+    const done = runner.run([{ sec: 10, speed: 3 }]);
+    await advance(20_000);
+    expect(lastStatus()).toBe('Start failed, program ended');
+    await expect(done).resolves.toBe('aborted');
+  });
+
+  it('a start that was aborted by the person in the meantime sends nothing more (the stop of that abort is theirs)', async () => {
+    const { host, runner, calls, advance } = setup();
+    let release!: (ok: boolean) => void;
+    host.start = vi.fn(() => new Promise<boolean>(r => { release = r; }));
+    const done = runner.run([{ sec: 10, speed: 3 }]);
+    runner.abort();
+    release(false);
+    await advance(20_000);
+    expect(calls).toEqual([]);
     await expect(done).resolves.toBe('aborted');
   });
 

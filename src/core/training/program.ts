@@ -205,7 +205,13 @@ export class ProgramRunner {
       this.host.status(() => t.program.starting);
       void this.host.start().catch(() => false).then(ok => {
         if (this.cur !== st) return;
-        if (!ok) { this.abort(() => t.program.startFailed, true); return; }
+        if (!ok) {
+          // "Failed" can also mean that Request Control failed and Start went through, or that the write only reported an error:
+          // the belt may be running, and nothing else would stop it now that the program is over
+          void this.host.stop().catch(() => undefined);
+          this.abort(() => t.program.startFailed, true);
+          return;
+        }
         st.t0 = this.now() + this.countdownMs;
         st.phase = 'countdown';
         this.tick();
