@@ -52,4 +52,19 @@ describe('Session', () => {
     expect([s.beltStarted, s.lastMeasured, s.controlLost]).toEqual([false, undefined, false]);
     expect(s.lastMeasuredAt).toBe(123);
   });
+
+  it('begins a connection with nothing known, and keeps what the treadmill reports from then on', () => {
+    const s = new Session();
+    s.beltStarted = true;
+    s.lastMeasured = 3;
+    s.controlLost = true;
+    const { client } = fakeClient(true);
+    s.begin(client);
+    expect(s.client).toBe(client);
+    expect([s.beltStarted, s.lastMeasured, s.controlLost]).toEqual([false, undefined, false]);
+    // a reading that arrives while the connection is still being set up is not wiped by anything later
+    s.lastMeasured = 4.2;
+    s.beltStarted = true;
+    expect(s.maybeRunning()).toBe(true);
+  });
 });

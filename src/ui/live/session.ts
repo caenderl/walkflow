@@ -32,6 +32,15 @@ export class Session {
     return this.client ? this.client.send(bytes, opts) : Promise.resolve(false);
   }
 
+  /**
+   * A new connection: nothing is known about the belt. Call it before the connection is made, not after: the treadmill can
+   * report its speed or a started belt while the connection is still being set up, and that must not be forgotten.
+   */
+  begin(client: TreadmillClient) {
+    this.forgetBelt();
+    this.client = client;
+  }
+
   /** A new connection or a lost one: nothing is known about the belt */
   forgetBelt() {
     this.beltStarted = false;

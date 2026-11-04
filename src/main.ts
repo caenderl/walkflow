@@ -335,7 +335,7 @@ async function connect(kind: 'ble' | 'demo') {
     let adapter: BleAdapter = webAdapter;
     if (kind === 'demo') adapter = sim ??= new SimulatorAdapter({ version: APP_VERSION });
     const c = new TreadmillClient(adapter, events);
-    session.client = c;
+    session.begin(c);
     runSource = kind === 'demo' ? 'demo' : 'ble';
     speed.setDeviceRange(1.0, 12.0);
     incline.reset();
@@ -345,7 +345,6 @@ async function connect(kind: 'ble' | 'demo') {
     incline.onConnected(info, runSource === 'ble');
     renderStats();
 
-    session.forgetBelt();
     governor.reset();
     await background.acquireWakeLock();
     speed.applyLimits();
