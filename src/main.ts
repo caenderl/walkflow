@@ -458,7 +458,7 @@ function applyStopPlacement() {
 // The header menus never cover the controls (Start/Pause/Stop, ±)
 const controls = () => [document.querySelector('.dock')];
 const connMenu = setupMenu($button('statusBtn'), $('connMenu'), controls);
-setupPrefs($('langOptions'), $('themeOptions'), $('unitsOptions'));
+setupPrefs($('langOptions'), $('themeOptions'), $('paletteOptions'), $('unitsOptions'));
 $button('openData').onclick = () => settings.open('data');
 // The belt runs: settings are locked (the dialog itself checks this when it opens)
 const renderSettingsLock = () => settings.setLocked(connected() && maybeRunning());

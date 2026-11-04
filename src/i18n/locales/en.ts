@@ -22,6 +22,12 @@ export const en = {
     dark: 'Dark',
     light: 'Light',
   },
+  palette: {
+    label: 'Colours',
+    standard: 'Standard',
+    lagoon: 'Lagoon',
+    candy: 'Candy',
+  },
   unitSystem: {
     label: 'Units',
     metric: 'Metric (km, km/h, m)',

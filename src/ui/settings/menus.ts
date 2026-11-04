@@ -7,7 +7,7 @@
 
 import { lang, LANGS, messagesFor, onLanguageChange, t } from '../../i18n/i18n';
 import { chooseLanguage } from '../i18n-dom';
-import { chooseTheme, currentTheme, onThemeChange, type ThemeChoice } from '../theme';
+import { choosePalette, chooseTheme, currentPalette, currentTheme, onPaletteChange, onThemeChange, PALETTES, type ThemeChoice } from '../theme';
 import { onUnitsChange, setUnits, UNIT_SYSTEMS, units } from '../../i18n/units';
 
 export interface Menu {
@@ -85,8 +85,8 @@ function option(label: string, checked: boolean, onPick: () => void): HTMLButton
   return b;
 }
 
-/** Language list and theme switch (in the settings dialog); both follow changes made elsewhere (e.g. the first-run dialog). */
-export function setupPrefs(langBox: HTMLElement, themeBox: HTMLElement, unitsBox: HTMLElement) {
+/** Language list, theme and palette switch (in the settings dialog); both follow changes made elsewhere (e.g. the first-run dialog). */
+export function setupPrefs(langBox: HTMLElement, themeBox: HTMLElement, paletteBox: HTMLElement, unitsBox: HTMLElement) {
   const render = () => {
     langBox.replaceChildren(...LANGS.map(l => {
       const b = option(messagesFor(l).name, l === lang, () => {
@@ -105,6 +105,15 @@ export function setupPrefs(langBox: HTMLElement, themeBox: HTMLElement, unitsBox
       b.dataset.themeChoice = c;
       return b;
     }));
+    const palette = currentPalette();
+    paletteBox.replaceChildren(...PALETTES.map(p => {
+      const b = option(t.palette[p], p === palette, () => {
+        choosePalette(p);
+        paletteBox.querySelector<HTMLElement>(`[data-palette-choice="${p}"]`)?.focus();
+      });
+      b.dataset.paletteChoice = p;
+      return b;
+    }));
     unitsBox.replaceChildren(...UNIT_SYSTEMS.map(u => {
       const b = option(t.unitSystem[u], u === units, () => {
         setUnits(u);
@@ -117,5 +126,6 @@ export function setupPrefs(langBox: HTMLElement, themeBox: HTMLElement, unitsBox
   render();
   onLanguageChange(render);
   onThemeChange(render);
+  onPaletteChange(render);
   onUnitsChange(render);
 }

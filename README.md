@@ -38,7 +38,7 @@ Other FTMS treadmills may work but are not tested.
 - Demo mode with a simulated treadmill, no hardware needed
 - Works offline and can be installed (PWA)
 - English, German and French; picked from the browser languages, switchable in the settings menu at the top right, or via `?lang=de|en|fr` in the URL
-- Dark and light theme, or following the system (default); switchable in the settings menu at the top right
+- Dark and light theme, or following the system (default), and a choice of colours on top of that: Standard, Lagoon (teal and violet) or Candy (each part of the app has its own colour: training green, routes blue, workouts violet, community pink, history yellow). Both are switchable in the settings dialog at the top right
 
 ### Safety features
 
@@ -136,7 +136,7 @@ The FTMS terms in the log (`Set Speed`, `Request Control` …) stay English in e
 
 ### Themes
 
-Every colour is a token at the top of `src/style.css`, defined once as `light-dark(light, dark)`. The theme only sets `color-scheme` (`data-theme` on `<html>`; none = follow the system), so form controls and scrollbars follow too. The chart reads the same tokens; the legal pages use a copy in `public/legal/legal.css`. `src/ui/theme.test.ts` checks that every token used is defined and that the main text and control colours reach WCAG contrast (4.5:1 for text, 3:1 for controls) in both themes. Alarm and stop stay strong red in both. A third theme (e.g. high contrast) would override the tokens under `:root[data-theme="…"]`.
+Every colour is a token at the top of `src/style.css`, defined once as `light-dark(light, dark)`. The theme only sets `color-scheme` (`data-theme` on `<html>`; none = follow the system), so form controls and scrollbars follow too. The chart reads the same tokens; the legal pages use a copy in `public/legal/legal.css`. `src/ui/theme.test.ts` checks that every token used is defined and that the main text and control colours reach WCAG contrast (4.5:1 for text, 3:1 for controls) in both themes. Alarm and stop stay strong red in both. A palette (`data-palette` on `<html>`, chosen in the settings dialog, stored as `walkflow.palette`) overrides only the tokens that change, again as `light-dark()`, so it works in light and dark; the tests run every palette, and fail if one changes the reds of Stop or the alarm. Standard is the tokens at the top; Lagoon and Candy are the blocks `:root[data-palette="…"]` below them. Candy also tints the cards of each part of the app (`--sec-*`, `--tint-*`). A new palette is one more block plus its name in `PALETTES` (`src/ui/theme.ts`) and in the three locale files.
 
 ## Publishing
 

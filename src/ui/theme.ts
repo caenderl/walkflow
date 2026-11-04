@@ -1,11 +1,20 @@
-// Colour theme: follow the system, or fixed dark/light. The colours themselves are tokens in style.css;
-// this module only sets data-theme on <html> and resolves tokens for places CSS cannot reach (canvas, meta).
+// Colour theme: follow the system, or fixed dark/light. On top of that a palette (Standard, Lagoon, Candy) that works in light
+// and dark. The colours themselves are tokens in style.css; this module only sets data-theme and data-palette on <html> and
+// resolves tokens for places CSS cannot reach (canvas, meta).
 
 import { store } from './store';
 
 export type ThemeChoice = 'system' | 'dark' | 'light';
 export const THEMES: readonly ThemeChoice[] = ['system', 'dark', 'light'];
 export const THEME_STORAGE_KEY = 'walkflow.theme';
+
+export type Palette = 'standard' | 'lagoon' | 'candy';
+export const PALETTES: readonly Palette[] = ['standard', 'lagoon', 'candy'];
+export const PALETTE_STORAGE_KEY = 'walkflow.palette';
+
+export function parsePalette(v: string | null | undefined): Palette {
+  return v === 'lagoon' || v === 'candy' ? v : 'standard';
+}
 
 export function parseTheme(v: string | null | undefined): ThemeChoice {
   return v === 'dark' || v === 'light' ? v : 'system';
@@ -16,11 +25,17 @@ export function effectiveTheme(choice: ThemeChoice, systemDark: boolean): 'dark'
 }
 
 let choice: ThemeChoice = 'system';
+let palette: Palette = 'standard';
 const listeners = new Set<(c: ThemeChoice) => void>();
+const paletteListeners = new Set<(p: Palette) => void>();
 const systemDark = () => window.matchMedia?.('(prefers-color-scheme: dark)');
 
 export function currentTheme(): ThemeChoice {
   return choice;
+}
+
+export function currentPalette(): Palette {
+  return palette;
 }
 
 /** Whether the page is dark right now: the chosen theme, or the system's */
@@ -34,6 +49,12 @@ export function onThemeChange(cb: (c: ThemeChoice) => void): () => void {
   return () => { listeners.delete(cb); };
 }
 
+/** Also called when the palette changes: the colours behind a theme are different then, too */
+export function onPaletteChange(cb: (p: Palette) => void): () => void {
+  paletteListeners.add(cb);
+  return () => { paletteListeners.delete(cb); };
+}
+
 function apply(c: ThemeChoice) {
   choice = c;
   const root = document.documentElement;
@@ -43,7 +64,18 @@ function apply(c: ThemeChoice) {
   for (const cb of [...listeners]) cb(c);
 }
 
+function applyPalette(p: Palette) {
+  palette = p;
+  const root = document.documentElement;
+  if (p === 'standard') delete root.dataset.palette;
+  else root.dataset.palette = p;
+  apply(choice);
+  for (const cb of [...paletteListeners]) cb(p);
+}
+
 export function initTheme() {
+  palette = parsePalette(store.get(PALETTE_STORAGE_KEY));
+  if (palette !== 'standard') document.documentElement.dataset.palette = palette;
   apply(parseTheme(store.get(THEME_STORAGE_KEY)));
   systemDark()?.addEventListener('change', () => { if (choice === 'system') apply('system'); });
 }
@@ -51,6 +83,11 @@ export function initTheme() {
 export function chooseTheme(c: ThemeChoice) {
   store.set(THEME_STORAGE_KEY, c);
   apply(c);
+}
+
+export function choosePalette(p: Palette) {
+  store.set(PALETTE_STORAGE_KEY, p);
+  applyPalette(p);
 }
 
 let probe: HTMLElement | null = null;

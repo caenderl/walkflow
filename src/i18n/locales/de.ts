@@ -21,6 +21,12 @@ export const de: Messages = {
     dark: 'Dunkel',
     light: 'Hell',
   },
+  palette: {
+    label: 'Farbwelt',
+    standard: 'Standard',
+    lagoon: 'Lagune',
+    candy: 'Bonbon',
+  },
   unitSystem: {
     label: 'Einheiten',
     metric: 'Metrisch (km, km/h, m)',

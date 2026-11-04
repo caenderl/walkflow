@@ -23,6 +23,12 @@ export const fr: Messages = {
     dark: 'Sombre',
     light: 'Clair',
   },
+  palette: {
+    label: 'Couleurs',
+    standard: 'Standard',
+    lagoon: 'Lagon',
+    candy: 'Bonbon',
+  },
   unitSystem: {
     label: 'Unités',
     metric: 'Métrique (km, km/h, m)',
