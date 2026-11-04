@@ -8,6 +8,7 @@ import {
 import { detectLanguage, isLang, setLanguage, t } from '../src/i18n/i18n';
 import { buildCsp } from '../src/platform/csp';
 import { RELAY_URLS } from '../src/platform/relays';
+import { isAllowedRequest } from '../src/platform/request-filter';
 import { devToolsAllowed } from '../src/core/safety/dev-mode';
 import { devOrigin } from '../src/platform/dev-url';
 import { mapOrigins, resolveMapStyles } from '../src/core/routes/map-config';
@@ -318,10 +319,9 @@ if (!app.requestSingleInstanceLock()) {
       if (!ok) console.log(`Permission denied: ${permission}`);
       callback(ok);
     });
-    // No requests to remote hosts from the renderer, except the map servers of this build (only used once the map is on)
+    // No requests to remote hosts from the renderer, except the map servers of this build (only used once the map is on) and the relays for sharing
     session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
-      const dev = DEV_ORIGIN ? [`${DEV_ORIGIN}/`, `${DEV_ORIGIN.replace('http:', 'ws:')}/`] : [];
-      const ok = [`${ORIGIN}/`, 'devtools://', 'data:', 'blob:', ...dev, ...MAP_ORIGINS.map(o => `${o}/`)].some(p => details.url.startsWith(p));
+      const ok = isAllowedRequest(details.url, { origin: ORIGIN, devOrigin: DEV_ORIGIN, mapOrigins: MAP_ORIGINS, relays: RELAY_URLS });
       if (!ok) console.log(`Blocked: ${details.url}`);
       callback({ cancel: !ok });
     });
