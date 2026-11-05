@@ -87,7 +87,7 @@ export function fmtDistance(meters: number): string {
 
 /** "5:00 min", "400 m", or both */
 export function fmtLength({ sec, meters }: { sec: number; meters: number }): string {
-  return [...(sec > 0 || meters === 0 ? [`${fmtTime(sec)} min`] : []), ...(meters > 0 ? [fmtDistance(meters)] : [])].join(' + ');
+  return [...(sec > 0 || meters === 0 ? [`${fmtTime(sec)} ${t.u.minuteUnit}`] : []), ...(meters > 0 ? [fmtDistance(meters)] : [])].join(' + ');
 }
 
 export interface ProgramHost {

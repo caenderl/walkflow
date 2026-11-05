@@ -89,7 +89,7 @@ describe('ROUTE_EXAMPLES', () => {
 });
 
 describe('seeding the library', () => {
-  const ex = (key: string, name = key): RouteExample => ({ key, name, names: { en: name, de: name, fr: name }, place: { en: 'p', de: 'p', fr: 'p' }, country: 'US', defaultSpeed: 4, description: { en: 'a', de: 'b', fr: 'c' }, previousDescriptions: [], source: '© OpenStreetMap contributors', points: [[0, 0], [0, 0.01]] });
+  const ex = (key: string, name = key): RouteExample => ({ key, name, names: { en: name, de: name, fr: name, uk: name }, place: { en: 'p', de: 'p', fr: 'p', uk: 'p' }, country: 'US', defaultSpeed: 4, description: { en: 'a', de: 'b', fr: 'c', uk: 'd' }, previousDescriptions: [], source: '© OpenStreetMap contributors', points: [[0, 0], [0, 0.01]] });
   const examples = [ex('a', 'Route A'), ex('b', 'Route B')];
 
   it('readSeeded reads a list of keys and nothing else', () => {

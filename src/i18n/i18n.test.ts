@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import indexHtml from '../../index.html?raw';
 import { detectLanguage, LANGS, lang, messagesFor, onLanguageChange, setLanguage, t } from './i18n';
+import { setUnits } from './units';
 import { lookup, parseRich } from '../ui/i18n-dom';
 import { numberFormat } from './locales/format';
 
@@ -33,6 +34,7 @@ describe('detectLanguage', () => {
     expect(detectLanguage({ preferred: ['fr-CH', 'de-DE'] })).toBe('fr');
     expect(detectLanguage({ preferred: ['es', 'de-AT', 'en'] })).toBe('de');
     expect(detectLanguage({ preferred: ['EN-us'] })).toBe('en');
+    expect(detectLanguage({ preferred: ['uk-UA', 'en'] })).toBe('uk');
   });
 
   it('prefers the URL parameter, then the stored choice', () => {
@@ -61,6 +63,11 @@ describe('setLanguage', () => {
 
 describe('locale files', () => {
   const en = messagesFor('en');
+
+  it('are English, German, French and Ukrainian', () => {
+    expect(LANGS).toEqual(['en', 'de', 'fr', 'uk']);
+    expect(messagesFor('uk').name).toBe('Українська');
+  });
 
   it.each(LANGS)('%s has exactly the shape of en (same keys, arity, list lengths)', l => {
     expect(shape(messagesFor(l))).toEqual(shape(en));
@@ -110,6 +117,34 @@ describe('number formatting', () => {
   it('formats speeds in the messages', () => {
     expect(messagesFor('de').control.ramping(2, 2.5)).toBe('Tempo wird in Stufen angepasst: 2,0 → 2,5 km/h');
     expect(messagesFor('en').control.ramping(2, 2.5)).toBe('Changing speed in steps: 2.0 → 2.5 km/h');
+  });
+});
+
+describe('Ukrainian', () => {
+  const uk = messagesFor('uk');
+  afterEach(() => setUnits('metric'));
+
+  it('counts with three forms', () => {
+    expect(uk.program.summary(1, '5 хв')).toContain('1 крок');
+    expect(uk.program.summary(3, '5 хв')).toContain('3 кроки');
+    expect(uk.program.summary(5, '5 хв')).toContain('5 кроків');
+    expect(uk.community.connected(1)).toBe('Підключено до 1 пристрою.');
+    expect(uk.community.connected(2)).toBe('Підключено до 2 пристроїв.');
+    expect(uk.community.connected(5)).toBe('Підключено до 5 пристроїв.');
+    expect(uk.community.devices(21)).toBe('21 пристрій');
+  });
+
+  it('shows speeds and distances with Ukrainian unit names and a decimal comma', () => {
+    expect(uk.control.speed(4.5)).toBe('4,5 км/год');
+    expect(uk.control.ramping(2, 2.5)).toBe('Швидкість змінюється поступово: 2,0 → 2,5 км/год');
+    setUnits('imperial');
+    expect(uk.control.speed(8.04672)).toBe('5,0 миль/год');
+  });
+
+  it('keeps the text format of workouts in Latin letters, as the parser reads it', () => {
+    expect(uk.workouts.textHint).toContain('`5 min 4,0`');
+    expect(uk.workouts.textHint).toContain('incl 2');
+    expect(uk.workouts.textHint).toMatch(/\bmin, s, m або km\b/);
   });
 });
 

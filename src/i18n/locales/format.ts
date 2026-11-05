@@ -1,6 +1,10 @@
 // Number formatting for the locale files: decimal separator per language, no thousands grouping.
 
-import { distUnit, KM_PER_MILE, shortUnit, speedUnit, toDist, toShort, toSpeed, units } from '../units';
+import { KM_PER_MILE, toDist, toShort, toSpeed, units } from '../units';
+
+/** The names of the units and of hours and minutes in a language (the values are always km/h, metres and seconds) */
+export interface UnitLabels { kmh: string; mph: string; km: string; mi: string; m: string; ft: string; h: string; min: string }
+export const LATIN_UNITS: UnitLabels = { kmh: 'km/h', mph: 'mph', km: 'km', mi: 'mi', m: 'm', ft: 'ft', h: 'h', min: 'min' };
 
 export type NumberFormat = (value: number, digits?: number) => string;
 
@@ -22,6 +26,12 @@ export function numberFormat(locale: string): NumberFormat {
 
 export const plural = (count: number, one: string, other: string) => (count === 1 ? one : other);
 
+/** Three forms (1, 21 …: one; 2 to 4, 22 to 24 …: few; 0, 5 to 20 …: many), as Ukrainian and other Slavic languages count */
+export function plural3(count: number, one: string, few: string, many: string, locale: string): string {
+  const category = new Intl.PluralRules(locale).select(count);
+  return category === 'one' ? one : category === 'few' ? few : many;
+}
+
 /** 0:45, 32:10, 1:05:30 */
 export function clock(sec: number): string {
   const s = Math.max(0, Math.round(sec)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
@@ -29,9 +39,9 @@ export function clock(sec: number): string {
 }
 
 /** 45 min, 2 h 05 min */
-export function hoursMinutes(sec: number): string {
+export function hoursMinutes(sec: number, labels: UnitLabels = LATIN_UNITS): string {
   const m = Math.round(Math.max(0, sec) / 60), h = Math.floor(m / 60);
-  return h ? `${h} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`;
+  return h ? `${h} ${labels.h} ${String(m % 60).padStart(2, '0')} ${labels.min}` : `${m} ${labels.min}`;
 }
 
 /** Dates in the format of the language. The year is only shown when it is not the current one. */
@@ -59,8 +69,14 @@ export function dateFormat(locale: string) {
  * Speeds and lengths for the texts of a language, in the units chosen in the settings (src/i18n/units.ts). The numbers are
  * always metric (km/h, metres); the choice only decides what is shown.
  */
-export function unitFormat(n: NumberFormat) {
+export function unitFormat(n: NumberFormat, labels: UnitLabels = LATIN_UNITS) {
+  const imperial = () => units === 'imperial';
+  const speedUnit = () => (imperial() ? labels.mph : labels.kmh);
+  const distUnit = () => (imperial() ? labels.mi : labels.km);
+  const shortUnit = () => (imperial() ? labels.ft : labels.m);
   return {
+    /** The word for minutes ("min"), for lengths of time written as 5:00 min */
+    minuteUnit: labels.min,
     /** "5.5 km/h" or "3.4 mph" */
     speed: (kmh: number, digits?: number) => `${n(toSpeed(kmh), digits)} ${speedUnit()}`,
     /** The number alone, for ranges: "1 – 6 km/h" */
@@ -74,8 +90,8 @@ export function unitFormat(n: NumberFormat) {
     short: (m: number) => `${n(Math.round(toShort(m)))} ${shortUnit()}`,
     shortUnit,
     /** The length of a step or a route: metres (feet) when short, otherwise km (miles) */
-    length: (m: number) => (units === 'imperial'
-      ? (m < 0.1 * KM_PER_MILE * 1000 ? `${n(Math.round(toShort(m)))} ft` : `${n(toDist(m), 2)} mi`)
-      : (m < 1000 ? `${n(Math.round(m))} m` : `${n(m / 1000, 2)} km`)),
+    length: (m: number) => (imperial()
+      ? (m < 0.1 * KM_PER_MILE * 1000 ? `${n(Math.round(toShort(m)))} ${labels.ft}` : `${n(toDist(m), 2)} ${labels.mi}`)
+      : (m < 1000 ? `${n(Math.round(m))} ${labels.m}` : `${n(m / 1000, 2)} ${labels.km}`)),
   };
 }

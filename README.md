@@ -1,6 +1,6 @@
 # Walkflow
 
-Open-source control for treadmills with Bluetooth FTMS (Fitness Machine Service), right in the browser via Web Bluetooth or as a desktop app. No account, no server, no tracking. The app is available in English, German and French.
+Open-source control for treadmills with Bluetooth FTMS (Fitness Machine Service), right in the browser via Web Bluetooth or as a desktop app. No account, no server, no tracking. The app is available in English, German, French and Ukrainian.
 
 > [!WARNING]
 > **Safety and liability notice.** Use at your own risk. The software is provided without warranty (see the [MIT license](LICENSE)).
@@ -37,7 +37,7 @@ Other FTMS treadmills may work but are not tested.
 - Log of sent/received bytes. The experiment console for the Control Point (raw commands, with the same checks) only shows in developer mode (Settings → General, switching it on asks first); in the desktop app the developer tools are only available then, too (no menu entry, one opened another way is closed again). That keeps them out of the way, it is not a security boundary
 - Demo mode with a simulated treadmill, no hardware needed
 - Works offline and can be installed (PWA)
-- English, German and French; picked from the browser languages, switchable in the settings menu at the top right, or via `?lang=de|en|fr` in the URL
+- English, German, French and Ukrainian; picked from the browser languages, switchable in the settings menu at the top right, or via `?lang=de|en|fr|uk` in the URL. Ukrainian has no legal pages of its own yet (they are in `public/legal/`): its links point to the English ones
 - Dark and light theme, or following the system (default), and a choice of colours on top of that: Standard, Lagoon (teal and violet) or Candy (each part of the app has its own colour: training green, routes blue, workouts violet, community pink, history yellow). Both are switchable in the settings dialog at the top right
 
 ### Safety features

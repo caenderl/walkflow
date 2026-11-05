@@ -35,14 +35,15 @@ export const ROUTE_EXAMPLES: readonly RouteExample[] = [
   {
     key: 'central-park-reservoir',
     name: 'Central Park Reservoir Loop',
-    names: { en: 'Central Park Reservoir Loop', de: 'Central-Park-Reservoir-Runde', fr: 'Tour du réservoir de Central Park' },
-    place: { en: 'New York, USA', de: 'New York, USA', fr: 'New York, États-Unis' },
+    names: { en: 'Central Park Reservoir Loop', de: 'Central-Park-Reservoir-Runde', fr: 'Tour du réservoir de Central Park', uk: 'Коло водосховища Центрального парку' },
+    place: { en: 'New York, USA', de: 'New York, USA', fr: 'New York, États-Unis', uk: 'Нью-Йорк, США' },
     country: 'US',
     defaultSpeed: 4,
     description: {
       en: 'The Stephanie and Fred Shuman Running Track, 2.54 km (1.58 miles) around the Jacqueline Kennedy Onassis Reservoir in Central Park, between 86th and 96th Street. The reservoir was built from 1858 to 1862 and taken out of service as a water supply in 1993. It was renamed in 1994 after Jacqueline Kennedy Onassis, who jogged here.',
       de: 'Die Stephanie and Fred Shuman Running Track, 2,54 km (1,58 Meilen) rund um das Jacqueline Kennedy Onassis Reservoir im Central Park, zwischen der 86. und der 96. Straße. Das Becken wurde von 1858 bis 1862 gebaut und 1993 als Wasserspeicher außer Betrieb genommen. 1994 wurde es nach Jacqueline Kennedy Onassis benannt, die hier joggte.',
       fr: 'Le Stephanie and Fred Shuman Running Track, 2,54 km (1,58 mile) autour du réservoir Jacqueline Kennedy Onassis, dans Central Park, entre la 86e et la 96e Rue. Le réservoir a été construit de 1858 à 1862 et mis hors service comme réserve d’eau en 1993. Il porte depuis 1994 le nom de Jacqueline Kennedy Onassis, qui y faisait son jogging.',
+      uk: 'Бігова доріжка імені Стефані та Фреда Шуманів завдовжки 2,54 км (1,58 милі) навколо водосховища імені Жаклін Кеннеді Онассіс у Центральному парку, між 86-ю та 96-ю вулицями. Водосховище збудовано в 1858–1862 роках, а як джерело води воно вийшло з експлуатації 1993 року. 1994 року його названо на честь Жаклін Кеннеді Онассіс, яка тут бігала підтюпцем.',
     },
     previousDescriptions: [
       'The well-known loop around the Jacqueline Kennedy Onassis Reservoir in Central Park, New York, about 2.5 km.',
@@ -77,14 +78,15 @@ export const ROUTE_EXAMPLES: readonly RouteExample[] = [
   {
     key: 'hamburg-aussenalster',
     name: 'Außenalster Loop',
-    names: { en: 'Außenalster Loop', de: 'Außenalster-Runde', fr: 'Tour de l’Außenalster' },
-    place: { en: 'Hamburg, Germany', de: 'Hamburg, Deutschland', fr: 'Hambourg, Allemagne' },
+    names: { en: 'Außenalster Loop', de: 'Außenalster-Runde', fr: 'Tour de l’Außenalster', uk: 'Коло Ауссеральстера' },
+    place: { en: 'Hamburg, Germany', de: 'Hamburg, Deutschland', fr: 'Hambourg, Allemagne', uk: 'Гамбург, Німеччина' },
     country: 'DE',
     defaultSpeed: 4,
     description: {
       en: 'The Außenalster is the larger of the two artificial lakes the Alster river forms in Hamburg: 1.64 km² and on average only about 2.5 m deep. Almost all of its banks are public, and the path around the lake is popular with joggers.',
       de: 'Die Außenalster ist der größere der beiden künstlichen Seen, die die Alster in Hamburg bildet: 1,64 km² groß und im Mittel nur etwa 2,5 m tief. Fast alle Ufer sind öffentlich zugänglich, und der Weg um den See ist bei Joggern beliebt.',
       fr: 'L’Außenalster est le plus grand des deux lacs artificiels que forme l’Alster à Hambourg : 1,64 km² et seulement environ 2,5 m de profondeur en moyenne. Presque toutes ses rives sont publiques, et le chemin qui en fait le tour est très prisé des joggeurs.',
+      uk: 'Ауссеральстер — більше з двох штучних озер, які річка Альстер утворює в Гамбурзі: 1,64 км² і в середньому лише близько 2,5 м завглибшки. Майже всі його береги відкриті для публіки, а стежка навколо озера дуже популярна серед бігунів.',
     },
     previousDescriptions: [],
     // Computed along footpaths and streets near the shore of the Außenalster (OpenStreetMap lake outline 51218), simplified to within 1.5 m
@@ -138,14 +140,15 @@ export const ROUTE_EXAMPLES: readonly RouteExample[] = [
   {
     key: 'vienna-ringstrasse',
     name: 'Vienna Ringstraße Loop',
-    names: { en: 'Vienna Ringstraße Loop', de: 'Wiener-Ringstraße-Runde', fr: 'Tour du Ring de Vienne' },
-    place: { en: 'Vienna, Austria', de: 'Wien, Österreich', fr: 'Vienne, Autriche' },
+    names: { en: 'Vienna Ringstraße Loop', de: 'Wiener-Ringstraße-Runde', fr: 'Tour du Ring de Vienne', uk: 'Коло Рінгштрасе у Відні' },
+    place: { en: 'Vienna, Austria', de: 'Wien, Österreich', fr: 'Vienne, Autriche', uk: 'Відень, Австрія' },
     country: 'AT',
     defaultSpeed: 4,
     description: {
       en: 'The Ringstraße is a grand boulevard around Vienna’s Innere Stadt, built where the city walls once stood: begun in 1857 on the order of Emperor Franz Joseph I and opened in 1865. The loop closes along the Franz-Josefs-Kai by the Donaukanal.',
       de: 'Die Ringstraße ist ein Boulevard rund um die Wiener Innere Stadt, gebaut dort, wo einst die Stadtmauern standen: 1857 auf Anordnung von Kaiser Franz Joseph I. begonnen und 1865 eröffnet. Die Runde schließt sich über den Franz-Josefs-Kai am Donaukanal.',
       fr: 'Le Ring est un grand boulevard autour de l’Innere Stadt de Vienne, construit à l’emplacement des anciens remparts : commencé en 1857 sur ordre de l’empereur François-Joseph Ier et inauguré en 1865. La boucle se ferme par le Franz-Josefs-Kai, le long du Donaukanal.',
+      uk: 'Рінгштрасе — широкий бульвар навколо віденського Інненштадта, збудований на місці колишніх міських мурів: будівництво розпочалося 1857 року за наказом імператора Франца Йосифа I, відкрито 1865 року. Коло замикається вздовж набережної Франц-Йозефс-Кай біля Дунайського каналу.',
     },
     previousDescriptions: [],
     // Computed along footpaths and streets through the Ringstraße (OpenStreetMap ways of Universitätsring to Stubenring) and the Franz-Josefs-Kai, simplified to within 1.5 m
@@ -184,14 +187,15 @@ export const ROUTE_EXAMPLES: readonly RouteExample[] = [
   {
     key: 'tokyo-imperial-palace',
     name: 'Imperial Palace Loop',
-    names: { en: 'Imperial Palace Loop', de: 'Kaiserpalast-Runde Tokio', fr: 'Tour du palais impérial de Tokyo' },
-    place: { en: 'Tokyo, Japan', de: 'Tokio, Japan', fr: 'Tokyo, Japon' },
+    names: { en: 'Imperial Palace Loop', de: 'Kaiserpalast-Runde Tokio', fr: 'Tour du palais impérial de Tokyo', uk: 'Коло Імператорського палацу' },
+    place: { en: 'Tokyo, Japan', de: 'Tokio, Japan', fr: 'Tokyo, Japon', uk: 'Токіо, Японія' },
     country: 'JP',
     defaultSpeed: 4,
     description: {
       en: 'The streets around the grounds of the Imperial Palace in Chiyoda, Tokyo. The palace is the main residence of the emperor of Japan and stands on the site of the former Edo Castle.',
       de: 'Die Straßen rund um das Gelände des Kaiserpalasts in Chiyoda, Tokio. Der Palast ist die Hauptresidenz des japanischen Kaisers und steht an der Stelle der früheren Burg Edo.',
       fr: 'Les rues autour des terrains du palais impérial, dans l’arrondissement de Chiyoda à Tokyo. Le palais est la résidence principale de l’empereur du Japon et se trouve sur le site de l’ancien château d’Edo.',
+      uk: 'Вулиці навколо території Імператорського палацу в районі Тійода в Токіо. Палац — головна резиденція імператора Японії, він стоїть на місці колишнього замку Едо.',
     },
     previousDescriptions: [],
     // Computed along footpaths and streets next to the Uchibori-dori (OpenStreetMap ways named 内堀通り) around the palace grounds, simplified to within 1.5 m

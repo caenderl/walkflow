@@ -4,17 +4,18 @@
 import { de } from './locales/de';
 import { en, type Messages } from './locales/en';
 import { fr } from './locales/fr';
+import { uk } from './locales/uk';
 
 export type { Messages };
-export type Lang = 'en' | 'de' | 'fr';
+export type Lang = 'en' | 'de' | 'fr' | 'uk';
 /** Text that is computed when shown, so it can be re-rendered after a language change. */
 export type Text = () => string;
 
-export const LANGS: readonly Lang[] = ['en', 'de', 'fr'];
+export const LANGS: readonly Lang[] = ['en', 'de', 'fr', 'uk'];
 export const DEFAULT_LANG: Lang = 'en';
 export const LANG_STORAGE_KEY = 'walkflow.lang';
 
-const MESSAGES: Record<Lang, Messages> = { en, de, fr };
+const MESSAGES: Record<Lang, Messages> = { en, de, fr, uk };
 
 /** Live binding: importers always see the current language. */
 export let lang: Lang = DEFAULT_LANG;

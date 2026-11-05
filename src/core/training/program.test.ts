@@ -112,6 +112,14 @@ describe('parseProgram', () => {
     expect(fmtLength({ sec: 300, meters: 1400 })).toBe('5:00 min + 1.40 km');
   });
 
+  it('length is written with the unit names of the language', () => {
+    setLanguage('uk');
+    try {
+      expect(fmtLength({ sec: 300, meters: 1400 })).toBe('5:00 хв + 1,40 км');
+      expect(fmtLength({ sec: 0, meters: 400 })).toBe('400 м');
+    } finally { setLanguage('en'); }
+  });
+
   it('total duration and time format', () => {
     expect(totalSeconds(parseProgram('2 2\n3 3'))).toBe(300);
     expect(fmtTime(65)).toBe('1:05');
