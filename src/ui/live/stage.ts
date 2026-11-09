@@ -3,7 +3,7 @@
 // run the same way, through the program runner. Drawing is display only.
 
 import type { RunRecorder, RunTag } from '../../core/history/runs';
-import { routeDescription, routeName } from '../../core/routes/route-examples';
+import { routeDescription, routeName } from '../../core/routes/route-text';
 import { fmtDistance, fmtLength, programLength, type ProgramRunner, type ProgramStep } from '../../core/training/program';
 import { ACTIVE_STORAGE_KEY, readActive, type Active } from '../../core/training/selection';
 import type { SpeedGovernor, StandstillDetector } from '../../core/safety/safety';

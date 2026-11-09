@@ -3,6 +3,7 @@
 import { rmSync } from 'node:fs';
 import { build as esbuild } from 'esbuild';
 import { build as viteBuild } from 'vite';
+import { resolveStoreBase } from '../src/platform/store-url.ts';
 
 process.env.VITE_TARGET = 'desktop';
 process.env.BASE_PATH = './';
@@ -22,7 +23,7 @@ await esbuild({
   format: 'cjs',
   target: 'node22',
   external: ['electron'],
-  define: { __GITHUB_REPO__: JSON.stringify(repo), __MAP_STYLE_RAW__: JSON.stringify(process.env.WALKFLOW_MAP_STYLE ?? ''), __MAP_STYLE_DARK_RAW__: JSON.stringify(process.env.WALKFLOW_MAP_STYLE_DARK ?? '') },
+  define: { __GITHUB_REPO__: JSON.stringify(repo), __MAP_STYLE_RAW__: JSON.stringify(process.env.WALKFLOW_MAP_STYLE ?? ''), __MAP_STYLE_DARK_RAW__: JSON.stringify(process.env.WALKFLOW_MAP_STYLE_DARK ?? ''), __COMMUNITY__: JSON.stringify(process.env.WALKFLOW_COMMUNITY === 'on'), __STORE_BASE__: JSON.stringify(resolveStoreBase(repo, process.env.WALKFLOW_STORE_BASE) ?? '') },
   logLevel: 'warning',
 });
 

@@ -1,7 +1,16 @@
 # Sharing between devices (peer to peer)
 
-Status: design, the pure core (`src/core/share/`) and both package formats are in; the connection and the screens are
+Status: **off in the first release** (see below), design, the pure core (`src/core/share/`) and both package formats are in; the connection and the screens are
 still to do. The core was first written for sending to one person with a code and has been extended for the community mode below.
+
+## Off in the first release
+
+Community is not part of the first release: it has to be tried with more than one real device first. The build leaves it out
+(`src/platform/features.ts`): no Community view, no sharing menu entries, nothing is set up, and the content security policy and
+the request filter of the desktop app allow no connection to the relays. To try it, build or run with `WALKFLOW_COMMUNITY=on`
+(web build, dev server and desktop build). Open before it goes live: one room for everyone instead of one per language (a few
+users spread over five rooms never meet), a clear message when a room is full, and the number of connections (16 is an
+estimate, not measured).
 
 ## What it is for
 

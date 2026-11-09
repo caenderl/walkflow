@@ -2,7 +2,7 @@
 // today's suggestion with its "Use" button. The plan itself is kept by the workouts view; this part draws and edits it.
 
 import { lang, t } from '../../i18n/i18n';
-import { routeName } from '../../core/routes/route-examples';
+import { routeName } from '../../core/routes/route-text';
 import type { Route } from '../../core/routes/routes';
 import type { RunSummary } from '../../core/history/runs';
 import {

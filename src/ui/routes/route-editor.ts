@@ -2,7 +2,7 @@
 // checked by editedRoute (core/routes/route-edit.ts).
 
 import { lang, t } from '../../i18n/i18n';
-import { routeDescription } from '../../core/routes/route-examples';
+import { routeDescription } from '../../core/routes/route-text';
 import { ROUTE_DESCRIPTION_MAX, ROUTE_SPEED_MAX, ROUTE_SPEED_MIN, routeSpeed, type Route } from '../../core/routes/routes';
 import { toSpeed } from '../../i18n/units';
 import { button, el } from '../components/elements';

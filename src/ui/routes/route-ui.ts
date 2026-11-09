@@ -10,11 +10,12 @@ import { overflowMenu } from '../components/overflow-menu';
 import { serializeGpx } from '../../core/routes/gpx';
 import { packageFileName, packageFromRoute, serializePackage } from '../../core/routes/route-package';
 import { lang, onLanguageChange, t } from '../../i18n/i18n';
-import { routeName } from '../../core/routes/route-examples';
+import { routeName } from '../../core/routes/route-text';
 import { editedRoute } from '../../core/routes/route-edit';
 import { safeFileName } from '../../core/routes/route-files';
 import { createProfile, svgEl } from './route-profile';
-import { backfillCountries, seedExamples } from './library-upkeep';
+import { backfillCountries } from './library-upkeep';
+import { nextWaypoint, placeWaypoints, waypointText, type PlacedWaypoint } from '../../core/routes/route-waypoints';
 import { buildDetail, describe, fillDetail, type Detail } from './route-detail';
 import { buildEditor, type Editor, type EditorHost } from './route-editor';
 import { setupRouteImport } from './route-import';
@@ -27,6 +28,7 @@ import {
   ROUTE_SPEED_MAX, ROUTE_SPEED_MIN, routeSpeed, walkSeconds, walkSteps, type Route, type RouteStats,
 } from '../../core/routes/routes';
 import { getRunStore } from '../../data/run-store';
+import { COMMUNITY_ENABLED } from '../../platform/features';
 import { $, $button, download } from '../ui';
 import { button, el, iconButton } from '../components/elements';
 import { store } from '../store';
@@ -135,6 +137,25 @@ export function setupRoutes(host: RoutesHost) {
     renderEstimate();
   }
 
+  /** The waypoints of the route in the training view, placed along it once (not at every update from the treadmill) */
+  let placedFor: { route: Route; placed: PlacedWaypoint[] } | null = null;
+  /** Within this distance the text of the next waypoint is shown as well as its name */
+  const WAYPOINT_TEXT_AHEAD = 150;
+
+  /** The next waypoint and how far it is, from the route and the metres walked; display only */
+  function renderNextWaypoint(route: Route, stats: RouteStats, covered: number, done: boolean) {
+    const box = $('routeWaypoint');
+    if (placedFor?.route !== route) placedFor = { route, placed: placeWaypoints(route, stats) };
+    const next = done ? null : nextWaypoint(placedFor.placed, covered);
+    box.hidden = !next;
+    if (!next) return;
+    const text = next.ahead <= WAYPOINT_TEXT_AHEAD ? waypointText(next.waypoint.text, lang) : undefined;
+    box.replaceChildren(
+      el('div', { className: 'rw-next', textContent: t.routes.waypointNext(waypointText(next.waypoint.name, lang) ?? '', fmtDistance(next.ahead)) }),
+      ...(text ? [el('div', { className: 'hint', textContent: text })] : []),
+    );
+  }
+
   function renderProgress() {
     const live = $('routeLive');
     const shown = trainingRoute();
@@ -152,6 +173,7 @@ export function setupRoutes(host: RoutesHost) {
     $('routeDetail').textContent = pos.ele === undefined
       ? t.routes.noElevation
       : [t.routes.elevation(pos.ele), ...(grade === undefined ? [] : [t.routes.grade(grade)])].join(' · ');
+    renderNextWaypoint(route, stats, pos.meters, pos.done);
     trainingProfile.mark(stats.hasElevation ? pos.fraction : null);
     training.slot?.mark({ lat: pos.lat, lon: pos.lon });
   }
@@ -231,7 +253,7 @@ export function setupRoutes(host: RoutesHost) {
           el('div', { className: 'wk-name' },
             ...(flag ? [el('img', { className: 'flag', src: flag, alt: countryName(r.country!, lang), title: countryName(r.country!, lang) })] : []), routeName(r, lang),
             ...(r.id === selectedId && host.wanted() ? [' ', el('span', { className: 'badge rec', textContent: t.routes.useHint })] : []),
-            ...(r.shared ? [' ', el('span', { className: 'badge', textContent: t.community.sharedBadge })] : [])),
+            ...(COMMUNITY_ENABLED && r.shared ? [' ', el('span', { className: 'badge', textContent: t.community.sharedBadge })] : [])),
           el('div', { className: 'rt-meta' },
             el('span', { className: 'rt-length', textContent: fmtDistance(stats.total) }),
             el('span', { className: 'hint', textContent: t.routes.duration(minutes, kmh) }),
@@ -243,7 +265,7 @@ export function setupRoutes(host: RoutesHost) {
           toggle,
           overflowMenu(t.routes.moreActions, [
             { icon: 'route', label: t.routes.export, run: () => download(serializeGpx(r), 'application/gpx+xml', safeFileName(r.name)) },
-            { icon: 'share', label: r.shared ? t.community.unshare : t.community.share, run: () => void toggleShare(r) },
+            ...(COMMUNITY_ENABLED ? [{ icon: 'share' as const, label: r.shared ? t.community.unshare : t.community.share, run: () => void toggleShare(r) }] : []),
             { icon: 'package', label: t.routes.exportPackage, run: () => download(serializePackage(packageFromRoute(r)), 'application/json', packageFileName(r.name)) },
             { icon: 'trash', label: t.routes.delete, run: () => void remove(r), danger: true },
           ])),
@@ -288,7 +310,6 @@ export function setupRoutes(host: RoutesHost) {
   async function reload() {
     const s = await ready;
     persistent = s.persistent;
-    await seedExamples(s);
     await backfillCountries(s);
     routes = await s.list();
     // A route that no longer exists is no selection
@@ -332,6 +353,9 @@ export function setupRoutes(host: RoutesHost) {
   return {
     update,
     openPackage,
+    takeFromStore: importer.takeFromStore,
+    /** What of the library came from the route store, to tell what is new there and what can be updated */
+    libraryMarks: () => routes.map(({ id, storeFile, revision }) => ({ id, storeFile, revision })),
     /** The route chosen for the training view, with a line about its length and duration; null if none is chosen */
     current(): { route: Route; info: string } | null {
       if (!analysed) return null;

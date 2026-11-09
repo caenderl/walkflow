@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setUnits } from '../../i18n/units';
 import { editedRoute } from './route-edit';
-import { exampleRoute, ROUTE_EXAMPLES } from './route-examples';
 import { ROUTE_DESCRIPTION_MAX, type Route } from './routes';
+import { SAMPLE_TEXTS, sampleRoute } from './sample-route';
 
-const ex = ROUTE_EXAMPLES[0]!;
-const base: Route = { ...exampleRoute(ex, 'r1', 5), example: undefined, texts: undefined, description: 'Alt', defaultSpeed: 4 };
+const base: Route = { ...sampleRoute('r1', 5), texts: undefined, description: 'Alt', defaultSpeed: 4 };
 
 afterEach(() => setUnits('metric'));
 
@@ -39,10 +38,10 @@ describe('editedRoute', () => {
     expect(cleared.ok && cleared.route.description).toBeUndefined();
   });
 
-  it('keeps the example text, which follows the language, when the field is left as shown', () => {
-    const route = exampleRoute(ex, 'r2', 5);
-    const r = editedRoute(route, { speed: '', description: ex.description.de }, 'de');
-    expect(r.ok && r.route.example).toBe(ex.key);
+  it('keeps the translations, which follow the language, when the field is left as shown', () => {
+    const route = sampleRoute('r2', 5);
+    const r = editedRoute(route, { speed: '', description: SAMPLE_TEXTS.de }, 'de');
+    expect(r.ok && r.route.texts).toEqual(SAMPLE_TEXTS);
     expect(r.ok && r.route.description).toBeUndefined();
   });
 

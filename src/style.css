@@ -388,6 +388,13 @@ html[data-incline="no"] .incl-only, html[data-incline="no"] .wk-incl { display:n
 .route-map { position:relative; width:100%; height:260px; border-radius:12px; overflow:hidden; border:1px solid var(--card-border); background:var(--input-bg); }
 .route-map.big { height:340px; }
 .route-map[hidden], .map-toggle[hidden], .map-note[hidden] { display:none; }
+.map-wp { width:14px; height:14px; border-radius:3px; transform:rotate(45deg); background:#2563eb; border:2px solid #fff; box-shadow:0 1px 4px rgba(0, 0, 0, .4); }
+.route-waypoint { display:grid; gap:2px; }
+.route-waypoint[hidden] { display:none; }
+.route-waypoint .hint { margin:0; }
+.rt-waypoints { margin:0; padding:0; list-style:none; display:grid; gap:6px; }
+.rt-waypoints li { display:grid; gap:1px; }
+.rt-waypoints .rt-wp-text { color:var(--mute); font-size:.85rem; }
 .map-dot { width:16px; height:16px; border-radius:50%; background:var(--accent); border:3px solid #fff; box-shadow:0 0 0 2px #15803d, 0 1px 4px rgba(0, 0, 0, .4); }
 @media (max-width: 719px) { .route-map { height:220px; } .route-map.big { height:260px; } }
 

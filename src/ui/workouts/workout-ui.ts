@@ -18,6 +18,7 @@ import { stepRow } from './step-row';
 import { setupWeekPlan } from './week-plan';
 import { store } from '../store';
 import { getWorkoutStore, type WorkoutStore } from '../../data/workout-store';
+import { COMMUNITY_ENABLED } from '../../platform/features';
 import {
   nameAfterEdit, newWorkoutId, readWorkout, TEMPLATES, workoutDescription, workoutName, WORKOUT_NAME_MAX,
   type WeekPlan, type Workout,
@@ -119,11 +120,11 @@ export function setupWorkouts(host: WorkoutsHost) {
       useButton(w.id),
       button(t.workouts.edit, () => startEdit({ id: w.id, name: workoutName(w, lang), rows: w.steps.map(toRow), source: w })),
       overflowMenu(t.routes.moreActions, [
-        { icon: 'share', label: w.shared ? t.community.unshare : t.community.share, run: () => void toggleShare(w) },
+        ...(COMMUNITY_ENABLED ? [{ icon: 'share' as const, label: w.shared ? t.community.unshare : t.community.share, run: () => void toggleShare(w) }] : []),
         { icon: 'package', label: t.workouts.exportPackage, run: () => download(serializeWorkoutPackage(workoutPackage(w)), 'application/json', workoutPackageFileName(workoutName(w, lang))) },
         { icon: 'trash', label: t.workouts.delete, run: () => void remove(w), danger: true },
       ]),
-    ], w.shared === true)));
+    ], COMMUNITY_ENABLED && w.shared === true)));
     $('wkExamples').replaceChildren(...TEMPLATES.map(tpl => listItem(exampleName(tpl.id), tpl.steps, TEMPLATE_PREFIX + tpl.id, [
       useButton(TEMPLATE_PREFIX + tpl.id),
       button(t.workouts.copy, () => startEdit({ id: null, name: t.workouts.copyName(exampleName(tpl.id)), rows: tpl.steps.map(toRow) })),

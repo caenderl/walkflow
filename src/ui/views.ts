@@ -2,14 +2,17 @@
 // shows a stop bar while a treadmill is connected, so Stop is always in reach. style.css reads the
 // data-view and data-stop attributes on <html>.
 
+import { COMMUNITY_ENABLED } from '../platform/features';
+
 export type View = 'training' | 'history' | 'workouts' | 'routes' | 'community';
-/** In the order of the navigation */
-export const VIEWS: readonly View[] = ['training', 'workouts', 'routes', 'community', 'history'];
+/** In the order of the navigation; there is no Community view in a build without Community (platform/features.ts) */
+export const viewsFor = (community: boolean): readonly View[] =>
+  community ? ['training', 'workouts', 'routes', 'community', 'history'] : ['training', 'workouts', 'routes', 'history'];
 
 export type StopPlacement = 'controls' | 'bar' | 'none';
 
-export const viewFromHash = (hash: string): View =>
-  hash === '#history' ? 'history' : hash === '#workouts' ? 'workouts' : hash === '#routes' ? 'routes' : hash === '#community' ? 'community' : 'training';
+export const viewFromHash = (hash: string, community = COMMUNITY_ENABLED): View =>
+  hash === '#history' ? 'history' : hash === '#workouts' ? 'workouts' : hash === '#routes' ? 'routes' : hash === '#community' && community ? 'community' : 'training';
 
 /** Training: the controls (disabled without a connection). Elsewhere: the stop bar while connected. */
 export function stopPlacement(view: View, connected: boolean): StopPlacement {

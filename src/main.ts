@@ -11,6 +11,7 @@ import { setupInterval } from './ui/workouts/interval-ui';
 import { ProgramRunner } from './core/training/program';
 import { setupPwa } from './ui/pwa';
 import { StandstillDetector } from './core/safety/safety';
+import { COMMUNITY_ENABLED, STORE_BASE } from './platform/features';
 import { setupBackground } from './ui/background';
 import { setupCommunity } from './ui/community/community';
 import { disclaimerAccepted, ensureDisclaimer } from './ui/disclaimer';
@@ -34,6 +35,7 @@ import { store } from './ui/store';
 import { packageKind } from './core/share/package-kind';
 import { onUnitsChange, parseUnits, setUnits, UNITS_STORAGE_KEY } from './i18n/units';
 import { setupRoutes } from './ui/routes/route-ui';
+import { setupRouteStore } from './ui/routes/route-store';
 import { setupViews } from './ui/views';
 import { setupWorkouts } from './ui/workouts/workout-ui';
 
@@ -85,13 +87,20 @@ const workouts = setupWorkouts({
 });
 const routes = setupRoutes({
   maxSpeed: effectiveMax,
-  changed: () => { if (booted) { stage.render(); community.libraryChanged(); } },
+  changed: () => { if (booted) { stage.render(); community.libraryChanged(); routeStore.refresh(); } },
   chosen: () => stage.setActive('route'),
   wanted: () => chosen.get() === 'route',
 });
 
+// The route store: routes from the project's repository, read from GitHub when the person opens the list (none without a repository)
+const routeStore = setupRouteStore({ base: STORE_BASE, library: () => routes.libraryMarks(), take: (file, opts) => routes.takeFromStore(file, opts) });
+
 // Routes and workouts that other devices share. It reads the library from the stores, so it needs nothing but the two views to reload.
-const community = setupCommunity({ libraryChanged: () => { void workouts.reload(); void routes.reload(); } });
+// Not in this build unless it says so (platform/features.ts): then nothing of it is shown, set up or connected.
+const community = COMMUNITY_ENABLED
+  ? setupCommunity({ libraryChanged: () => { void workouts.reload(); void routes.reload(); } })
+  : { libraryChanged() { /* no Community in this build */ } };
+if (!COMMUNITY_ENABLED) document.querySelectorAll('[data-view="community"], .community-part').forEach(e => e.remove());
 
 const standstill = new StandstillDetector();
 

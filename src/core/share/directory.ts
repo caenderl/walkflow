@@ -37,7 +37,7 @@ export interface Facets {
 }
 
 /** Lower case, no accents, ß as ss: what is compared when searching */
-const fold = (text: string) => text.toLowerCase().replace(/ß/g, 'ss').normalize('NFD').replace(/\p{M}/gu, '');
+export const fold = (text: string) => text.toLowerCase().replace(/ß/g, 'ss').normalize('NFD').replace(/\p{M}/gu, '');
 
 const describe = (i: OfferedItem) => JSON.stringify([i.kind, i.name, i.chars, i.place ?? null, i.country ?? null, i.tags ?? null]);
 

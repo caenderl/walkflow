@@ -3,7 +3,7 @@
 
 import type { Lang } from '../../i18n/i18n';
 import { fromSpeed } from '../../i18n/units';
-import { descriptionAfterEdit } from './route-examples';
+import { descriptionAfterEdit } from './route-text';
 import { readRoute, ROUTE_SPEED_MAX, ROUTE_SPEED_MIN, type Route } from './routes';
 
 export type EditResult =
@@ -22,7 +22,7 @@ export function editedRoute(route: Route, input: { speed: string; description: s
   const kmh = raw ? Math.round(fromSpeed(Number(raw)) * 100) / 100 : undefined;
   if (kmh !== undefined && !(kmh >= ROUTE_SPEED_MIN && kmh <= ROUTE_SPEED_MAX)) return { ok: false, reason: 'speed' };
   const next = readRoute({
-    ...route, defaultSpeed: kmh, description: undefined, example: undefined, texts: undefined,
+    ...route, defaultSpeed: kmh, description: undefined, texts: undefined,
     ...descriptionAfterEdit(route, input.description, lang),
   });
   return next ? { ok: true, route: next } : { ok: false, reason: 'invalid' };

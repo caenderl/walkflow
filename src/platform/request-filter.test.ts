@@ -41,3 +41,17 @@ describe('isAllowedRequest (the desktop app blocks every other request)', () => 
     expect(allowed('http://localhost:5174/x', dev)).toBe(false);
   });
 });
+
+describe('the route store', () => {
+  const store = 'https://raw.githubusercontent.com/caenderl/walkflow/main/store';
+
+  it('allows the index and the files in the store folder, and nothing else on that host', () => {
+    expect(allowed(`${store}/index.json`)).toBe(false);
+    expect(allowed(`${store}/index.json`, { store })).toBe(true);
+    expect(allowed(`${store}/routes/a.walkflow`, { store })).toBe(true);
+    expect(allowed('https://raw.githubusercontent.com/caenderl/walkflow/main/src/main.ts', { store })).toBe(false);
+    expect(allowed('https://raw.githubusercontent.com/someone/else/main/store/index.json', { store })).toBe(false);
+    expect(allowed(`${store}-evil/index.json`, { store })).toBe(false);
+  });
+});
+

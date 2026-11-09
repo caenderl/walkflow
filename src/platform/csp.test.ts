@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildCsp } from './csp';
-import { RELAY_URLS } from './relays';
+import { RELAY_URLS, sharingRelays } from './relays';
 
 const directives = (csp: string) => Object.fromEntries(csp.split('; ').map(d => [d.split(' ')[0]!, d.split(' ').slice(1)]));
 
@@ -44,5 +44,31 @@ describe('RELAY_URLS', () => {
     expect(RELAY_URLS).toHaveLength(5);
     for (const url of RELAY_URLS) expect(url, url).toMatch(/^wss:\/\/[a-z0-9.-]+(:\d+)?$/);
     expect(new Set(RELAY_URLS).size).toBe(RELAY_URLS.length);
+  });
+});
+
+describe('sharingRelays', () => {
+  it('are the relays while Community is on, and none while it is off', () => {
+    expect(sharingRelays(true)).toEqual(RELAY_URLS);
+    expect(sharingRelays(false)).toEqual([]);
+  });
+
+  it('leave the content security policy without a relay when Community is off', () => {
+    expect(directives(buildCsp({ mapOrigins: [], relays: sharingRelays(false), header: true }))['connect-src']).toEqual(["'self'"]);
+  });
+});
+
+describe('the route store', () => {
+  const store = 'https://raw.githubusercontent.com/caenderl/walkflow/main/store';
+
+  it('lets the page connect to the store folder, with a trailing slash so nothing else on the host is allowed', () => {
+    const d = directives(buildCsp({ mapOrigins: [], relays: [], store, header: false }));
+    expect(d['connect-src']).toEqual(["'self'", `${store}/`]);
+    expect(d['img-src']).toEqual(["'self'", 'data:']);
+  });
+
+  it('has no store address without a store', () => {
+    expect(directives(buildCsp({ mapOrigins: [], relays: [], header: false }))['connect-src']).toEqual(["'self'"]);
+    expect(directives(buildCsp({ mapOrigins: [], relays: [], store: null, header: false }))['connect-src']).toEqual(["'self'"]);
   });
 });

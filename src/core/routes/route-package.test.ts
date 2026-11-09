@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { exampleRoute, ROUTE_EXAMPLES } from './route-examples';
 import { PACKAGE_FORMAT, PACKAGE_MAX_CHARS, packageFileName, packageFromRoute, readPackage, serializePackage } from './route-package';
-import { analyzeRoute, readRoute, type Route } from './routes';
+import { SAMPLE_NAMES, SAMPLE_PLACE, SAMPLE_SOURCE, SAMPLE_TEXTS, sampleRoute } from './sample-route';
+import { analyzeRoute, readRoute, type Route, type Waypoint } from './routes';
 
 const base = (over: Partial<Route> = {}): Route => ({
   id: 'abc', name: 'Park loop', updated: 5, country: 'DE', defaultSpeed: 4,
@@ -11,6 +11,97 @@ const base = (over: Partial<Route> = {}): Route => ({
 const read = (text: string) => readPackage(text, 'new-id', 1234);
 const pkg = (over: Record<string, unknown> = {}) => JSON.stringify({
   format: PACKAGE_FORMAT, version: 1, name: { und: 'Loop' }, points: [[52.5, 13.4], [52.501, 13.401]], ...over,
+});
+
+describe('the revision of a package', () => {
+  it('is written when the route has one, and left out otherwise', () => {
+    expect(packageFromRoute(base({ revision: 2 })).revision).toBe(2);
+    expect(Object.keys(packageFromRoute(base()))).not.toContain('revision');
+  });
+
+  it('comes right after the format version in the file', () => {
+    expect(Object.keys(packageFromRoute(base({ revision: 2 }))).slice(0, 3)).toEqual(['format', 'version', 'revision']);
+  });
+
+  it('is read into the route', () => {
+    const res = read(pkg({ revision: 4 }));
+    expect(res.ok && res.route.revision).toBe(4);
+  });
+
+  it('a package without one has none (it counts as the first)', () => {
+    const res = read(pkg());
+    expect(res.ok && 'revision' in res.route).toBe(false);
+  });
+
+  it('a revision that is not a whole number from 1 makes the package invalid, so a wrong number never passes as another', () => {
+    for (const revision of [0, -1, 1.5, 100000, '2', null]) expect(read(pkg({ revision })), String(revision)).toEqual({ ok: false, reason: 'invalid' });
+  });
+
+  it('survives an export and a read', () => {
+    const res = read(serializePackage(packageFromRoute(base({ revision: 7 }))));
+    expect(res.ok && res.route.revision).toBe(7);
+  });
+});
+
+describe('waypoints in a package', () => {
+  const wps: Waypoint[] = [
+    { lat: 52.5005, lon: 13.4005, name: { en: 'Bridge', de: 'Brücke' }, text: { en: 'A fine view.', de: 'Eine schöne Aussicht.' } },
+    { lat: 52.501, lon: 13.401, name: { und: 'Mein Punkt' } },
+  ];
+
+  it('are written as `at`, a name and a text, after the description and before the points', () => {
+    const p = packageFromRoute(base({ waypoints: wps }));
+    expect(p.waypoints).toEqual([
+      { at: [52.5005, 13.4005], name: { en: 'Bridge', de: 'Brücke' }, text: { en: 'A fine view.', de: 'Eine schöne Aussicht.' } },
+      { at: [52.501, 13.401], name: { und: 'Mein Punkt' } },
+    ]);
+    const keys = Object.keys(p);
+    expect(keys.indexOf('waypoints')).toBe(keys.length - 2);
+    expect(keys.at(-1)).toBe('points');
+  });
+
+  it('are left out when the route has none', () => {
+    expect(Object.keys(packageFromRoute(base()))).not.toContain('waypoints');
+    expect(Object.keys(packageFromRoute(base({ waypoints: [] })))).not.toContain('waypoints');
+  });
+
+  it('are written with the place on one line, so a change shows line by line in a review', () => {
+    const text = serializePackage(packageFromRoute(base({ waypoints: wps })));
+    expect(text).toContain('"at": [52.5005, 13.4005]');
+    expect(text).toContain('"at": [52.501, 13.401]');
+  });
+
+  it('are rounded to 6 decimals like the points', () => {
+    expect(packageFromRoute(base({ waypoints: [{ lat: 52.123456789, lon: 13.987654321, name: { en: 'P' } }] })).waypoints![0]!.at).toEqual([52.123457, 13.987654]);
+  });
+
+  it('are read back as waypoints of the route', () => {
+    const res = read(serializePackage(packageFromRoute(base({ waypoints: wps }))));
+    expect(res.ok && res.route.waypoints).toEqual(wps);
+  });
+
+  it('that cannot be read are left out, not a reason to refuse the package', () => {
+    const res = read(pkg({ waypoints: [
+      { at: [52.5, 13.4], name: { en: 'Good' } },
+      { at: [52.5], name: { en: 'One number' } },
+      { at: 'x', name: { en: 'Not a place' } },
+      { name: { en: 'No place' } },
+      { at: [52.5, 13.4] },
+      'nonsense',
+    ] }));
+    expect(res.ok && res.route.waypoints).toEqual([{ lat: 52.5, lon: 13.4, name: { en: 'Good' } }]);
+  });
+
+  it('a package whose waypoints are not a list has none', () => {
+    const res = read(pkg({ waypoints: { at: [52.5, 13.4], name: { en: 'x' } } }));
+    expect(res.ok && 'waypoints' in res.route).toBe(false);
+  });
+
+  it('come out byte for byte the same when read and written again', () => {
+    const text = serializePackage(packageFromRoute(base({ waypoints: wps })));
+    const again = read(text);
+    expect(again.ok && serializePackage(packageFromRoute(again.route))).toBe(text);
+  });
 });
 
 describe('packageFromRoute', () => {
@@ -43,14 +134,13 @@ describe('packageFromRoute', () => {
     expect(packageFromRoute(base({ names: { en: 'Park loop', de: 'Parkrunde' } })).name).toEqual({ en: 'Park loop', de: 'Parkrunde' });
   });
 
-  it('exports an example route with all its names, texts and places, and its source', () => {
-    const ex = ROUTE_EXAMPLES[0]!;
-    const p = packageFromRoute(exampleRoute(ex, 'x', 0));
-    expect(p.name).toEqual(ex.names);
-    expect(p.description).toEqual(ex.description);
-    expect(p.place).toEqual(ex.place);
-    expect(p.source).toBe(ex.source);
-    expect(p.defaultSpeed).toBe(ex.defaultSpeed);
+  it('exports a route that came with translations with all its names, texts and places, and its source', () => {
+    const p = packageFromRoute(sampleRoute('x', 0));
+    expect(p.name).toEqual(SAMPLE_NAMES);
+    expect(p.description).toEqual(SAMPLE_TEXTS);
+    expect(p.place).toEqual(SAMPLE_PLACE);
+    expect(p.source).toBe(SAMPLE_SOURCE);
+    expect(p.defaultSpeed).toBe(4);
   });
 
   it('carries author, licence, source and tags that came with the route, so credit travels with it', () => {
@@ -79,20 +169,17 @@ describe('serializePackage and readPackage', () => {
     expect(lines.filter(l => /^\s+\[52\.\d+, 13\.\d+\],?$/.test(l))).toHaveLength(3);
   });
 
-  it('turns every example into a package that reads back as the same route', () => {
-    for (const ex of ROUTE_EXAMPLES) {
-      const original = exampleRoute(ex, 'x', 0);
-      const res = read(serializePackage(packageFromRoute(original)));
-      expect(res.ok, ex.key).toBe(true);
-      if (!res.ok) continue;
-      expect(res.route.name).toBe(ex.name);
-      expect(res.route.names).toEqual(ex.names);
-      expect(res.route.meta?.place).toEqual(ex.place);
-      expect(res.route.points).toHaveLength(ex.points.length);
-      expect(analyzeRoute(res.route).total).toBeCloseTo(analyzeRoute(original).total, 0);
-      expect(res.route.texts).toEqual(ex.description);
-      expect(res.route.example).toBeUndefined();
-    }
+  it('turns a route with translations into a package that reads back as the same route', () => {
+    const original = sampleRoute('x', 0);
+    const res = read(serializePackage(packageFromRoute(original)));
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.route.name).toBe(original.name);
+    expect(res.route.names).toEqual(original.names);
+    expect(res.route.meta?.place).toEqual(original.meta?.place);
+    expect(res.route.points).toHaveLength(original.points.length);
+    expect(analyzeRoute(res.route).total).toBeCloseTo(analyzeRoute(original).total, 0);
+    expect(res.route.texts).toEqual(original.texts);
   });
 
   it('keeps the elevation', () => {
@@ -236,10 +323,10 @@ describe('a package the app wrote comes out byte for byte the same when it is re
     return read.ok ? serializePackage(packageFromRoute(read.route)) : null;
   };
 
-  it('for every example route', () => {
-    for (const ex of ROUTE_EXAMPLES) {
-      const text = serializePackage(packageFromRoute(exampleRoute(ex, 'x', 0), [ex]));
-      expect(again(text), ex.key).toBe(text);
+  it('for a route with translations, a place and a source, and one with a revision', () => {
+    for (const route of [sampleRoute('x', 0), { ...sampleRoute('y', 0), revision: 3 }]) {
+      const text = serializePackage(packageFromRoute(route));
+      expect(again(text)).toBe(text);
     }
   });
 

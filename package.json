@@ -18,7 +18,9 @@
     "electron:dev": "node scripts/dev-desktop.mjs",
     "dist": "node scripts/build-desktop.mjs && electron-builder --config electron-builder.config.cjs --publish never",
     "icons": "node scripts/make-icons.mjs",
-    "relays:check": "node scripts/check-relays.mjs"
+    "relays:check": "node scripts/check-relays.mjs",
+    "store:build": "node scripts/build-store.mjs",
+    "store:check": "node scripts/build-store.mjs --check"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

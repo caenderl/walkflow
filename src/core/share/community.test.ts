@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { exampleRoute, ROUTE_EXAMPLES } from '../routes/route-examples';
+import { SAMPLE_NAMES, SAMPLE_PLACE, sampleRoute } from '../routes/sample-route';
 import { readRoute, type Route } from '../routes/routes';
 import { readWorkout, type Workout } from '../training/workouts';
 import { itemId, localHashes, offeredItems, readCommunityItem, routeText, workoutText } from './community';
@@ -77,12 +77,11 @@ describe('offeredItems', () => {
     expect(items).toHaveLength(1);
   });
 
-  it('offers an example route with its place and its source, as the file every device writes for it', async () => {
-    const ex = ROUTE_EXAMPLES[0]!;
-    const r = { ...exampleRoute(ex, 'x', 0), shared: true as const };
+  it('offers a route with translations with its place and its source, as the file every device writes for it', async () => {
+    const r = { ...sampleRoute('x', 0), shared: true as const };
     const [item] = await offeredItems([r], [], 'en');
-    expect(item).toMatchObject({ kind: 'route', name: ex.names.en, place: ex.place.en });
-    const again = await offeredItems([{ ...exampleRoute(ex, 'another-id', 99), shared: true as const }], [], 'en');
+    expect(item).toMatchObject({ kind: 'route', name: SAMPLE_NAMES.en, place: SAMPLE_PLACE.en });
+    const again = await offeredItems([{ ...sampleRoute('another-id', 99), shared: true as const }], [], 'en');
     expect(again[0]!.sha256).toBe(item!.sha256);
   });
 
@@ -127,7 +126,7 @@ describe('readCommunityItem', () => {
   });
 
   it('passes a taken item on again with the very hash it arrived with, so nobody ends up with a copy that differs', async () => {
-    for (const text of [routeText(route()), routeText({ ...exampleRoute(ROUTE_EXAMPLES[0]!, 'x', 0) })]) {
+    for (const text of [routeText(route()), routeText(sampleRoute('x', 0))]) {
       const read = await readCommunityItem('route', text, 1);
       expect(read.ok && read.kind === 'route').toBe(true);
       if (!read.ok || read.kind !== 'route') continue;

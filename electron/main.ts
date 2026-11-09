@@ -7,7 +7,8 @@ import {
 } from 'electron';
 import { detectLanguage, isLang, setLanguage, t } from '../src/i18n/i18n';
 import { buildCsp } from '../src/platform/csp';
-import { RELAY_URLS } from '../src/platform/relays';
+import { COMMUNITY_ENABLED, STORE_BASE } from '../src/platform/features';
+import { sharingRelays } from '../src/platform/relays';
 import { isAllowedRequest } from '../src/platform/request-filter';
 import { devToolsAllowed } from '../src/core/safety/dev-mode';
 import { devOrigin } from '../src/platform/dev-url';
@@ -38,7 +39,8 @@ const background = () => (nativeTheme.shouldUseDarkColors ? BACKGROUND.dark : BA
 
 const MAP_STYLES = resolveMapStyles(__MAP_STYLE_RAW__, __MAP_STYLE_DARK_RAW__);
 const MAP_ORIGINS = MAP_STYLES ? mapOrigins(MAP_STYLES) : [];
-const CSP = buildCsp({ mapOrigins: MAP_ORIGINS, relays: RELAY_URLS, header: true });
+const RELAYS = sharingRelays(COMMUNITY_ENABLED);
+const CSP = buildCsp({ mapOrigins: MAP_ORIGINS, relays: RELAYS, store: STORE_BASE, header: true });
 
 /** Allowed permission requests. Everything else (camera, microphone, location, notifications …) is denied. */
 const ALLOWED_PERMISSIONS = new Set(['screen-wake-lock', 'fullscreen']);
@@ -100,7 +102,9 @@ function isAllowedExternal(url: string): boolean {
 async function serve(request: Request): Promise<Response> {
   const url = new URL(request.url);
   if (url.host !== HOST) return new Response('Not found', { status: 404 });
-  let path = decodeURIComponent(url.pathname);
+  let path: string;
+  // A path with a broken % escape is not a file
+  try { path = decodeURIComponent(url.pathname); } catch { return new Response('Not found', { status: 404 }); }
   if (path === '/' || path === '') path = '/index.html';
   const file = normalize(join(RENDERER_DIR, path));
   if (!file.startsWith(RENDERER_DIR + sep)) return new Response('Forbidden', { status: 403 });
@@ -321,7 +325,7 @@ if (!app.requestSingleInstanceLock()) {
     });
     // No requests to remote hosts from the renderer, except the map servers of this build (only used once the map is on) and the relays for sharing
     session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
-      const ok = isAllowedRequest(details.url, { origin: ORIGIN, devOrigin: DEV_ORIGIN, mapOrigins: MAP_ORIGINS, relays: RELAY_URLS });
+      const ok = isAllowedRequest(details.url, { origin: ORIGIN, devOrigin: DEV_ORIGIN, mapOrigins: MAP_ORIGINS, relays: RELAYS, store: STORE_BASE });
       if (!ok) console.log(`Blocked: ${details.url}`);
       callback({ cancel: !ok });
     });

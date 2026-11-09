@@ -10,3 +10,6 @@ export const RELAY_URLS: readonly string[] = [
   'wss://nostr.christiansass.de',
   'wss://relay.bullishbounty.com',
 ];
+
+/** The relays this build may connect to: none while Community is off */
+export const sharingRelays = (community: boolean): readonly string[] => (community ? RELAY_URLS : []);

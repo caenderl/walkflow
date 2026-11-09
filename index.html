@@ -155,6 +155,7 @@
         <div class="grid" id="routeProgress" hidden>
           <progress id="routeBar" max="1000" value="0"></progress>
           <div id="routeText" class="route-text"></div>
+          <div id="routeWaypoint" class="route-waypoint" hidden></div>
         </div>
         <div class="stage-info" id="stageInfo" hidden>
           <div id="shInfo"></div>
@@ -302,6 +303,25 @@
         <p class="hint" id="rtStorage" hidden></p>
         <p class="hint" id="rtStatus" role="status"></p>
         <p class="hint" data-i18n="routes.hint">A route only shows where you are along it.</p>
+      </section>
+
+      <!-- Route store (src/ui/routes/route-store.ts): routes from the project's repository, read from GitHub when the list is opened -->
+      <section class="card grid routes-part" id="rsStore">
+        <div class="head-row">
+          <h2 data-i18n="routeStore.title">Route store</h2>
+          <button id="rsToggle" type="button" data-i18n="routeStore.show">Show the route store</button>
+        </div>
+        <p class="hint" data-i18n="routeStore.hint">Routes that people have contributed to the project.</p>
+        <div id="rsBody" class="grid" hidden>
+          <div class="cm-filters">
+            <label class="hint field"><span data-i18n="routeStore.search">Search</span><input type="text" id="rsText" autocomplete="off"></label>
+            <label class="hint field"><span data-i18n="routeStore.country">Country</span><select id="rsCountry"></select></label>
+            <label class="hint field"><span data-i18n="routeStore.tag">Tag</span><select id="rsTag"></select></label>
+          </div>
+          <p class="hint" id="rsStatus" role="status"></p>
+          <ul id="rsList" class="wk-list"></ul>
+          <p class="hint" data-i18n="routeStore.contribute">You can add your own routes.</p>
+        </div>
       </section>
 
       <!-- Community view (src/ui/community/community.ts): routes and workouts that other devices share, and what you take from them -->

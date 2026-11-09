@@ -15,11 +15,12 @@ src/
     protocol/           FTMS: parsers and commands
     safety/             speed limit and ramp, standstill, incline rules, banner and button state, modes
     training/           workouts, the program runner, step panel logic, what the training view is about
-    routes/             routes, GPX, route packages, example routes, countries, map settings
+    routes/             routes, GPX, route packages, the texts of a route, countries, map settings
+    store/              the route store: its index (strict reading, entries from package files, filter) and the check of a download
     share/              the share code and the messages and rules of an exchange with another device
     history/            runs, statistics, CSV/TCX export
     id.ts               ids of things the person creates
-  platform/           pure helpers around the shell: build settings, version, CSP, MIME types, dev server address, opened files
+  platform/           pure helpers around the shell: build settings, features that are on or off, version, CSP, MIME types, dev server address, opened files
   device/             the treadmill: Web Bluetooth adapter, simulator
   net/                the connection to other people's devices for sharing (not there yet, see docs/P2P.md); never the treadmill
   data/               IndexedDB storage (workouts, routes, runs)
@@ -72,7 +73,7 @@ tests/                tests about the project itself
   function that returns a valid value or nothing, and never trust what was stored.
 - **Display never gets in the way of control.** Code that only draws is wrapped so that an error in it cannot reach a
   stop path.
-- **Text for people lives in `i18n/locales`**, in all three languages; code builds sentences from those functions.
+- **Text for people lives in `i18n/locales`**, in every language of the app; code builds sentences from those functions.
 - **Small modules with one job.** If a file needs a section comment to say what comes next, it is two files.
 - **No framework without a conversation.** Components are plain functions that build or update DOM
   (`ui/components/`, e.g. `overflowMenu`, `iconButton`, `confirmDialog`).
@@ -86,7 +87,7 @@ tests/                tests about the project itself
 | something that talks to Bluetooth | `device/` |
 | a part of the page for a feature | `ui/<feature>/` |
 | a part that several features use | `ui/components/` |
-| a text for people | `i18n/locales/en.ts`, `de.ts`, `fr.ts` |
+| a text for people | `i18n/locales/en.ts`, `de.ts`, `fr.ts`, `uk.ts` |
 | a helper for the build or the desktop shell, without the browser | `platform/` |
 
 ## Known debt (small, on purpose not done in one go)

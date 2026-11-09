@@ -49,7 +49,9 @@ hundred KB at most).
 |---|---|---|
 | `format` | yes | Always `"walkflow-route"`. |
 | `version` | yes | Whole number, `1` for this description. A package with a higher version is refused with a note to update the app. |
+| `revision` | no | The version of this route's content, a whole number from 1 (without it: 1). Not the `version` of the format. Raise it when you change a route that others may have: a copy with a lower revision is offered an update in the [route store](ROUTE-STORE.md). A value that is not a whole number from 1 makes the package invalid. |
 | `name` | yes | Language code → name (up to 80 characters each), at least one. The name without a known language (a name someone typed) has the key `"und"`. The app shows the language it is set to, else English, else the plain name of the route: the `"und"` one, else English, else the first language. |
+| `waypoints` | no | Places along the route worth a word (a bridge, a view, where the path turns): a list of `{ "at": [lat, lon], "name": {…}, "text": {…} }`. `name` (up to 80 characters) and the optional `text` (up to 300) are language code → text like the route's own, and at most 50 waypoints are read. Where a waypoint is along the route is worked out from `at`: the nearest point of the route counts, and a waypoint more than 150 m from the route is left out. On a loop, a place at the start is taken as the start. The app shows them in the route's details, as markers on the map, and in the training view as "next: …" with the text when you are within 150 m. A waypoint that cannot be read is left out, the package is still accepted. |
 | `points` | yes | `[lat, lon]` or `[lat, lon, ele]` (elevation in metres), 2 to 5000 points, together at least 10 m long. All points have an elevation or none. Latitude and longitude are written with up to 6 decimals, elevation with 1. |
 | `place` | no | Language code → where it is, for browsing (up to 80 characters each). |
 | `country` | no | ISO 3166-1 alpha-2, e.g. `"DE"`. Without it the app works it out from the start of the route. |
@@ -80,7 +82,9 @@ cannot change the safety settings, the speed limit or the way the belt is contro
 
 Author, licence and source stay with the route when it is exported again, so the credit travels with it.
 
-## For a catalogue (later)
+## For a catalogue
+
+The [route store](ROUTE-STORE.md) is such a catalogue.
 
 The identity of a package in a catalogue is the SHA-256 of the file as it is stored (the bytes, no re-formatting),
 so an index can name it and the app can check what it downloaded. `serializePackage` writes one point per line, so a

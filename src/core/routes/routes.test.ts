@@ -167,11 +167,50 @@ describe('readRoute', () => {
     expect(readRoute({ ...good, description: 'a\u0000b\u0007c' })?.description).toBe('abc');
   });
 
-  it('keeps the key of an example, and drops anything that is not one', () => {
-    expect(readRoute({ ...good, example: 'central-park-reservoir' })?.example).toBe('central-park-reservoir');
-    for (const bad of [5, '', 'Has Space', 'x'.repeat(60), null, {}]) {
-      expect('example' in readRoute({ ...good, example: bad })!, String(bad)).toBe(false);
-    }
+  it('keeps usable waypoints (a place and a name, in several languages) and leaves out the rest', () => {
+    const r = readRoute({ ...good, waypoints: [
+      { lat: 52.5, lon: 13.4, name: { en: 'Bridge', de: 'Brücke' }, text: { en: 'A fine view.' } },
+      { lat: 52.5, lon: 13.4, name: { en: 'No text' } },
+      { lat: 99, lon: 13.4, name: { en: 'Not on earth' } },
+      { lat: 52.5, lon: 'x', name: { en: 'Not a number' } },
+      { lat: 52.5, lon: 13.4 },
+      { lat: 52.5, lon: 13.4, name: {} },
+      { lat: 52.5, lon: 13.4, name: { 'EN': 'bad key' } },
+      'nonsense', null, 5,
+    ] });
+    expect(r?.waypoints).toEqual([
+      { lat: 52.5, lon: 13.4, name: { en: 'Bridge', de: 'Brücke' }, text: { en: 'A fine view.' } },
+      { lat: 52.5, lon: 13.4, name: { en: 'No text' } },
+    ]);
+  });
+
+  it('has no waypoints key for none or for something that is not a list, and keeps at most 50', () => {
+    for (const bad of [undefined, [], 'x', {}, 5, [null]]) expect('waypoints' in readRoute({ ...good, waypoints: bad })!, String(bad)).toBe(false);
+    const many = Array.from({ length: 80 }, (_, i) => ({ lat: 52.5, lon: 13.4, name: { en: `P${i}` } }));
+    expect(readRoute({ ...good, waypoints: many })?.waypoints).toHaveLength(50);
+  });
+
+  it('cuts waypoint names and texts to length and takes control characters out', () => {
+    const w = readRoute({ ...good, waypoints: [{ lat: 52.5, lon: 13.4, name: { en: `A\u0007${'x'.repeat(200)}` }, text: { en: 'y'.repeat(500) } }] })?.waypoints?.[0];
+    expect(w?.name.en).not.toContain('\u0007');
+    expect(w?.name.en!.length).toBeLessThanOrEqual(80);
+    expect(w?.text?.en!.length).toBeLessThanOrEqual(300);
+  });
+
+  it('a route that was an example route of an earlier version counts as the copy of its file in the route store', () => {
+    // Before the route store the app brought four routes itself, marked with `example`: the same routes are in the store now
+    expect(readRoute({ ...good, example: 'hamburg-aussenalster' })).toMatchObject({ storeFile: 'hamburg-aussenalster.walkflow' });
+    expect('example' in readRoute({ ...good, example: 'hamburg-aussenalster' })!).toBe(false);
+    // A store file it already has stays, and a key that never was an example is nothing
+    expect(readRoute({ ...good, example: 'hamburg-aussenalster', storeFile: 'other.walkflow' })).toMatchObject({ storeFile: 'other.walkflow' });
+    for (const bad of ['something-else', '../x', 5, null]) expect('storeFile' in readRoute({ ...good, example: bad })!, String(bad)).toBe(false);
+  });
+
+  it('keeps the revision of a package (a whole number from 1) and the store file it came from, and drops anything else', () => {
+    expect(readRoute({ ...good, revision: 3, storeFile: 'alster-rundweg.walkflow' })).toMatchObject({ revision: 3, storeFile: 'alster-rundweg.walkflow' });
+    expect(readRoute({ ...good, revision: 99999 })?.revision).toBe(99999);
+    for (const bad of [0, -1, 1.5, 100000, '2', null, NaN, {}]) expect('revision' in readRoute({ ...good, revision: bad })!, String(bad)).toBe(false);
+    for (const bad of ['../x.walkflow', 'A.walkflow', 'a/b.walkflow', 'a.json', '', 5, null, 'x'.repeat(90) + '.walkflow']) expect('storeFile' in readRoute({ ...good, storeFile: bad })!, String(bad)).toBe(false);
   });
 
   it('leaves an empty or unusable description out', () => {

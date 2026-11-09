@@ -3,7 +3,8 @@ import type { Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { buildCsp } from './src/platform/csp.ts';
-import { RELAY_URLS } from './src/platform/relays.ts';
+import { sharingRelays } from './src/platform/relays.ts';
+import { resolveStoreBase } from './src/platform/store-url.ts';
 import { mapOrigins, resolveMapStyles } from './src/core/routes/map-config.ts';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
@@ -17,7 +18,13 @@ const desktop = process.env.VITE_TARGET === 'desktop';
 const mapStyles = resolveMapStyles(process.env.WALKFLOW_MAP_STYLE, process.env.WALKFLOW_MAP_STYLE_DARK);
 
 /** Strict CSP only in the build: the dev server injects styles it would forbid. */
-const CSP = buildCsp({ mapOrigins: mapStyles ? mapOrigins(mapStyles) : [], relays: RELAY_URLS, header: false });
+// Community (sharing between devices) is off unless the build says so (src/platform/features.ts)
+const community = process.env.WALKFLOW_COMMUNITY === 'on';
+
+// The route store: the store folder of the repository this build is made for (none without one); WALKFLOW_STORE_BASE is for trying it out
+const storeBase = resolveStoreBase(githubRepo, process.env.WALKFLOW_STORE_BASE) ?? '';
+
+const CSP = buildCsp({ mapOrigins: mapStyles ? mapOrigins(mapStyles) : [], relays: sharingRelays(community), store: storeBase || null, header: false });
 
 function csp(): Plugin {
   return {
@@ -33,6 +40,8 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
     __GITHUB_REPO__: JSON.stringify(githubRepo),
     __MAP_STYLES__: JSON.stringify(mapStyles),
+    __COMMUNITY__: JSON.stringify(community),
+    __STORE_BASE__: JSON.stringify(storeBase),
   },
   // The map chunk is large on purpose: it is loaded only when the map is switched on
   build: {

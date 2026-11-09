@@ -25,18 +25,32 @@ export interface Route {
   defaultSpeed?: number;
   /** Optional text about the route, plain text, in whatever language the person wrote it in */
   description?: string;
-  /** Key of the example route this is (src/core/routes/route-examples.ts). While it has no description of its own, the example's text is shown in the language of the app. */
-  example?: string;
-  /** The name in several languages (language code → name), from a route package; `name` is the plain one for where no language fits (routeName). */
+  /** The name in several languages (language code → name), from a route package; `name` is the plain one for where no language fits (route-text.ts). */
   names?: Record<string, string>;
   /** Texts in several languages (language code → text), from a route package. While it has no description of its own, the one in the language of the app is shown. */
   texts?: Record<string, string>;
   /** Where the route comes from and what it is about; travels with the route when it is exported again */
   meta?: RouteMeta;
+  /** Places along the route, from a route package; where each is along the route is worked out from the route (placeWaypoints) */
+  waypoints?: Waypoint[];
+  /** The revision of the route package this came from (a whole number from 1; missing = the first). A route store entry with a higher one is an update. */
+  revision?: number;
+  /** The file in the route store this was taken from (src/core/store/route-index.ts): what an update is matched on */
+  storeFile?: string;
   /** The person has switched on sharing this route with the community */
   shared?: true;
   /** Taken from the community: the SHA-256 of the package text as it arrived (lower-case hex). It is passed on while the package the app writes for the route is still byte-identical (core/share/community.ts). */
   communityHash?: string;
+}
+
+/** A place along a route worth a word: where it is on the map, its name and an optional text in several languages (route-waypoints.ts) */
+export interface Waypoint {
+  lat: number;
+  lon: number;
+  /** Language code → name */
+  name: Record<string, string>;
+  /** Language code → text */
+  text?: Record<string, string>;
 }
 
 export interface RouteMeta {
@@ -111,6 +125,21 @@ export function readCredit(v: unknown): Credit {
   return credit;
 }
 
+/** The waypoints that are usable: a place on the map and a name; anything else is left out, and so is everything past the limit */
+export function readWaypoints(v: unknown): Waypoint[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const out: Waypoint[] = [];
+  for (const item of v as unknown[]) {
+    if (out.length >= ROUTE_WAYPOINTS_MAX) break;
+    if (!isObject(item) || !isCoord(item.lat, 90) || !isCoord(item.lon, 180)) continue;
+    const name = readLangMap(item.name, ROUTE_NAME_MAX, true);
+    if (!name) continue;
+    const text = readLangMap(item.text, WAYPOINT_TEXT_MAX);
+    out.push({ lat: item.lat, lon: item.lon, name, ...(text ? { text } : {}) });
+  }
+  return out.length ? out : undefined;
+}
+
 function readMeta(v: unknown): RouteMeta | undefined {
   if (!isObject(v)) return undefined;
   const meta: RouteMeta = {};
@@ -130,6 +159,18 @@ export const routeSpeed = (r: Route): number => r.defaultSpeed ?? DEFAULT_WALK_S
 
 export const ROUTE_MAX_POINTS = 5000;
 export const ROUTE_NAME_MAX = 80;
+export const ROUTE_WAYPOINTS_MAX = 50;
+export const WAYPOINT_TEXT_MAX = 300;
+/** The revision of a route package: a whole number from 1 */
+export const ROUTE_REVISION_MAX = 99999;
+export const isRevision = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= ROUTE_REVISION_MAX;
+/** The name of a route file in the route store: lower-case letters, digits, `.`, `_`, `-`, ending in `.walkflow` */
+export const STORE_FILE_NAME = /^[a-z0-9][a-z0-9._-]{0,80}\.walkflow$/;
+/**
+ * The routes that versions before the route store brought themselves, marked in the library with `example: <key>`. They are in
+ * the store now as `<key>.walkflow`, so such a route counts as the copy of that file and is not offered a second time.
+ */
+const LEGACY_EXAMPLES: ReadonlySet<string> = new Set(['central-park-reservoir', 'hamburg-aussenalster', 'vienna-ringstrasse', 'tokyo-imperial-palace']);
 /** Anything shorter is a point, not a route */
 export const ROUTE_MIN_METERS = 10;
 const ELE_MIN = -500;
@@ -266,13 +307,18 @@ export function readRoute(v: unknown): Route | null {
   if (typeof v.defaultSpeed === 'number' && Number.isFinite(v.defaultSpeed) && v.defaultSpeed >= ROUTE_SPEED_MIN && v.defaultSpeed <= ROUTE_SPEED_MAX) route.defaultSpeed = v.defaultSpeed;
   const description = cleanText(v.description, ROUTE_DESCRIPTION_MAX);
   if (description) route.description = description;
-  if (typeof v.example === 'string' && /^[a-z0-9-]{1,40}$/.test(v.example)) route.example = v.example;
   const names = readLangMap(v.names, ROUTE_NAME_MAX, true);
   if (names) route.names = names;
   const texts = readLangMap(v.texts, ROUTE_DESCRIPTION_MAX);
   if (texts) route.texts = texts;
   const meta = readMeta(v.meta);
   if (meta) route.meta = meta;
+  const waypoints = readWaypoints(v.waypoints);
+  if (waypoints) route.waypoints = waypoints;
+  if (isRevision(v.revision)) route.revision = v.revision;
+  if (typeof v.storeFile === 'string' && STORE_FILE_NAME.test(v.storeFile)) route.storeFile = v.storeFile;
+  // An example route of a version before the route store: the store has the same route under the example's key
+  else if (typeof v.example === 'string' && LEGACY_EXAMPLES.has(v.example)) route.storeFile = `${v.example}.walkflow`;
   if (v.shared === true) route.shared = true;
   if (typeof v.communityHash === 'string' && /^[0-9a-f]{64}$/.test(v.communityHash)) route.communityHash = v.communityHash;
   return analyzeRoute(route).total >= ROUTE_MIN_METERS ? route : null;

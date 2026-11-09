@@ -6,7 +6,7 @@ import { GPX_MAX_CHARS, parseGpx } from '../../core/routes/gpx';
 import { nameFromFile } from '../../core/routes/route-files';
 import { readPackage } from '../../core/routes/route-package';
 import { packageKind } from '../../core/share/package-kind';
-import { routeName } from '../../core/routes/route-examples';
+import { routeName } from '../../core/routes/route-text';
 import { analyzeRoute, newRouteId, readRoute, type Route } from '../../core/routes/routes';
 import { fmtDistance } from '../../core/training/program';
 import type { RouteStore } from '../../data/route-store';
@@ -83,5 +83,30 @@ export function setupRouteImport(host: RouteImportHost) {
     setStatus(() => t.routes.imported(routeName(route, lang), analyzeRoute(route).total));
   }
 
-  return { importFile, openPackage };
+  /**
+   * A route package that was downloaded from the route store (already compared with the list). The person is asked first.
+   * `replace` is the id of the copy in the library that is updated: it keeps its id (and stays chosen and shared), everything
+   * else is the new version. Without it the package becomes a new route.
+   */
+  async function takeFromStore(file: { name: string; text: string }, opts: { storeFile: string; replace?: string }) {
+    const read = readPackage(file.text, newRouteId(Date.now()), Date.now());
+    if (!read.ok) { setStatus(() => t.routes[packageFailure(read.reason)]); return; }
+    const name = routeName(read.route, lang);
+    const revision = read.route.revision ?? 1;
+    const existing = opts.replace ? (await (await host.store()).list()).find(r => r.id === opts.replace) : undefined;
+    const ok = existing
+      ? await confirmDialog(t.routeStore.updateTitle, [t.routeStore.updateText(routeName(existing, lang), existing.revision ?? 1, revision)], t.routeStore.updateConfirm)
+      : await confirmDialog(t.routeStore.addTitle, [t.routeStore.addText(name, fmtDistance(analyzeRoute(read.route).total))], t.routeStore.addConfirm);
+    if (!ok) return;
+    let route: Route = { ...read.route, storeFile: opts.storeFile, ...(existing ? { id: existing.id, ...(existing.shared ? { shared: true as const } : {}) } : {}) };
+    if (route.country === undefined) {
+      const country = await countryAt(route.points[0]!.lat, route.points[0]!.lon).catch(() => undefined);
+      route = readRoute({ ...route, country }) ?? route;
+    }
+    try { await (await host.store()).put(route); } catch (e) { setStatus(() => t.routes.failed(String(e))); return; }
+    await host.added(route);
+    setStatus(() => (existing ? t.routeStore.updated(name, revision) : t.routes.imported(name, analyzeRoute(route).total)));
+  }
+
+  return { importFile, openPackage, takeFromStore };
 }

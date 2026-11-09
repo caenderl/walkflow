@@ -6,7 +6,9 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { routeBounds, routeLine } from '../../core/routes/map-geo';
 import { applyTint, mapTint } from '../../core/routes/map-tint';
-import type { Route } from '../../core/routes/routes';
+import { placeWaypoints, waypointText } from '../../core/routes/route-waypoints';
+import { analyzeRoute, type Route } from '../../core/routes/routes';
+import { lang } from '../../i18n/i18n';
 
 export interface RouteMap {
   /** Draw the route and fit it into the view */
@@ -58,6 +60,8 @@ export function createRouteMap(box: HTMLElement, opts: RouteMapOptions): RouteMa
   let shown: Route | null = null;
   let touched = false;
   let marker: Marker | null = null;
+  /** The waypoints of the route on show, a small marker each with its name as the tooltip */
+  let waypointMarkers: Marker[] = [];
 
   function draw(route: Route) {
     const data = routeLine(route.points);
@@ -70,9 +74,21 @@ export function createRouteMap(box: HTMLElement, opts: RouteMapOptions): RouteMa
       map.addLayer({ id: 'route-casing', type: 'line', source: SOURCE, layout, paint: { 'line-color': COLORS[opts.dark ? 'dark' : 'light'].casing, 'line-width': 8, 'line-opacity': 0.9 } });
       map.addLayer({ id: 'route-line', type: 'line', source: SOURCE, layout, paint: { 'line-color': COLORS[opts.dark ? 'dark' : 'light'].line, 'line-width': 4 } });
     }
+    drawWaypoints(route);
     fit(route);
     shown = route;
     touched = false;
+  }
+
+  function drawWaypoints(route: Route) {
+    for (const m of waypointMarkers) m.remove();
+    // Only those that are on the route (placeWaypoints), as everywhere else
+    waypointMarkers = placeWaypoints(route, analyzeRoute(route)).map(({ waypoint: w }) => {
+      const el = document.createElement('div');
+      el.className = 'map-wp';
+      el.title = waypointText(w.name, lang) ?? '';
+      return new Marker({ element: el }).setLngLat([w.lon, w.lat]).addTo(map);
+    });
   }
 
   function fit(route: Route) {
@@ -105,6 +121,8 @@ export function createRouteMap(box: HTMLElement, opts: RouteMapOptions): RouteMa
       }
     },
     destroy() {
+      for (const m of waypointMarkers) m.remove();
+      waypointMarkers = [];
       marker?.remove();
       marker = null;
       map.remove();
