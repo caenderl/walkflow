@@ -16,6 +16,7 @@ function rig(opts: { active?: boolean; standstillFires?: boolean } = {}) {
   const governor = {
     reset: vi.fn(() => calls.push('governor reset')),
     noteMeasured: vi.fn(),
+    commandRefused: vi.fn(() => calls.push('governor refused')),
   } as unknown as SpeedGovernor;
   const standstill = {
     disarm: vi.fn(() => calls.push('standstill disarm')),
@@ -27,8 +28,9 @@ function rig(opts: { active?: boolean; standstillFires?: boolean } = {}) {
   const distance = vi.fn();
   const renderStats = vi.fn();
   const redrawChart = vi.fn();
-  const live = setupLiveData({ session, banner, governor, standstill, runner, recorder, now: () => 5000, log, distance, renderStats, redrawChart });
-  return { live, session, calls, banner, governor, standstill, runner, recorder, log, distance, renderStats, redrawChart };
+  const stopFailed = vi.fn((_failed: boolean) => {});
+  const live = setupLiveData({ session, banner, governor, standstill, runner, recorder, now: () => 5000, log, distance, renderStats, redrawChart, stopFailed });
+  return { live, session, calls, banner, governor, standstill, runner, recorder, log, distance, renderStats, redrawChart, stopFailed };
 }
 
 describe('Machine Status', () => {
@@ -77,6 +79,44 @@ describe('Machine Status', () => {
     r.live.events.machineStatus(dv(0x7e));
     expect(r.log).toHaveBeenCalledTimes(1);
     expect(r.runner.abort).not.toHaveBeenCalled();
+  });
+});
+
+describe('Control Point responses', () => {
+  it('a command the treadmill accepted changes nothing', () => {
+    const r = rig();
+    r.session.lastMeasured = 3;
+    for (const op of [0x00, 0x02, 0x07, 0x08]) r.live.events.controlResponse({ requestOp: op, result: 1 });
+    expect(r.stopFailed).not.toHaveBeenCalled();
+    expect(r.governor.commandRefused).not.toHaveBeenCalled();
+    expect(r.session.controlLost).toBe(false);
+  });
+
+  it('a Stop the treadmill refused while the belt moves: the person is told to stop it on the treadmill', () => {
+    const r = rig();
+    r.session.lastMeasured = 3;
+    r.live.events.controlResponse({ requestOp: 0x08, result: 4 });
+    expect(r.stopFailed).toHaveBeenCalledWith(true);
+  });
+
+  it('a Stop the treadmill refused while the belt stands is nothing to warn about', () => {
+    const r = rig();
+    r.session.lastMeasured = 0;
+    r.live.events.controlResponse({ requestOp: 0x08, result: 4 });
+    expect(r.stopFailed).not.toHaveBeenCalled();
+  });
+
+  it('a speed the treadmill refused: the ramp ends and the log says so', () => {
+    const r = rig();
+    r.live.events.controlResponse({ requestOp: 0x02, result: 3 });
+    expect(r.governor.commandRefused).toHaveBeenCalledTimes(1);
+    expect(r.log).toHaveBeenCalledTimes(1);
+  });
+
+  it('control that was refused counts as lost, so the next stop asks for it first', () => {
+    const r = rig();
+    r.live.events.controlResponse({ requestOp: 0x00, result: 5 });
+    expect(r.session.controlLost).toBe(true);
   });
 });
 

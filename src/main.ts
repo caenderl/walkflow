@@ -96,7 +96,16 @@ const community = setupCommunity({ libraryChanged: () => { void workouts.reload(
 const standstill = new StandstillDetector();
 
 // Start, pause and stop: the commands and what has to happen around them
-const belt = setupBelt({ session, banner, governor, standstill, now, abortRun: reason => runner.abort(reason), log });
+/** A Stop or Pause that did not get through although the treadmill is connected: the person has to stop the belt on the treadmill */
+const stopFailed = (failed: boolean) => {
+  $('stopAlarm').hidden = !failed;
+  if (failed) { log(t.alarm.stopTitle); $('stopAlarm').scrollIntoView({ block: 'start' }); }
+};
+const belt = setupBelt({
+  session, banner, governor, standstill, now, log, stopFailed,
+  abortRun: reason => runner.abort(reason),
+  wait: ms => new Promise(resolve => setTimeout(resolve, ms)),
+});
 
 const runner = new ProgramRunner({
   start: belt.start,
@@ -143,7 +152,7 @@ const background = setupBackground({
 
 // What the treadmill reports while connected
 const live = setupLiveData({
-  session, banner, governor, standstill, runner, recorder, now, log,
+  session, banner, governor, standstill, runner, recorder, now, log, stopFailed,
   distance: meters => routes.update(meters),
   renderStats: readout.renderStats,
   redrawChart: readout.redrawChart,
@@ -177,6 +186,7 @@ $button('demo').onclick = () => { connMenu.close(); void connection.connect('dem
 $button('disconnect').onclick = () => { connMenu.close(); void connection.disconnectClicked(); };
 $button('openConn').onclick = () => { connMenu.open(); $button('connect').disabled ? $button('demo').focus() : $button('connect').focus(); };
 $button('alarmAck').onclick = () => { $('alarm').hidden = true; };
+$button('stopAlarmAck').onclick = () => { $('stopAlarm').hidden = true; };
 $button('hiddenAck').onclick = () => { $('hiddenBanner').hidden = true; };
 $button('simLoss').onclick = () => connection.simulator()?.simulateConnectionLoss();
 $button('simKey').onclick = () => connection.simulator()?.pullSafetyKey();

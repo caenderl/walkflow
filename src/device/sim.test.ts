@@ -15,6 +15,7 @@ function setup(opts = {}) {
     heartRate: vi.fn(),
     machineStatus: d => machine.push(parseMachineStatus(d)?.kind ?? '?'),
     trainingStatus: vi.fn(),
+    controlResponse: vi.fn(),
     disconnected: vi.fn(),
   };
   const client = new TreadmillClient(sim, ev);

@@ -5,7 +5,7 @@ import {
   CH, DEVINFO_CH, DEVINFO_SERVICE, FTMS_SERVICE, HR_SERVICE,
   describeControlPointResponse, hex, parseControlPointResponse, parseFeatures,
   parseHeartRate, parseInclinationRange, parseSpeedRange, parseTreadmillData,
-  type Features, type Range, type TreadmillData,
+  type ControlPointResponse, type Features, type Range, type TreadmillData,
 } from '../core/protocol/ftms';
 import { t } from '../i18n/i18n';
 
@@ -44,6 +44,8 @@ export class DroppedError extends Error {
 }
 
 interface Job {
+  /** Stop or Pause: never dropped for another one */
+  urgent: boolean;
   task: () => Promise<unknown>;
   resolve: (v: unknown) => void;
   reject: (e: unknown) => void;
@@ -55,19 +57,27 @@ export class SerialQueue {
   private running = false;
 
   run<T>(task: () => Promise<T>): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      this.pending.push({ task, resolve: resolve as (v: unknown) => void, reject });
-      void this.drain();
-    });
+    return this.add(task, false);
   }
 
   /**
-   * Rejects all tasks that have not started yet (DroppedError) and queues `task` next.
-   * A task that is already running is awaited; nothing ever runs in parallel.
+   * Rejects the ordinary tasks that have not started yet (DroppedError) and queues `task` next. Urgent tasks that are still
+   * waiting stay, in their order: a Pause never displaces a Stop. A task that is already running is awaited; nothing ever
+   * runs in parallel.
    */
   runUrgent<T>(task: () => Promise<T>): Promise<T> {
-    for (const job of this.pending.splice(0)) job.reject(new DroppedError());
-    return this.run(task);
+    const waiting = this.pending.splice(0);
+    for (const job of waiting) {
+      if (job.urgent) this.pending.push(job); else job.reject(new DroppedError());
+    }
+    return this.add(task, true);
+  }
+
+  private add<T>(task: () => Promise<T>, urgent: boolean): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      this.pending.push({ urgent, task, resolve: resolve as (v: unknown) => void, reject });
+      void this.drain();
+    });
   }
 
   private async drain() {
@@ -196,6 +206,8 @@ export interface TreadmillEvents {
   heartRate(bpm: number): void;
   machineStatus(dv: DataView): void;
   trainingStatus(dv: DataView): void;
+  /** What the treadmill answered to a command: a write that went through is not yet a command it accepted */
+  controlResponse(r: ControlPointResponse): void;
   disconnected(): void;
 }
 
@@ -245,6 +257,7 @@ export class TreadmillClient {
       await device.subscribe(FTMS_SERVICE, CH.control, dv => {
         const r = parseControlPointResponse(dv);
         ev.log(r ? `← ${describeControlPointResponse(r)}` : `← CP ${hex(dv)}`);
+        if (r) ev.controlResponse(r);
       });
       await device.subscribe(FTMS_SERVICE, CH.treadmillData, dv => ev.data(parseTreadmillData(dv)));
 
@@ -304,7 +317,7 @@ export class TreadmillClient {
 
   /**
    * Writes to the Control Point. All writes go serially through a queue, with response.
-   * `urgent` (stop/pause): waiting writes are dropped, the running one is awaited.
+   * `urgent` (stop/pause): waiting ordinary writes are dropped, the running one is awaited.
    * Resolves to false on error, timeout or when dropped (all are logged), never throws.
    */
   send(bytes: Uint8Array, opts: { urgent?: boolean } = {}): Promise<boolean> {

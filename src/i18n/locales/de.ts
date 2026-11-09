@@ -46,6 +46,8 @@ export const de: Messages = {
     title: 'Verbindung verloren. Das Band läuft möglicherweise weiter!',
     text: 'Die App kann es jetzt nicht mehr stoppen. Stoppe es am Gerät: Stopp-Taste drücken oder Sicherheitsschlüssel ziehen.',
     ack: 'Verstanden',
+    stopTitle: 'Das Laufband hat den Stopp nicht angenommen. Das Band läuft möglicherweise weiter!',
+    stopText: 'Drücke noch einmal Stopp oder stoppe es am Gerät: Stopp-Taste drücken oder Sicherheitsschlüssel ziehen.',
   },
   unsupported: {
     demoHint: 'Ohne Laufband oder ohne Web Bluetooth kannst du die **Demo** ausprobieren.',
@@ -523,6 +525,7 @@ export const de: Messages = {
     maxStepRange: (min: number, max: number) => `❌ Maximale Änderung muss zwischen ${u.speedValue(min, 1)} und ${u.speed(max, 1)} liegen`,
     noAllowedSpeed: (max: number, min: number) => `❌ Kein erlaubter Speed: Limit ${n(max)} liegt unter dem Geräte-Minimum ${n(min)}`,
     rampAborted: '❌ Stufenweise Tempoänderung abgebrochen (Schreibfehler)',
+    speedRefused: '❌ Das Laufband hat das Tempo abgelehnt. Stufenweise Tempoänderung abgebrochen.',
   },
   console: {
     title: 'Experimentier-Konsole (Control Point 0x2AD9)',

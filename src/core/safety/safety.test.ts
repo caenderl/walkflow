@@ -279,6 +279,34 @@ describe('SpeedGovernor', () => {
     expect(logs.join()).toMatch(/Stepwise speed change aborted/);
   });
 
+  it('a command that was not written is not what the next ramp starts from', async () => {
+    const { gov, sent } = make({ fail: kmh => kmh === 3 && sent.length === 2 });
+    gov.noteMeasured(2);
+    gov.request(5);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(gov.lastCommand?.kmh).toBe(2.5);
+    gov.request(5);
+    await vi.advanceTimersByTimeAsync(0);
+    // On from 2.5, the last speed the belt got: not from the 3 it never got (which would make this step 3.5)
+    expect(sent.at(-1)?.[1]).toBe(3);
+  });
+
+  it('a speed the treadmill refused ends the ramp, and the command is forgotten', async () => {
+    const { gov, sent } = make();
+    gov.noteMeasured(2);
+    gov.request(5);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sent.map(s => s[1])).toEqual([2.5]);
+    gov.commandRefused();
+    expect(gov.target).toBeNull();
+    expect(gov.lastCommand).toBeNull();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(sent.map(s => s[1])).toEqual([2.5]);
+    // The next ramp starts from what the belt does
+    gov.noteMeasured(2);
+    expect(gov.base()).toBe(2);
+  });
+
   it('from standstill, the ramp starts at the device minimum', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(0);

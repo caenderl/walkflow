@@ -46,7 +46,7 @@ function setup(dev = new FakeDevice()) {
   const adapter: BleAdapter = { kind: 'fake', availability: async () => ({ ok: true }), requestDevice: vi.fn(async () => dev) };
   const logs: string[] = [];
   const ev: TreadmillEvents = {
-    log: m => logs.push(m), data: vi.fn(), heartRate: vi.fn(), machineStatus: vi.fn(), trainingStatus: vi.fn(), disconnected: vi.fn(),
+    log: m => logs.push(m), data: vi.fn(), heartRate: vi.fn(), machineStatus: vi.fn(), trainingStatus: vi.fn(), controlResponse: vi.fn(), disconnected: vi.fn(),
   };
   return { dev, adapter, logs, ev, client: new TreadmillClient(adapter, ev) };
 }
@@ -76,6 +76,17 @@ describe('TreadmillClient.connect', () => {
     const { dev, client } = setup();
     await expect(client.connect()).rejects.toThrow();
     expect(dev.connected).toBe(false);
+  });
+
+  it('hands every Control Point response on, so a command the treadmill refused does not count as done', async () => {
+    const { dev, client, ev } = setup();
+    dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
+    await client.connect();
+    dev.subs.get('1826/2ad9')!(dataView([0x80, 0x08, 0x04]));
+    expect(ev.controlResponse).toHaveBeenCalledWith({ requestOp: 0x08, result: 0x04 });
+    // Not a response: logged, not handed on
+    dev.subs.get('1826/2ad9')!(dataView([0x01]));
+    expect(ev.controlResponse).toHaveBeenCalledTimes(1);
   });
 
   it('forwards parsed notifications and logs CP responses readably', async () => {
@@ -163,6 +174,21 @@ describe('priority for stop/pause', () => {
     gate.resolve();
     await a; await u;
     expect(order).toEqual(['a start', 'a end', 'urgent']);
+  });
+
+  it('SerialQueue.runUrgent never drops an urgent task that is waiting: a Pause does not displace a Stop', async () => {
+    const q = new SerialQueue();
+    const order: string[] = [];
+    const gate = deferred();
+    const a = q.run(async () => { order.push('a start'); await gate.promise; });
+    const b = q.run(async () => { order.push('b'); });
+    await Promise.resolve();
+    const stop = q.runUrgent(async () => { order.push('stop'); });
+    const pause = q.runUrgent(async () => { order.push('pause'); });
+    await expect(b).rejects.toBeInstanceOf(DroppedError);
+    gate.resolve();
+    await a; await stop; await pause;
+    expect(order).toEqual(['a start', 'stop', 'pause']);
   });
 
   it('TreadmillClient: an urgent write drops waiting writes and logs it', async () => {

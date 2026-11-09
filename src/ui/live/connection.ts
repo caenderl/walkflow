@@ -83,6 +83,7 @@ export function setupConnection(host: ConnectionHost) {
       host.speed.applyLimits();
       setUi(true);
       $('alarm').hidden = true;
+      $('stopAlarm').hidden = true;
       $('demoBanner').hidden = kind !== 'demo';
       const name = info.deviceName;
       bindText($('deviceName'), () => name ?? t.connection.defaultDeviceName);
@@ -115,6 +116,8 @@ export function setupConnection(host: ConnectionHost) {
     setStatus(() => t.connection.notConnected);
     host.renderStats();
     $('demoBanner').hidden = true;
+    // Without a connection there is nothing left to stop from here: the connection alarm below takes over
+    $('stopAlarm').hidden = true;
     setUi(false);
     if (wasRunning) {
       $('alarm').hidden = false;

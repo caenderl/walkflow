@@ -253,6 +253,15 @@ export class SpeedGovernor {
     this.deps.onChange?.();
   }
 
+  /**
+   * The treadmill answered that it did not accept the last speed command: the ramp ends and the command is forgotten, so the
+   * next request starts from what the belt really does (the measured speed).
+   */
+  commandRefused() {
+    this.cancel();
+    this.last = null;
+  }
+
   /** Additionally forget the last command and measured value (after stop, start, disconnect). */
   reset() {
     this.cancel();
@@ -277,10 +286,14 @@ export class SpeedGovernor {
     const next = plan[0]!;
     const gen = this.gen;
     this.sending = true;
-    this.last = { kmh: next, at: now };
+    const before = this.last;
+    const mine = { kmh: next, at: now };
+    this.last = mine;
     this.deps.onChange?.();
     void this.deps.send(next).catch(() => false).then(ok => {
       this.sending = false;
+      // The belt never got this speed: the next ramp starts from the one it got before
+      if (!ok && this.last === mine) this.last = before;
       if (gen === this.gen && !ok) {
         this._target = null;
         this.deps.log?.(t.limit.rampAborted);

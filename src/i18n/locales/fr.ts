@@ -48,6 +48,8 @@ export const fr: Messages = {
     title: 'Connexion perdue. Le tapis tourne peut-être encore !',
     text: 'L’application ne peut plus l’arrêter. Arrêtez-le sur l’appareil : appuyez sur le bouton d’arrêt ou retirez la clé de sécurité.',
     ack: 'Compris',
+    stopTitle: 'Le tapis n’a pas accepté l’arrêt. Il tourne peut-être encore !',
+    stopText: 'Appuyez de nouveau sur Arrêt, ou arrêtez-le sur l’appareil : appuyez sur le bouton d’arrêt ou retirez la clé de sécurité.',
   },
   unsupported: {
     demoHint: 'Sans tapis de course ou sans Web Bluetooth, vous pouvez essayer la **démo**.',
@@ -526,6 +528,7 @@ export const fr: Messages = {
     maxStepRange: (min: number, max: number) => `❌ La variation maximale doit être comprise entre ${u.speedValue(min, 1)} et ${u.speed(max, 1)}`,
     noAllowedSpeed: (max: number, min: number) => `❌ Aucune vitesse autorisée : la limite ${n(max)} est inférieure au minimum de l’appareil ${n(min)}`,
     rampAborted: '❌ Ajustement par paliers interrompu (erreur d’écriture)',
+    speedRefused: '❌ Le tapis a refusé la vitesse. Ajustement par paliers interrompu.',
   },
   console: {
     title: 'Console d’expérimentation (Control Point 0x2AD9)',

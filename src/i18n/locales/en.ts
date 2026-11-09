@@ -47,6 +47,8 @@ export const en = {
     title: 'Connection lost. The belt may still be running!',
     text: 'The app can no longer stop it. Stop it on the treadmill: press the stop button or pull the safety key.',
     ack: 'Understood',
+    stopTitle: 'The treadmill did not take the stop. The belt may still be running!',
+    stopText: 'Press Stop again, or stop it on the treadmill: press the stop button or pull the safety key.',
   },
   unsupported: {
     demoHint: 'Without a treadmill or without Web Bluetooth you can try the **demo**.',
@@ -524,6 +526,7 @@ export const en = {
     maxStepRange: (min: number, max: number) => `❌ The maximum change must be between ${u.speedValue(min, 1)} and ${u.speed(max, 1)}`,
     noAllowedSpeed: (max: number, min: number) => `❌ No allowed speed: limit ${n(max)} is below the device minimum ${n(min)}`,
     rampAborted: '❌ Stepwise speed change aborted (write error)',
+    speedRefused: '❌ The treadmill refused the speed. Stepwise speed change aborted.',
   },
   console: {
     title: 'Experiment console (Control Point 0x2AD9)',
