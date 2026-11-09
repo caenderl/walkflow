@@ -26,8 +26,10 @@ src/
   ui/                 everything that draws or listens
     components/         reusable parts: dialogs, the "⋯" menu, the speed chart, element builders (el, button, iconButton)
     settings/           settings dialog, header menus
-    live/               the training view's live parts: session state, speed and limits (owns the governor), incline card,
-                        stage (chosen workout or route, and starting it), experiment console
+    live/               the training view's live parts: session state, the belt commands (start, pause, stop), what the treadmill
+                        reports (live-data), the figures and banner (readout), connecting and disconnecting, the buttons and
+                        keys, speed and limits (owns the governor), incline card, stage (chosen workout or route, and
+                        starting it), experiment console
     routes/ workouts/ history/ community/ settings/   one folder per feature view (history also has the export buttons)
     background.ts       wake lock, tab in the background, leaving the page
     desktop.ts pwa.ts theme.ts views.ts i18n-dom.ts   integration of the page
@@ -89,11 +91,11 @@ tests/                tests about the project itself
 
 ## Known debt (small, on purpose not done in one go)
 
-- `src/main.ts` (about 570 lines) was a thousand-line script; info, export buttons, background handling, the incline card,
-  the speed controls, the session state, the stage and the experiment console now live in their own modules. What is left
-  is the treadmill session itself: connecting and disconnecting, the stop/pause/start commands, the live data handler, the
-  banner and button drawing, and the keyboard shortcuts. They are the most safety-relevant part, so they move only with a
-  test on the real treadmill in between.
+- `src/main.ts` (about 255 lines) only creates the parts and wires them together. The treadmill session is split by job:
+  `ui/live/belt.ts` (start, pause, stop), `live-data.ts` (what the treadmill reports), `readout.ts` (figures, banner, buttons,
+  chart), `connection.ts` (connect, disconnect, header status) and `controls.ts` (buttons and keys). `belt.ts` and
+  `live-data.ts` have no DOM and are tested for the order of their steps (a stop ends the program, forgets the ramp and goes
+  out urgently); the rest is display and was checked by hand in the demo; the real treadmill still has to confirm the split (HARDWARE-TESTS.md).
 - `ui/routes/route-ui.ts` (about 355 lines) still holds the library list, the card in the training view and the map switch;
   `ui/workouts/workout-ui.ts` (about 270 lines) the library and the editor. The week plan, the step row, the elevation
   profile, the import, the library upkeep, the route details and the route editor are their own modules. What is left in
