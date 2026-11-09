@@ -5,28 +5,40 @@ Always: safety key inserted, low speed, start while standing on the side rails.
 
 Log lines below are quoted in English. Either switch the app to English (language picker at the top right) to compare them word for word, or compare the hex bytes, which are the same in every language.
 
+## Results so far: Sportstech sPad 500, desktop app on macOS, 2026-11-09 (firmware not read)
+
+A walking pad: it has **no safety key** (nothing to hold on to), so all “pull the safety key” checks do not apply to it. Still open and to be done in a second session: everything under “Not yet tested” that is not ticked, History, Workouts (distance steps), Routes, Settings and training view, Units and the rest of the Desktop app list.
+
+- Connecting, Request Control, start, stop, the ramp in 0.5 km/h steps and Stop during a ramp work as expected.
+- **Device stop** (button on the treadmill) gives `ℹ Status 02 01` (stopped) after about 4–7 s, not `02 02`. Start on the device and a speed change on the device are noticed by the app through the live values.
+- **No `05` (target speed) and no `03` (safety key) status ever came.** The treadmill changes its speed in 0.1 km/h steps on the device without telling us in the Machine Status. Whether `ff` (control lost) ever comes is not recorded.
+- **Countdown after start:** about 3 s (the program waits 4.5 s, so it sets the first speed after the belt has started).
+- **Incline:** `Set Inclination` is accepted, the belt follows after about 5 s. The treadmill’s display shows **levels, not percent**: the app sent 1.0 %, 3.0 % and 0 % (`03 0a 00`, `03 1e 00`, `03 00 00`) and the display showed level 1, 3 and 0. The range “0 to 5 %” in the log is levels 0 to 5. The real slope of a level is unknown.
+- **Starting speed (finding):** the treadmill remembers the last `Set Speed`, also one set before the start, and runs up to it by itself after `Start` (0 to 2 km/h slowly in the test). The app sends no speed with the start, so the ramp in steps does not apply to this first acceleration; the limit and Stop still do. To be decided and fixed with tests first, not yet changed.
+- Texts that ask for the safety key are wrong for this device; the “%” label for the incline is wrong for level-based treadmills.
+
 ## Changed compared with the prototype, please double-check
 
-- [ ] **Connecting.** Same sequence as the prototype, except that the notification listener is now registered *before* `startNotifications`. Expected in the log: `Device: …`, `Manufacturer: …`, `Speed range: …`, `→ 00`, `← Request Control: OK`, then live values come in.
-- [ ] **Ramp.** At 2 km/h press preset 5. Expected: `→ 02 fa 00` (2.5), `02 2c 01` (3.0), `02 5e 01` (3.5), `02 90 01` (4.0), `02 c2 01` (4.5), `02 f4 01` (5.0), each at least 1.5 s apart and with `← Set Speed: OK`. Suspicious would be: missing responses, `failed`, or the belt jerking at every step.
-- [ ] **Stop takes priority.** Press Space during a ramp. Expected: `→ 08 01` comes right after the write in progress, possibly with `dropped: 02 …`. The belt stops.
-- [ ] **Lowering the limit while the belt runs.** At 5 km/h set the limit to 4. Expected: `Limit lowered, regulating to 4.0 km/h` and `→ 02 90 01`.
+- [x] **Connecting.** Same sequence as the prototype, except that the notification listener is now registered *before* `startNotifications`. Expected in the log: `Device: …`, `Manufacturer: …`, `Speed range: …`, `→ 00`, `← Request Control: OK`, then live values come in.
+- [x] **Ramp.** At 2 km/h press preset 5. Expected: `→ 02 fa 00` (2.5), `02 2c 01` (3.0), `02 5e 01` (3.5), `02 90 01` (4.0), `02 c2 01` (4.5), `02 f4 01` (5.0), each at least 1.5 s apart and with `← Set Speed: OK`. Suspicious would be: missing responses, `failed`, or the belt jerking at every step.
+- [x] **Stop takes priority.** Press Space during a ramp. Expected: `→ 08 01` comes right after the write in progress, possibly with `dropped: 02 …`. The belt stops.
+- [ ] **Lowering the limit while the belt runs.** (The settings are locked while the belt runs, so this cannot happen any more; the item is obsolete.) At 5 km/h set the limit to 4. Expected: `Limit lowered, regulating to 4.0 km/h` and `→ 02 90 01`.
 
 ## Machine Status (controls program abort)
 
-- [ ] Stop button on the device/remote while the belt is running. Which `ℹ Status` line comes? According to FTMS `02 01` (stopped) or `02 02` (paused).
-- [ ] Pull the safety key. According to FTMS `03`.
-- [ ] Change the speed on the remote. According to FTMS `05 <LSB> <MSB>`.
+- [x] Stop button on the device/remote while the belt is running. Which `ℹ Status` line comes? According to FTMS `02 01` (stopped) or `02 02` (paused). *sPad 500: `02 01`, after about 4–7 s.*
+- [ ] Pull the safety key. According to FTMS `03`. *sPad 500: no safety key, not applicable. Still open for treadmills with one.*
+- [x] Change the speed on the remote. According to FTMS `05 <LSB> <MSB>`. *sPad 500: no `05` comes.*
 - [ ] Does `ff` (control lost) ever come?
 
 If the treadmill sends different status bytes or none at all, please note the hex values. They decide whether a program ends immediately; otherwise only the standstill detection after 8 s kicks in.
 
 ## Not yet tested
 
-- [ ] **Incline (asks the treadmill).** After connecting, the log has `Features: …`, `Controllable: …` and, if readable, `Inclination range: …`. Note all three lines. If `Controllable` has no `Inclination`, the card “Incline”, the incline figure and the incline fields of the workout editor must not be shown, and the log says `This treadmill does not report incline control`. If it has `Inclination`, the card appears: move the slider; `← Set Inclination: OK` or `not supported`? Does the treadmill’s incline really change, and does the figure in the app follow?
+- [x] **Incline (asks the treadmill).** *sPad 500: works, shows levels (see results above).* After connecting, the log has `Features: …`, `Controllable: …` and, if readable, `Inclination range: …`. Note all three lines. If `Controllable` has no `Inclination`, the card “Incline”, the incline figure and the incline fields of the workout editor must not be shown, and the log says `This treadmill does not report incline control`. If it has `Inclination`, the card appears: move the slider; `← Set Inclination: OK` or `not supported`? Does the treadmill’s incline really change, and does the figure in the app follow?
 - [ ] **Incline levels.** Settings → General → Incline levels: set the slider to the number of levels of the treadmill (for the sPad 500: 5). The card then shows one numbered button per level instead of the slider; the levels are spread evenly from the lowest to the highest incline in `Inclination range` (both ends included), the button’s tooltip says the percent. Press each: `→ 03 …` in the log with that value (percent × 10, little endian), and the treadmill goes to that level? Which percent does each level of the treadmill really have? (That decides whether a percent per level has to become configurable.) With the slider at 0 the card shows the slider again.
 - [ ] **Heart rate.** Does the log say `Heart rate service subscribed`? Do values come in?
-- [ ] **Countdown.** How long does the treadmill count down after start? The program waits 4.5 s before setting the first speed.
+- [x] **Countdown.** *sPad 500: about 3 s.* How long does the treadmill count down after start? The program waits 4.5 s before setting the first speed.
 - [ ] **Program transitions.** Program `0.5 2` / `0.5 3` / `0.5 2`. Changes at the right time? Cancel a program with the stop button on the device: does it end (status under the speed or `Belt stopped, program ended`)?
 - [ ] **Reconnecting.** Disconnect, connect again: `← Request Control: OK` and live values again?
 - [ ] **Connection loss** (the dangerous assumption). At 2 km/h, standing on the side rails, turn off Bluetooth on the computer. Does the belt keep running, does it stop, after how long? Record the result here and in the project description. The app shows the warning in any case.
