@@ -96,7 +96,7 @@ const community = setupCommunity({ libraryChanged: () => { void workouts.reload(
 const standstill = new StandstillDetector();
 
 // Start, pause and stop: the commands and what has to happen around them
-const belt = setupBelt({ session, banner, governor, standstill, now, abortRun: reason => runner.abort(reason) });
+const belt = setupBelt({ session, banner, governor, standstill, now, abortRun: reason => runner.abort(reason), log });
 
 const runner = new ProgramRunner({
   start: belt.start,

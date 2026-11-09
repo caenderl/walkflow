@@ -16,6 +16,7 @@ export interface BeltHost {
   now(): number;
   /** A running workout or route ends, with the reason shown as its end */
   abortRun(reason: Text): void;
+  log(msg: string): void;
 }
 
 export function setupBelt(host: BeltHost) {
@@ -60,6 +61,8 @@ export function setupBelt(host: BeltHost) {
     standstill.disarm();
     const a = await c.send(cmdRequestControl());
     if (a) session.controlLost = false;
+    // A treadmill runs up to the speed it last had after Start, so the ramp would be skipped: take that speed away first
+    if (!(await governor.startSpeed())) host.log(t.start.startSpeedFailed);
     const b = await c.send(cmdStart());
     if (b) { session.beltStarted = true; banner.startRequested(host.now()); }
     return a && b;

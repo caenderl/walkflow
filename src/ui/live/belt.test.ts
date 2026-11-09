@@ -7,7 +7,7 @@ import { setupBelt } from './belt';
 import { Session } from './session';
 
 /** Everything the belt touches, in the order it happens */
-function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean); client?: boolean } = {}) {
+function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean); client?: boolean; startSpeedOk?: boolean } = {}) {
   const calls: string[] = [];
   const session = new Session();
   if (opts.client !== false) {
@@ -24,11 +24,15 @@ function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean); client?: bo
     stopRequested: vi.fn(() => calls.push('banner stop')),
     startRequested: vi.fn(() => calls.push('banner start')),
   } as unknown as BeltBanner;
-  const governor = { reset: vi.fn(() => calls.push('governor reset')) } as unknown as SpeedGovernor;
+  const governor = {
+    reset: vi.fn(() => calls.push('governor reset')),
+    startSpeed: vi.fn(async () => { calls.push('governor startSpeed'); return opts.startSpeedOk ?? true; }),
+  } as unknown as SpeedGovernor;
   const standstill = { disarm: vi.fn(() => calls.push('standstill disarm')) } as unknown as StandstillDetector;
   const abortRun = vi.fn(() => calls.push('abort run'));
-  const belt = setupBelt({ session, banner, governor, standstill, now: () => 1234, abortRun });
-  return { belt, session, calls, banner, abortRun };
+  const log = vi.fn((m: string) => calls.push(`log ${m}`));
+  const belt = setupBelt({ session, banner, governor, standstill, now: () => 1234, abortRun, log });
+  return { belt, session, calls, banner, abortRun, governor, log };
 }
 
 describe('stop', () => {
@@ -87,11 +91,25 @@ describe('pause', () => {
 });
 
 describe('start', () => {
-  it('takes control and starts, in this order, and tells the banner', async () => {
+  it('takes control, sets the lowest speed and only then starts, and tells the banner', async () => {
     const r = rig();
     expect(await r.belt.start()).toBe(true);
-    expect(r.calls).toEqual(['governor reset', 'standstill disarm', 'send 00', 'send 07', 'banner start']);
+    expect(r.calls).toEqual(['governor reset', 'standstill disarm', 'send 00', 'governor startSpeed', 'send 07', 'banner start']);
     expect(r.session.beltStarted).toBe(true);
+  });
+
+  it('if the treadmill does not take the starting speed, it still starts, but says so in the log', async () => {
+    const r = rig({ startSpeedOk: false });
+    expect(await r.belt.start()).toBe(true);
+    expect(r.calls).toContain('send 07');
+    expect(r.log).toHaveBeenCalledTimes(1);
+    expect(r.session.beltStarted).toBe(true);
+  });
+
+  it('does not log anything when the starting speed was set', async () => {
+    const r = rig();
+    await r.belt.start();
+    expect(r.log).not.toHaveBeenCalled();
   });
 
   it('does not end a program: the program is what starts the belt', async () => {
@@ -113,6 +131,7 @@ describe('start', () => {
     expect(await r.belt.start()).toBe(false);
     expect(r.session.controlLost).toBe(true);
     expect(r.calls).toContain('send 07');
+    expect(r.calls).toContain('governor startSpeed');
   });
 
   it('does not mark the belt as started or show the banner if Start failed', async () => {

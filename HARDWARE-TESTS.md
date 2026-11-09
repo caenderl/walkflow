@@ -14,7 +14,7 @@ A walking pad: it has **no safety key** (nothing to hold on to), so all “pull 
 - **No `05` (target speed) and no `03` (safety key) status ever came.** The treadmill changes its speed in 0.1 km/h steps on the device without telling us in the Machine Status. Whether `ff` (control lost) ever comes is not recorded.
 - **Countdown after start:** about 3 s (the program waits 4.5 s, so it sets the first speed after the belt has started).
 - **Incline:** `Set Inclination` is accepted, the belt follows after about 5 s. The treadmill’s display shows **levels, not percent**: the app sent 1.0 %, 3.0 % and 0 % (`03 0a 00`, `03 1e 00`, `03 00 00`) and the display showed level 1, 3 and 0. The range “0 to 5 %” in the log is levels 0 to 5. The real slope of a level is unknown.
-- **Starting speed (finding):** the treadmill remembers the last `Set Speed`, also one set before the start, and runs up to it by itself after `Start` (0 to 2 km/h slowly in the test). The app sends no speed with the start, so the ramp in steps does not apply to this first acceleration; the limit and Stop still do. To be decided and fixed with tests first, not yet changed.
+- **Starting speed (finding):** the treadmill remembers the last `Set Speed`, also one set before the start, and runs up to it by itself after `Start` (0 to 2 km/h slowly in the test). Fixed in the app: after `Request Control` it now sends `Set Speed` with the lowest speed of the device (`→ 02 64 00` for 1.0 km/h) and only then `Start`. To be confirmed on the treadmill, see the first list below.
 - Texts that ask for the safety key are wrong for this device; the “%” label for the incline is wrong for level-based treadmills.
 
 ## Changed compared with the prototype, please double-check

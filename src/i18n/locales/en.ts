@@ -546,6 +546,7 @@ export const en = {
     sideRails: 'Are you standing on the side rails and not on the belt?',
     safetyKey: 'Is the safety key inserted and attached to your clothing?',
     confirm: 'Yes, start',
+    startSpeedFailed: '⚠ The treadmill did not take the starting speed. The belt may run up to the speed it remembers. Stop works as always.',
   },
   stop: {
     stopped: 'Stopped',

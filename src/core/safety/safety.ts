@@ -225,6 +225,25 @@ export class SpeedGovernor {
     return clamped;
   }
 
+  /**
+   * The speed the belt starts at: the lowest the device allows, set before Start. A treadmill runs up to the speed it last
+   * had by itself after Start (a sPad 500 does), which would skip the ramp; this takes the old value away. It ends a ramp that
+   * was running; the next request ramps on from here. False if the device did not take it or the limit leaves no speed.
+   */
+  async startSpeed(): Promise<boolean> {
+    const kmh = clampSpeed(this.range.min, this.range);
+    if (kmh === null) {
+      this.deps.log?.(t.limit.noAllowedSpeed(this.range.max, this.range.min));
+      return false;
+    }
+    this.cancel();
+    const mine = { kmh, at: this.deps.now() };
+    this.last = mine;
+    const ok = await this.deps.send(kmh).catch(() => false);
+    if (!ok && this.last === mine) this.last = null;
+    return ok;
+  }
+
   /** End the ramp immediately (stop, pause, disconnect). */
   cancel() {
     this.gen++;

@@ -548,6 +548,7 @@ export const fr: Messages = {
     sideRails: 'Êtes-vous debout sur les repose-pieds latéraux et non sur la bande ?',
     safetyKey: 'La clé de sécurité est-elle insérée et attachée à vos vêtements ?',
     confirm: 'Oui, démarrer',
+    startSpeedFailed: '⚠ Le tapis n’a pas accepté la vitesse de départ. La bande peut monter jusqu’à la vitesse qu’il a mémorisée. L’arrêt fonctionne comme toujours.',
   },
   stop: {
     stopped: 'Arrêté',

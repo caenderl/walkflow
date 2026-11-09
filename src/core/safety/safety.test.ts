@@ -367,6 +367,62 @@ describe('SpeedGovernor', () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(sent.map(s => s[1])).toEqual([3, 4]);
   });
+
+  describe('startSpeed: the speed the belt starts at', () => {
+    it('sets the lowest speed the device allows, once, and says it worked', async () => {
+      const { gov, sent } = make();
+      expect(await gov.startSpeed()).toBe(true);
+      expect(sent).toEqual([[0, 1]]);
+      expect(gov.lastCommand).toEqual({ kmh: 1, at: 0 });
+    });
+
+    it('uses the device minimum, not a fixed value', async () => {
+      const { gov, sent } = make();
+      gov.setRange({ min: 0.5, max: 6 });
+      await gov.startSpeed();
+      expect(sent.map(s => s[1])).toEqual([0.5]);
+    });
+
+    it('ends a ramp that was running and forgets its target', async () => {
+      const { gov, sent } = make();
+      gov.noteMeasured(2);
+      gov.request(5);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(gov.target).toBe(5);
+      await gov.startSpeed();
+      expect(gov.target).toBeNull();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(sent.map(s => s[1])).toEqual([2.5, 1]);
+    });
+
+    it('lets the next ramp start from there, no sooner than 1.5 s later', async () => {
+      const { gov, sent } = make();
+      await gov.startSpeed();
+      gov.request(2);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(sent).toEqual([[0, 1], [1500, 1.5], [3000, 2]]);
+    });
+
+    it('says no, and remembers nothing, if the device does not take it', async () => {
+      const { gov } = make({ fail: () => true });
+      expect(await gov.startSpeed()).toBe(false);
+      expect(gov.lastCommand).toBeNull();
+    });
+
+    it('says no if sending throws', async () => {
+      const gov = new SpeedGovernor({ send: async () => { throw new Error('x'); }, now: () => 0 });
+      expect(await gov.startSpeed()).toBe(false);
+      expect(gov.lastCommand).toBeNull();
+    });
+
+    it('sends nothing if the limit is below the lowest speed of the device', async () => {
+      const { gov, sent, logs } = make();
+      gov.setRange({ min: 1, max: 0.8 });
+      expect(await gov.startSpeed()).toBe(false);
+      expect(sent).toEqual([]);
+      expect(logs).toHaveLength(1);
+    });
+  });
 });
 
 describe('experiment console', () => {

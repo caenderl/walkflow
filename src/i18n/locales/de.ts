@@ -545,6 +545,7 @@ export const de: Messages = {
     sideRails: 'Stehst du auf den Seitenflächen und nicht auf dem Band?',
     safetyKey: 'Ist der Sicherheitsschlüssel eingesteckt und an deiner Kleidung befestigt?',
     confirm: 'Ja, starten',
+    startSpeedFailed: '⚠ Das Laufband hat die Startgeschwindigkeit nicht angenommen. Das Band kann auf die Geschwindigkeit hochlaufen, die es sich gemerkt hat. Stopp wirkt wie immer.',
   },
   stop: {
     stopped: 'Gestoppt',
