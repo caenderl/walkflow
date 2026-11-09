@@ -1,0 +1,46 @@
+name: Bug report
+description: Something does not work as it should
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If the problem is that **the belt did not stop**, or started faster than asked, please do not post it here: use
+        [Report a vulnerability](https://github.com/caenderl/walkflow/security/advisories/new) (private). Thank you.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: treadmill
+    attributes:
+      label: Treadmill
+      description: Make and model, or "demo" if it happens without a treadmill
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which app?
+      options:
+        - Web app
+        - Desktop app (macOS)
+        - Desktop app (Windows)
+        - Desktop app (Linux)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: At the bottom of the page, e.g. "Walkflow 0.1.0"
+  - type: input
+    id: system
+    attributes:
+      label: Browser and system
+      description: e.g. Chrome 140 on Android 15
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: The Log section of the training view, if the problem has to do with the connection. It contains the name of the treadmill, nothing else about you.
+      render: text
