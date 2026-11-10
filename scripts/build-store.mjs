@@ -5,6 +5,7 @@
 //   node scripts/build-store.mjs --root <path> --check --files-only                        checks the files only (a pull request does not write the index)
 // The logic is src/core/store/route-index.ts; it is bundled on the fly because it is TypeScript with imports Node cannot resolve.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
 const args = process.argv.slice(2);
@@ -27,7 +28,7 @@ const bundle = await build({
       "export { analyzeRoute } from './src/core/routes/routes.ts';",
       "export { placeWaypoints, WAYPOINT_MAX_OFFSET } from './src/core/routes/route-waypoints.ts';",
     ].join('\n'),
-    resolveDir: process.cwd(),
+    resolveDir: fileURLToPath(new URL('..', import.meta.url)),
     loader: 'ts',
   },
   bundle: true, format: 'esm', platform: 'node', write: false, logLevel: 'warning',

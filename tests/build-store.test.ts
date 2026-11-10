@@ -16,8 +16,9 @@ let root = '';
 beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'route-store-')); cpSync(FIXTURE, root, { recursive: true }); });
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
+// Run from the store's own folder, as the CI of the route-store repository does: the script finds the app's code by itself
 const run = (...args: string[]) => {
-  const r = spawnSync('node', [SCRIPT, '--root', root, ...args], { encoding: 'utf8' });
+  const r = spawnSync('node', [SCRIPT, '--root', root, ...args], { encoding: 'utf8', cwd: root });
   return { code: r.status, out: `${r.stdout}${r.stderr}` };
 };
 const edit = (change: (pkg: Record<string, unknown>) => void) => {
