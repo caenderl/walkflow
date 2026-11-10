@@ -3,6 +3,8 @@ name: Release
 # Builds the desktop app for a release tag and attaches it to a draft release, which is published by hand.
 # Normally called by release-please.yml after a release pull request was merged (the draft already exists).
 # Still works by hand: bump the version in package.json, commit, push the tag "v<version>".
+# macOS is built here by default. If GitHub has no macOS runner free, set the repository variable MAC_BUILD to "local":
+# the job is left out, and `scripts/release-mac.sh <tag>` builds it on a Mac and adds it to the draft (README, "Releasing").
 on:
   push:
     tags: ['v*']
@@ -20,11 +22,27 @@ env:
   TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      os: ${{ steps.matrix.outputs.os }}
+    steps:
+      - id: matrix
+        env:
+          MAC_BUILD: ${{ vars.MAC_BUILD }}
+        run: |
+          if [ "$MAC_BUILD" = local ]; then
+            echo 'os=["windows-latest","ubuntu-latest"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'os=["macos-latest","windows-latest","ubuntu-latest"]' >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: plan
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: ${{ fromJSON(needs.plan.outputs.os) }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -61,7 +79,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: build
+    needs: [plan, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write

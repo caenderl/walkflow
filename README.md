@@ -179,6 +179,11 @@ Releasing ([release-please](https://github.com/googleapis/release-please), confi
 2. Merging it creates the tag `vx.y.z` and a **draft release** with the changelog. The desktop app for macOS (arm64, x64), Windows and Linux is built and attached with checksums.
 3. Check the changed areas on the treadmill (`HARDWARE-TESTS.md`), then publish the draft by hand. Only published releases reach the update notice of the desktop app.
 
+If GitHub has no macOS runner free (the macOS job is cancelled with “job was not acquired by Runner”), you can rerun the failed job, or build macOS on your own Mac:
+
+1. Set the repository variable `MAC_BUILD` to `local` (*Settings → Secrets and variables → Actions → Variables*). The workflow then builds only Windows and Linux. Delete the variable to build macOS on GitHub again (the default).
+2. When the draft exists: `git checkout v<version>` and run `scripts/release-mac.sh v<version>` on the Mac. It runs the checks, builds both macOS apps (arm64, x64), adds them to the draft and updates `SHA256SUMS.txt`. It needs `gh` (logged in with write access) and a clean checkout of the tag.
+
 One-time setup: *Settings → Actions → General → Workflow permissions →* “Allow GitHub Actions to create and approve pull requests”. Without it, release-please cannot open its pull request.
 
 The first `feat` or `fix` after setting this up leads to version 0.1.0. A release by hand still works: set the version in `package.json` and `.release-please-manifest.json`, commit, push the tag `v<version>`.
