@@ -15,9 +15,12 @@ import { devOrigin } from '../src/platform/dev-url';
 import { mapOrigins, resolveMapStyles } from '../src/core/routes/map-config';
 import { mimeFor } from '../src/platform/mime';
 import { OPEN_MAX_BYTES, packagePaths } from '../src/platform/open-files';
-import { isNewerVersion } from '../src/platform/version';
+import { autoUpdater } from 'electron-updater';
+import { createUpdateController, selfUpdateSupported, type UpdaterPort } from '../src/platform/update-controller';
 
 declare const __GITHUB_REPO__: string;
+/** Whether this build is signed and notarized for macOS (the signing secrets are set): only then can the app replace itself there */
+declare const __MAC_SIGNED__: boolean;
 /** The raw build settings WALKFLOW_MAP_STYLE and WALKFLOW_MAP_STYLE_DARK; resolved here the same way as for the renderer (vite.config.ts) */
 declare const __MAP_STYLE_RAW__: string;
 declare const __MAP_STYLE_DARK_RAW__: string;
@@ -235,8 +238,12 @@ ipcMain.on('bt:pairing-response', (e, r: unknown) => {
   cb?.({ confirmed: o.confirmed === true, ...(typeof o.pin === 'string' ? { pin: o.pin } : {}) });
 });
 
+/** Whether the page says it is connected to a treadmill: an update never restarts the app then (platform/update-controller.ts) */
+let treadmillConnected = false;
+
 ipcMain.on('app:connection', (e, connected: unknown) => {
   if (!fromWindow(e)) return;
+  treadmillConnected = connected === true;
   if (connected === true) {
     if (powerBlockerId === null) powerBlockerId = powerSaveBlocker.start('prevent-display-sleep');
     registerStopShortcut();
@@ -260,8 +267,10 @@ ipcMain.on('app:theme', (e, theme: unknown) => {
   win?.setBackgroundColor(background());
 });
 
-ipcMain.handle('app:check-update', async e => {
-  if (!fromWindow(e) || !__GITHUB_REPO__) return null;
+// ---------- Updates (platform/update-controller.ts: two yeses, never while connected) ----------
+/** The newest published release, for builds that cannot install an update themselves (macOS without a signature) */
+async function newestRelease(): Promise<{ version: string; url: string } | null> {
+  if (!__GITHUB_REPO__) return null;
   try {
     // Separate session: the request blocker of the default session is meant for the renderer only
     const res = await session.fromPartition('walkflow-updates').fetch(`https://api.github.com/repos/${__GITHUB_REPO__}/releases/latest`, {
@@ -271,10 +280,52 @@ ipcMain.handle('app:check-update', async e => {
     const j = (await res.json()) as { tag_name?: unknown; html_url?: unknown };
     const tag = typeof j.tag_name === 'string' ? j.tag_name : '';
     const url = typeof j.html_url === 'string' && j.html_url.startsWith(`${releasesUrl()}/`) ? j.html_url : releasesUrl();
-    return isNewerVersion(tag, app.getVersion()) ? { version: tag.replace(/^v/, ''), url } : null;
+    return { version: tag, url };
   } catch {
     return null;
   }
+}
+
+// An update is installed only by an installed app; "npm run electron:dev" and an unpacked app only point to the release page
+const selfUpdate = app.isPackaged && !!__GITHUB_REPO__ && selfUpdateSupported({ platform: process.platform, appImage: !!process.env.APPIMAGE, macSigned: __MAC_SIGNED__ });
+let updater: UpdaterPort | null = null;
+if (selfUpdate) {
+  // Nothing is downloaded or installed on its own: the person decides at both steps
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.allowPrerelease = false;
+  autoUpdater.allowDowngrade = false;
+  updater = {
+    onAvailable: cb => { autoUpdater.on('update-available', info => cb(String(info.version))); },
+    onProgress: cb => { autoUpdater.on('download-progress', p => cb(p.percent)); },
+    onDownloaded: cb => { autoUpdater.on('update-downloaded', info => cb(String(info.version))); },
+    onError: cb => { autoUpdater.on('error', e => cb(e)); },
+    check: () => autoUpdater.checkForUpdates(),
+    download: () => autoUpdater.downloadUpdate(),
+    // Quietly (no installer window), and the app starts again afterwards
+    quitAndInstall: () => autoUpdater.quitAndInstall(true, true),
+  };
+}
+const updates = createUpdateController({
+  updater,
+  checkRelease: newestRelease,
+  releaseUrl: releasesUrl(),
+  currentVersion: app.getVersion(),
+  isConnected: () => treadmillConnected,
+  emit: s => { if (win && !win.isDestroyed()) win.webContents.send('update:state', s); },
+});
+
+ipcMain.handle('update:check', async e => {
+  if (!fromWindow(e) || !__GITHUB_REPO__) return null;
+  await updates.check();
+  return updates.state();
+});
+ipcMain.handle('update:download', async e => {
+  if (!fromWindow(e)) return;
+  await updates.download();
+});
+ipcMain.on('update:install', e => {
+  if (fromWindow(e)) updates.install();
 });
 
 ipcMain.on('app:dev-mode', (e, on: unknown) => {

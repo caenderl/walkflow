@@ -1,12 +1,14 @@
 // Integration with the Electron app (only if window.walkflowDesktop exists, i.e. provided by the preload).
 
 import { type BtDevice, chooserList } from '../platform/bt-devices';
+import type { UpdateState } from '../platform/update-controller';
 import { choose } from './components/dialogs';
 import { lang, onLanguageChange, t } from '../i18n/i18n';
 import { bindText } from './i18n-dom';
 import { currentTheme, onThemeChange } from './theme';
 import { $, $button, $input } from './ui';
 import { store } from './store';
+import { updateView } from './update-view';
 
 export interface OpenedFile { name: string; text?: string; error?: 'unreadable' | 'tooLarge' }
 
@@ -23,7 +25,13 @@ export interface WalkflowDesktop {
   setDevMode(on: boolean): void;
   onBluetoothPairing(cb: (d: { kind: string; pin: string | null }) => void): void;
   respondPairing(r: { confirmed: boolean; pin?: string }): void;
-  checkForUpdate(): Promise<{ version: string; url: string } | null>;
+  /** Looks for a newer version; the state (what to offer) comes back and also as events */
+  checkForUpdate(): Promise<UpdateState | null>;
+  onUpdateState(cb: (s: UpdateState) => void): void;
+  /** The person said yes to "download and install" */
+  downloadUpdate(): Promise<void>;
+  /** The person said yes to the restart; the main process refuses it while connected to the treadmill */
+  installUpdate(): void;
   openExternal(url: string): Promise<void>;
   /** Language for menus and dialogs of the main process */
   setLanguage(lang: string): void;
@@ -40,6 +48,8 @@ export const desktop: WalkflowDesktop | undefined = window.walkflowDesktop;
 const LAST_DEVICE_KEY = 'walkflow.lastBtDevice';
 const AUTO_SELECT_KEY = 'walkflow.autoSelectLastDevice';
 const UPDATE_CHECK_KEY = 'walkflow.updateCheck';
+/** How often a running app looks for a newer version again */
+const UPDATE_CHECK_MS = 6 * 60 * 60 * 1000;
 
 export function setupDesktop(opts: { onGlobalStop: () => void; onOpenPackage: (f: OpenedFile) => void; log: (m: string) => void }) {
   const d = desktop;
@@ -63,22 +73,32 @@ export function setupDesktop(opts: { onGlobalStop: () => void; onOpenPackage: (f
   setupChooser(d, opts.log);
   d.onBluetoothPairing(p => void pairing(d, p));
 
-  // Update notice (can be turned off in the info section)
+  // Update notice (can be turned off in the info section). The app downloads and installs only after the person said yes, and
+  // restarts only after a second yes (platform/update-controller.ts).
   $('infoDesktopPrivacy').hidden = false;
   const cb = $input('updateCheck');
   cb.checked = store.get(UPDATE_CHECK_KEY) !== 'off';
   cb.onchange = () => store.set(UPDATE_CHECK_KEY, cb.checked ? 'on' : 'off');
-  if (cb.checked) {
-    void d.checkForUpdate().then(u => {
-      if (!u) return;
-      bindText($('updateText'), () => t.desktop.updateAvailable(u.version));
-      const btn = $button('updateAction');
-      bindText(btn, () => t.desktop.openRelease);
-      btn.onclick = () => void d.openExternal(u.url);
-      $('updateBanner').hidden = false;
-      opts.log(t.desktop.updateLog(u.version));
-    });
-  }
+  const btn = $button('updateAction');
+  let announced = '';
+  const showUpdate = (s: UpdateState | null) => {
+    if (!s) return;
+    const v = updateView(s);
+    bindText($('updateText'), v.text);
+    btn.hidden = v.action === null;
+    if (v.action) bindText(btn, v.label);
+    btn.onclick = () => {
+      if (v.action === 'download') void d.downloadUpdate();
+      else if (v.action === 'install') d.installUpdate();
+      else if (v.action === 'open' && 'url' in s) void d.openExternal(s.url);
+    };
+    $('updateBanner').hidden = false;
+    if (s.stage === 'available' && announced !== s.version) { announced = s.version; opts.log(t.desktop.updateLog(s.version)); }
+  };
+  d.onUpdateState(showUpdate);
+  const check = () => { if (cb.checked) void d.checkForUpdate().then(showUpdate); };
+  check();
+  setInterval(check, UPDATE_CHECK_MS);
 }
 
 /** Own device chooser: Electron has none built in. */

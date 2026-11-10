@@ -65,7 +65,7 @@ Downloads are on the **Releases** page. The app is not signed, so the system war
 - **Windows:** at “Windows protected your PC”, click *More info → Run anyway*.
 - **Linux:** `chmod +x Walkflow-*.AppImage` and start it. Web Bluetooth on Linux is untested.
 
-On startup the desktop app asks GitHub whether there is a newer version and shows a notice if so. It does not update itself. The check can be turned off in the info section. Besides that, the app contacts GitHub only when you open the route store (see `docs/ROUTE-STORE.md`).
+On startup, and every few hours after that, the desktop app asks GitHub whether there is a newer version and shows a notice if so. On Windows and for the Linux AppImage the notice offers **Download and install**; once the update is installed it asks for a **restart**. Nothing is downloaded before the first yes and nothing restarts without the second, and never while the app is connected to a treadmill. Usually only the changed parts of the installer are downloaded. The macOS app is not signed yet, and macOS does not let an unsigned app replace itself: there the notice opens the release page. With a signed and notarized build (see the note at the top of `electron-builder.config.cjs`) it updates itself like the others. The check can be turned off in the info section. Besides that, the app contacts GitHub only when you open the route store (see `docs/ROUTE-STORE.md`).
 
 In addition to the web version: its own device chooser with optional automatic selection of the last connected device, a global stop shortcut **Cmd/Ctrl + Shift + Space** (only while connected, also when the window is in the background), and display sleep is prevented while connected. Menus, dialogs and the macOS Bluetooth prompt follow the app language.
 

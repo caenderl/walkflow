@@ -16,7 +16,11 @@ contextBridge.exposeInMainWorld('walkflowDesktop', {
     ipcRenderer.on('bt:pairing', (_e, d: { kind: string; pin: string | null }) => cb(d));
   },
   respondPairing: (r: { confirmed: boolean; pin?: string }) => ipcRenderer.send('bt:pairing-response', r),
-  checkForUpdate: (): Promise<{ version: string; url: string } | null> => ipcRenderer.invoke('app:check-update'),
+  // Updates (platform/update-controller.ts): the state arrives as events; the person's two yeses are downloadUpdate and installUpdate
+  checkForUpdate: (): Promise<unknown> => ipcRenderer.invoke('update:check'),
+  onUpdateState: (cb: (s: unknown) => void) => { ipcRenderer.on('update:state', (_e, s: unknown) => cb(s)); },
+  downloadUpdate: (): Promise<void> => ipcRenderer.invoke('update:download'),
+  installUpdate: () => ipcRenderer.send('update:install'),
   openExternal: (url: string) => ipcRenderer.invoke('app:open-external', String(url)),
   onOpenPackage: (cb: (f: { name: string; text?: string; error?: string }) => void) => {
     ipcRenderer.on('app:open-package', (_e, f: { name: string; text?: string; error?: string }) => cb(f));

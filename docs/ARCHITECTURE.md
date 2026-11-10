@@ -20,7 +20,7 @@ src/
     share/              the share code and the messages and rules of an exchange with another device
     history/            runs, statistics, CSV/TCX export
     id.ts               ids of things the person creates
-  platform/           pure helpers around the shell: build settings, features that are on or off, version, CSP, MIME types, dev server address, opened files
+  platform/           pure helpers around the shell: build settings, features that are on or off, version, the logic of the desktop update (two yeses, never while connected), CSP, MIME types, dev server address, opened files
   device/             the treadmill: Web Bluetooth adapter, simulator
   net/                the connection to other people's devices for sharing (not there yet, see docs/P2P.md); never the treadmill
   data/               IndexedDB storage (workouts, routes, runs)

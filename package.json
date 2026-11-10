@@ -37,5 +37,8 @@
     "workbox-window": "7.4.1"
   },
   "main": "dist-electron/main.cjs",
-  "author": "Walkflow contributors"
+  "author": "Walkflow contributors",
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  }
 }
