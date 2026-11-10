@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Walkflow – control your treadmill from your computer</title>
+<meta name="description" content="Walkflow is a free, open-source app that controls Bluetooth treadmills (FTMS): workouts, real routes with a map and your history. No account, no cloud.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="Walkflow – control your treadmill from your computer">
+<meta property="og:description" content="Free and open source. Workouts, real routes with a map and your history for Bluetooth treadmills. No account, no cloud.">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="de" href="de/">
+<link rel="alternate" hreflang="en" href="./">
+<link rel="stylesheet" href="site.css">
+<script src="site.js" defer></script>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="favicon.svg" alt="" width="32" height="32">Walkflow</a>
+    <nav class="main" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#safety">Safety</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/caenderl/walkflow">Source code</a>
+      <span class="langs"><a href="./?lang=en" hreflang="en" lang="en" aria-current="page">English</a> · <a href="de/" hreflang="de" lang="de">Deutsch</a></span>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero" style="padding-top: 24px">
+  <div class="wrap">
+    <h1>Your treadmill, in your own hands</h1>
+    <p class="lead">Walkflow connects to your treadmill over Bluetooth and controls it from your computer: workouts with steps, real routes on a map, and your history. Free, open source, no account.</p>
+    <div class="cta">
+      <a class="btn primary" id="dl-main" href="#download" data-label="Download for {os}">Download</a>
+      <a class="btn secondary" href="app/">Open in the browser</a>
+    </div>
+    <p class="note">For treadmills with Bluetooth FTMS. Tested with the Sportstech sPad 500 so far. <a href="#compat">More on compatibility</a></p>
+    <div class="shot">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="img/dark-en-training.webp">
+        <img src="img/light-en-training.webp" width="1600" height="1000" alt="The training view of Walkflow: a route around the Central Park reservoir on a map, the current speed of 4.0 km/h, distance and time, and the controls with Start, Pause and Stop.">
+      </picture>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <p class="intro">No setup beyond Bluetooth. You can try everything with the built-in demo treadmill before you connect a real one.</p>
+    <ol class="steps">
+      <li><strong>Connect</strong><span>Switch the treadmill on and connect over Bluetooth. Or start the demo, which needs no treadmill.</span></li>
+      <li><strong>Pick what to do</strong><span>Train freely, choose a workout, or walk a route and see where you are on the map.</span></li>
+      <li><strong>Start</strong><span>Walkflow brings the belt up to speed in small steps. Stop is always one click, or the space bar, away.</span></li>
+    </ol>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2>What it can do</h2>
+    <p class="intro">The treadmill’s own display is limited. Walkflow gives it a proper screen.</p>
+
+    <div class="feature">
+      <div class="text">
+        <h3>Routes with a map</h3>
+        <p>Walk a real place. Import a GPX file from your route planner, or take one from the route store. The map shows where you are along the route, with progress and the time you have left.</p>
+        <ul>
+          <li>Routes from the project’s store, with waypoints and updates</li>
+          <li>Open maps (OpenStreetMap), switched on only if you want them</li>
+          <li>Your own routes can be exported and shared as files</li>
+        </ul>
+      </div>
+      <div class="shot"><picture>
+        <source media="(prefers-color-scheme: dark)" srcset="img/dark-en-routes.webp">
+        <img src="img/light-en-routes.webp" width="1600" height="1000" loading="lazy" alt="The route library with four routes: Außenalster Loop, Central Park Reservoir Loop, Imperial Palace Loop and Vienna Ringstraße Loop, each with its length, time and a small map of the loop.">
+      </picture></div>
+    </div>
+
+    <div class="feature">
+      <div class="text">
+        <h3>Workouts with steps</h3>
+        <p>Build a workout from steps of time or distance, each with its own speed. A week plan keeps your weekly minutes in view and suggests what to do today.</p>
+        <ul>
+          <li>Steps by time or by distance</li>
+          <li>Speed changes in small steps, never in jumps</li>
+          <li>Import and export workouts as files</li>
+        </ul>
+      </div>
+      <div class="shot"><picture>
+        <source media="(prefers-color-scheme: dark)" srcset="img/dark-en-workouts.webp">
+        <img src="img/light-en-workouts.webp" width="1600" height="1000" loading="lazy" alt="The workout library with the workouts 5 km steady, Morning walk and Short bursts, each with its number of steps and its length.">
+      </picture></div>
+    </div>
+
+    <div class="feature">
+      <div class="text">
+        <h3>Your history</h3>
+        <p>Every run is saved on your device. See your distance per day for the last 30 days, your streak and your best week, and export runs as CSV or TCX.</p>
+        <ul>
+          <li>Saved automatically, on your device only</li>
+          <li>Backup and restore as one file</li>
+          <li>Export for other fitness apps</li>
+        </ul>
+      </div>
+      <div class="shot"><picture>
+        <source media="(prefers-color-scheme: dark)" srcset="img/dark-en-history.webp">
+        <img src="img/light-en-history.webp" width="1600" height="1000" loading="lazy" alt="The history view: distance this week, this month and in total, a bar chart of the distance per day over the last 30 days, days in a row, farthest and longest run and the best week.">
+      </picture></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Private by design</h2>
+    <p class="intro">There is nothing to sign up for and nothing to give away.</p>
+    <div class="facts">
+      <div class="fact"><h3>No account, no cloud</h3><p>Your runs, workouts and routes stay on your own device.</p></div>
+      <div class="fact"><h3>No tracking</h3><p>No analytics, no cookies, no ads, no scripts from third parties.</p></div>
+      <div class="fact"><h3>Open source</h3><p>MIT licence. You can read every line, and you can change it.</p></div>
+      <div class="fact"><h3>Works offline</h3><p>Install it from the browser or as a desktop app. The map and the route store need the internet; the rest does not.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="safety">
+  <div class="wrap">
+    <div class="safety">
+      <h2>Please read this first</h2>
+      <ul>
+        <li><strong>Use it at your own risk.</strong> Walkflow is a private open-source project without any warranty.</li>
+        <li><strong>If the Bluetooth connection drops, the app cannot stop the belt.</strong> Then only the stop button on the treadmill or its safety key will help. Keep both within reach.</li>
+        <li>If your treadmill has a safety key, use it. Start the belt only while you stand on the side rails.</li>
+        <li>Speed, distance, calories and heart rate come from the treadmill or are estimates, and they can be wrong.</li>
+        <li>Stop if you feel unwell. If you are unsure whether treadmill training suits you, ask a doctor first.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <h2>Download</h2>
+    <p class="intro">Free to use. The installers are on GitHub; the links open the page of the latest version.</p>
+    <div class="downloads">
+      <a class="dl" data-os="mac" data-badge="Your system" href="https://github.com/caenderl/walkflow/releases/latest"><strong>macOS</strong><span>Apple Silicon and Intel (.dmg)</span></a>
+      <a class="dl" data-os="windows" data-badge="Your system" href="https://github.com/caenderl/walkflow/releases/latest"><strong>Windows</strong><span>64-bit (.exe)</span></a>
+      <a class="dl" data-os="linux" data-badge="Your system" href="https://github.com/caenderl/walkflow/releases/latest"><strong>Linux</strong><span>AppImage, 64-bit. Bluetooth in the app is untested on Linux.</span></a>
+      <a class="dl" href="app/"><strong>In the browser</strong><span>Chrome or Edge on a computer or an Android phone. Nothing to install.</span></a>
+    </div>
+    <div class="unsigned">
+      <h3>The installers are not signed</h3>
+      <p style="margin: 0 0 6px">Your system will warn you when you open the app for the first time. That is expected, and the file is the one from this project’s GitHub page. You can check it against <code>SHA256SUMS.txt</code> on the same page.</p>
+      <ul>
+        <li><strong>macOS:</strong> drag the app to Applications and open it. At the warning, choose “Done”, then open System Settings → Privacy &amp; Security and click “Open Anyway”.</li>
+        <li><strong>Windows:</strong> at “Windows protected your PC”, click “More info”, then “Run anyway”.</li>
+        <li><strong>Linux:</strong> make the file executable (<code>chmod +x</code>) and start it.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="compat" style="padding-top: 8px">
+  <div class="wrap">
+    <h2>Which treadmills work?</h2>
+    <p class="intro" style="margin-bottom: 12px">Walkflow speaks FTMS (Fitness Machine Service), the standard Bluetooth protocol for treadmills. The manual or the app of your treadmill often says whether it supports it. It has been tested with one treadmill so far, the Sportstech sPad 500; others may behave differently. Results are collected in the <a href="https://github.com/caenderl/walkflow/blob/main/HARDWARE-TESTS.md">test notes</a>. If you try another model, a note in the <a href="https://github.com/caenderl/walkflow/issues">issue tracker</a> helps everyone.</p>
+    <p class="intro" style="margin: 0">The web version needs Web Bluetooth: Chrome or Edge on a computer or an Android phone. Safari and iPhone do not support it; use the desktop app instead. The app is available in English, German, French and Ukrainian.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>Walkflow · MIT licence · an independent project, not affiliated with any treadmill maker.</div>
+    <div class="links">
+      <a href="app/legal/en/legal-notice.html">Legal notice</a>
+      <a href="app/legal/en/privacy.html">Privacy</a>
+      <a href="https://github.com/caenderl/walkflow">Source code</a>
+      <a href="https://github.com/caenderl/walkflow/issues">Report a problem</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

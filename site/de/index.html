@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Walkflow – dein Laufband vom Computer aus steuern</title>
+<meta name="description" content="Walkflow ist eine kostenlose Open-Source-App, die Bluetooth-Laufbänder (FTMS) steuert: Workouts, echte Strecken mit Karte und dein Verlauf. Ohne Konto, ohne Cloud.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="Walkflow – dein Laufband vom Computer aus steuern">
+<meta property="og:description" content="Kostenlos und Open Source. Workouts, echte Strecken mit Karte und dein Verlauf für Bluetooth-Laufbänder. Ohne Konto, ohne Cloud.">
+<meta property="og:type" content="website">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="en" href="../">
+<link rel="alternate" hreflang="de" href="./">
+<link rel="stylesheet" href="../site.css">
+<script src="../site.js" defer></script>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="../favicon.svg" alt="" width="32" height="32">Walkflow</a>
+    <nav class="main" aria-label="Hauptmenü">
+      <a href="#features">Funktionen</a>
+      <a href="#safety">Sicherheit</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/caenderl/walkflow">Quellcode</a>
+      <span class="langs"><a href="../?lang=en" hreflang="en" lang="en">English</a> · <a href="./" hreflang="de" lang="de" aria-current="page">Deutsch</a></span>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero" style="padding-top: 24px">
+  <div class="wrap">
+    <h1>Dein Laufband in deiner Hand</h1>
+    <p class="lead">Walkflow verbindet sich per Bluetooth mit deinem Laufband und steuert es vom Computer aus: Workouts mit Schritten, echte Strecken auf der Karte und dein Verlauf. Kostenlos, Open Source, ohne Konto.</p>
+    <div class="cta">
+      <a class="btn primary" id="dl-main" href="#download" data-label="Download für {os}">Download</a>
+      <a class="btn secondary" href="../app/?lang=de">Im Browser öffnen</a>
+    </div>
+    <p class="note">Für Laufbänder mit Bluetooth-FTMS. Bisher getestet mit dem Sportstech sPad 500. <a href="#compat">Mehr zur Kompatibilität</a></p>
+    <div class="shot">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="../img/dark-de-training.webp">
+        <img src="../img/light-de-training.webp" width="1600" height="1000" alt="Die Trainingsansicht von Walkflow: eine Strecke um das Central-Park-Reservoir auf der Karte, die aktuelle Geschwindigkeit von 4,0 km/h, Strecke und Zeit und die Bedienung mit Start, Pause und Stop.">
+      </picture>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <h2>So funktioniert es</h2>
+    <p class="intro">Du brauchst nur Bluetooth. Alles lässt sich vorher mit dem eingebauten Demo-Laufband ausprobieren, bevor du ein echtes verbindest.</p>
+    <ol class="steps">
+      <li><strong>Verbinden</strong><span>Schalte das Laufband ein und verbinde es per Bluetooth. Oder starte die Demo, die kein Laufband braucht.</span></li>
+      <li><strong>Auswählen</strong><span>Trainiere frei, wähle ein Workout oder lauf eine Strecke und sieh auf der Karte, wo du gerade bist.</span></li>
+      <li><strong>Starten</strong><span>Walkflow bringt das Band in kleinen Schritten auf Tempo. Stop ist immer einen Klick oder die Leertaste entfernt.</span></li>
+    </ol>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Was Walkflow kann</h2>
+    <p class="intro">Das Display des Laufbands ist begrenzt. Walkflow gibt ihm einen richtigen Bildschirm.</p>
+
+    <div class="feature">
+      <div class="text">
+        <h3>Strecken mit Karte</h3>
+        <p>Lauf einen echten Ort ab. Importiere eine GPX-Datei aus deiner Routenplanung oder nimm eine Strecke aus dem Streckenspeicher. Die Karte zeigt, wo du auf der Strecke bist, mit Fortschritt und verbleibender Zeit.</p>
+        <ul>
+          <li>Strecken aus dem Speicher des Projekts, mit Wegpunkten und Updates</li>
+          <li>Offene Karten (OpenStreetMap), nur wenn du sie einschaltest</li>
+          <li>Eigene Strecken lassen sich als Datei exportieren und weitergeben</li>
+        </ul>
+      </div>
+      <div class="shot"><picture>
+        <source media="(prefers-color-scheme: dark)" srcset="../img/dark-de-routes.webp">
+        <img src="../img/light-de-routes.webp" width="1600" height="1000" loading="lazy" alt="Die Streckenbibliothek mit vier Strecken: Außenalster-Runde, Central-Park-Reservoir-Runde, Kaiserpalast-Runde Tokio und Wiener-Ringstraße-Runde, jeweils mit Länge, Zeit und einer kleinen Karte der Runde.">
+      </picture></div>
+    </div>
+
+    <div class="feature">
+      <div class="text">
+        <h3>Workouts mit Schritten</h3>
+        <p>Baue ein Workout aus Schritten nach Zeit oder Strecke, jeweils mit eigenem Tempo. Ein Wochenplan hält deine Wochenminuten im Blick und schlägt vor, was heute dran ist.</p>
+        <ul>
+          <li>Schritte nach Zeit oder nach Strecke</li>
+          <li>Das Tempo ändert sich in kleinen Stufen, nie in Sprüngen</li>
+          <li>Workouts als Datei importieren und exportieren</li>
+        </ul>
+      </div>
+      <div class="shot"><picture>
+        <source media="(prefers-color-scheme: dark)" srcset="../img/dark-de-workouts.webp">
+        <img src="../img/light-de-workouts.webp" width="1600" height="1000" loading="lazy" alt="Die Workout-Bibliothek mit den Workouts 5 km gleichmäßig, Morgenrunde und Kurze Sprints, jeweils mit Anzahl der Schritte und Länge.">
+      </picture></div>
+    </div>
+
+    <div class="feature">
+      <div class="text">
+        <h3>Dein Verlauf</h3>
+        <p>Jeder Lauf wird auf deinem Gerät gespeichert. Sieh deine Strecke pro Tag der letzten 30 Tage, deine Serie und deine beste Woche, und exportiere Läufe als CSV oder TCX.</p>
+        <ul>
+          <li>Automatisch gespeichert, nur auf deinem Gerät</li>
+          <li>Sicherung und Wiederherstellung als eine Datei</li>
+          <li>Export für andere Fitness-Apps</li>
+        </ul>
+      </div>
+      <div class="shot"><picture>
+        <source media="(prefers-color-scheme: dark)" srcset="../img/dark-de-history.webp">
+        <img src="../img/light-de-history.webp" width="1600" height="1000" loading="lazy" alt="Die Verlaufsansicht: Strecke diese Woche, diesen Monat und gesamt, ein Balkendiagramm der Strecke pro Tag der letzten 30 Tage, Tage in Folge, weitester und längster Lauf und beste Woche.">
+      </picture></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Privat von Grund auf</h2>
+    <p class="intro">Du musst dich nirgends anmelden und gibst nichts preis.</p>
+    <div class="facts">
+      <div class="fact"><h3>Kein Konto, keine Cloud</h3><p>Deine Läufe, Workouts und Strecken bleiben auf deinem eigenen Gerät.</p></div>
+      <div class="fact"><h3>Kein Tracking</h3><p>Keine Analyse, keine Cookies, keine Werbung, keine Skripte von Dritten.</p></div>
+      <div class="fact"><h3>Open Source</h3><p>MIT-Lizenz. Du kannst jede Zeile lesen und ändern.</p></div>
+      <div class="fact"><h3>Funktioniert offline</h3><p>Installiere sie aus dem Browser oder als Desktop-App. Karte und Streckenspeicher brauchen Internet, der Rest nicht.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="safety">
+  <div class="wrap">
+    <div class="safety">
+      <h2>Bitte zuerst lesen</h2>
+      <ul>
+        <li><strong>Nutzung auf eigene Gefahr.</strong> Walkflow ist ein privates Open-Source-Projekt ohne jede Gewährleistung.</li>
+        <li><strong>Bricht die Bluetooth-Verbindung ab, kann die App das Band nicht anhalten.</strong> Dann hilft nur die Stopp-Taste am Laufband oder der Sicherheitsschlüssel. Halte beides in Reichweite.</li>
+        <li>Wenn dein Laufband einen Sicherheitsschlüssel hat, nutze ihn. Starte das Band nur, solange du auf den Seitenflächen stehst.</li>
+        <li>Geschwindigkeit, Strecke, Kalorien und Puls kommen vom Laufband oder sind Schätzungen und können falsch sein.</li>
+        <li>Brich ab, wenn es dir schlecht geht. Wenn du unsicher bist, ob Laufbandtraining für dich geeignet ist, frag vorher eine Ärztin oder einen Arzt.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <h2>Download</h2>
+    <p class="intro">Kostenlos nutzbar. Die Installer liegen auf GitHub; die Links öffnen die Seite der neuesten Version.</p>
+    <div class="downloads">
+      <a class="dl" data-os="mac" data-badge="Dein System" href="https://github.com/caenderl/walkflow/releases/latest"><strong>macOS</strong><span>Apple Silicon und Intel (.dmg)</span></a>
+      <a class="dl" data-os="windows" data-badge="Dein System" href="https://github.com/caenderl/walkflow/releases/latest"><strong>Windows</strong><span>64 Bit (.exe)</span></a>
+      <a class="dl" data-os="linux" data-badge="Dein System" href="https://github.com/caenderl/walkflow/releases/latest"><strong>Linux</strong><span>AppImage, 64 Bit. Bluetooth in der App ist unter Linux ungetestet.</span></a>
+      <a class="dl" href="../app/?lang=de"><strong>Im Browser</strong><span>Chrome oder Edge auf dem Computer oder einem Android-Handy. Nichts zu installieren.</span></a>
+    </div>
+    <div class="unsigned">
+      <h3>Die Installer sind nicht signiert</h3>
+      <p style="margin: 0 0 6px">Dein System warnt dich beim ersten Öffnen. Das ist zu erwarten, und die Datei ist die von der GitHub-Seite dieses Projekts. Du kannst sie mit <code>SHA256SUMS.txt</code> auf derselben Seite vergleichen.</p>
+      <ul>
+        <li><strong>macOS:</strong> Ziehe die App in „Programme“ und öffne sie. Wähle bei der Warnung „Fertig“, öffne dann Systemeinstellungen → Datenschutz &amp; Sicherheit und klicke auf „Trotzdem öffnen“.</li>
+        <li><strong>Windows:</strong> Klicke bei „Der Computer wurde durch Windows geschützt“ auf „Weitere Informationen“ und dann auf „Trotzdem ausführen“.</li>
+        <li><strong>Linux:</strong> Mach die Datei ausführbar (<code>chmod +x</code>) und starte sie.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="compat" style="padding-top: 8px">
+  <div class="wrap">
+    <h2>Welche Laufbänder funktionieren?</h2>
+    <p class="intro" style="margin-bottom: 12px">Walkflow spricht FTMS (Fitness Machine Service), das Standardprotokoll für Laufbänder per Bluetooth. Ob dein Laufband es unterstützt, steht oft in der Anleitung oder in der App des Herstellers. Getestet ist bisher ein Laufband, das Sportstech sPad 500; andere können sich anders verhalten. Die Ergebnisse stehen in den <a href="https://github.com/caenderl/walkflow/blob/main/HARDWARE-TESTS.md">Testnotizen</a> (auf Englisch). Wenn du ein anderes Modell ausprobierst, hilft eine Meldung im <a href="https://github.com/caenderl/walkflow/issues">Issue-Tracker</a> allen weiter.</p>
+    <p class="intro" style="margin: 0">Die Web-Version braucht Web Bluetooth: Chrome oder Edge auf dem Computer oder einem Android-Handy. Safari und iPhone unterstützen es nicht; nimm dort die Desktop-App. Die App gibt es auf Englisch, Deutsch, Französisch und Ukrainisch.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>Walkflow · MIT-Lizenz · ein unabhängiges Projekt, nicht mit einem Laufbandhersteller verbunden.</div>
+    <div class="links">
+      <a href="../app/legal/de/impressum.html">Impressum</a>
+      <a href="../app/legal/de/datenschutz.html">Datenschutz</a>
+      <a href="https://github.com/caenderl/walkflow">Quellcode</a>
+      <a href="https://github.com/caenderl/walkflow/issues">Problem melden</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

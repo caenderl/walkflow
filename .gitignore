@@ -8,3 +8,6 @@ dist-electron/
 dist/
 node_modules/
 release/
+
+# The site for GitHub Pages (npm run build:pages)
+pages/

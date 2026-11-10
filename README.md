@@ -127,6 +127,7 @@ The source is split into layers, each in its own folder; a layer only uses the o
 | `electron/` | Main process and preload of the desktop app (uses only pure code of `src/`) |
 | `tests/` | Tests about the project itself (structure rules); unit tests sit next to their code |
 | `public/legal/<lang>/` | Legal notice and privacy pages per language (placeholders) |
+| `site/` | The product page for GitHub Pages (English and German, plain HTML and CSS, screenshots in `site/img/`); `npm run build:pages` puts it at the root and the web app under `app/` |
 
 A second BLE path (e.g. native) only implements `BleAdapter`/`BleDevice` from `src/device/ble.ts`.
 
@@ -145,6 +146,10 @@ Every colour is a token at the top of `src/style.css`, defined once as `light-da
 ## Publishing
 
 ### GitHub Pages
+
+The site has two parts: the product page (`site/`: what Walkflow is, screenshots, download links to the latest release) at the root, and the web app under `app/` (so `https://<user>.github.io/<repo>/` is the page and `…/app/` the app). `npm run build:pages` builds both into `pages/`; for a local look, build with `BASE_PATH=/app/` and serve `pages/` with any static server. The page takes no scripts, fonts or other content from third parties. Its two pages (`site/index.html`, `site/de/index.html`) must keep the same shape, which `tests/site.test.ts` checks, together with every link and image.
+
+The screenshots in `site/img/` show the app with made-up runs and workouts and the routes of the route store (not a real person's data). They are `<dark|light>-<en|de>-<training|routes|workouts|history>.webp`, 1600 × 1000, and are taken again when the look of the app changes a lot.
 
 1. Repository settings → *Pages* → Source: **GitHub Actions**. (For a private repository, Pages needs a paid GitHub plan.)
 2. Fill in the pages under `public/legal/` (legal notice and privacy, per language). As long as they contain `TODO`, the Pages workflow fails on purpose. If you only want legal pages in one language, delete the others and point `info.imprintHref`/`info.privacyHref` in the locale files to the remaining ones.
