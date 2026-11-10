@@ -54,6 +54,7 @@ export function dateFormat(locale: string) {
   /** 9.11. (de), 11/9 (en), 09/11 (fr): for chart labels */
   const numericDay = f({ day: 'numeric', month: 'numeric' });
   const dayYear = f({ day: 'numeric', month: 'short', year: 'numeric' });
+  const tick = f({ day: '2-digit', month: 'short' });
   const time = f(hm);
   const weekday = f({ weekday: 'long' });
   const thisYear = (ts: number) => new Date(ts).getFullYear() === new Date().getFullYear();
@@ -64,6 +65,17 @@ export function dateFormat(locale: string) {
     shortDay: (ts: number) => day.format(ts),
     /** Even shorter, only numbers */
     numericDay: (ts: number) => numericDay.format(ts),
+    /**
+     * A chart label in two lines: the day, then the month. 01. over Nov (de), 01 over Nov (en). The day keeps the dot the
+     * language puts behind it; the month loses the one of its abbreviation, as it stands alone.
+     */
+    dayTick: (ts: number): [string, string] => {
+      const parts = tick.formatToParts(ts);
+      const i = parts.findIndex(p => p.type === 'day');
+      const dot = parts[i + 1]?.type === 'literal' && parts[i + 1]!.value.trim() === '.' ? '.' : '';
+      const month = (parts.find(p => p.type === 'month')?.value ?? '').replace(/\.$/, '');
+      return [`${parts[i]?.value ?? ''}${dot}`, month];
+    },
     weekday: (ts: number) => weekday.format(ts),
     time: (ts: number) => time.format(ts),
   };

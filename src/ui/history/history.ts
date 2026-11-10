@@ -154,8 +154,8 @@ export function setupHistory(host: HistoryHost) {
   function drawDays() {
     if (!days.length) return;
     barCentres = drawBarChart($<HTMLCanvasElement>('dayChart'), days.map(w => toDist(w.dist)), {
-      // Only the Mondays are labelled and today: 30 dates side by side would not fit
-      labels: days.map((w, i) => (i === days.length - 1 || new Date(w.start).getDay() === 1 ? t.history.dayLabel(w.start) : '')),
+      // Every day has its date, in two lines (01. / Nov); on a narrow screen the chart leaves some out
+      labels: days.map(w => t.history.dayTick(w.start)),
       active: activeDay,
       format: v => t.number(v),
     });

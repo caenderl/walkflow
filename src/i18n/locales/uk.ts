@@ -438,6 +438,8 @@ export const uk = {
     chartTitle: 'Відстань за день, останні 30 днів',
     chartLabel: 'Відстань за день, останні 30 днів',
     dayLabel: (ts: number) => d.numericDay(ts),
+    /** The label under a bar of the daily chart: the day, a line break, the month */
+    dayTick: (ts: number) => d.dayTick(ts).join('\n'),
     dayValue: (ts: number, m: number) => `${d.day(ts)}: ${u.dist(m, 1)}`,
     tableDay: 'День',
     streak: 'Днів поспіль',

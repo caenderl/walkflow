@@ -110,6 +110,12 @@ export function drawSpeedChart(c: HTMLCanvasElement, samples: readonly Sample[],
   }
 }
 
+/** Every how many bars a label is drawn so that labels of this width do not touch: 1 = every bar */
+export function labelStep(textWidth: number, slot: number): number {
+  if (!(slot > 0) || !(textWidth > 0)) return 1;
+  return Math.max(1, Math.ceil((textWidth + 6) / slot));
+}
+
 /** Round step for about `parts` grid lines up to `max` */
 function niceStep(max: number, parts: number): number {
   const raw = max / parts;
@@ -118,7 +124,7 @@ function niceStep(max: number, parts: number): number {
 }
 
 export interface BarChartOptions {
-  /** One label per bar; labels that would overlap are left out */
+  /** One label per bar, up to two lines separated by a line break (""  = none); where they would touch, every second or third is drawn, and always the last */
   labels: string[];
   /** Index of the highlighted bar (hover), -1 = none */
   active: number;
@@ -130,7 +136,8 @@ export function drawBarChart(c: HTMLCanvasElement, values: readonly number[], o:
   const p = prepare(c);
   if (!p) return [];
   const { g, W, H } = p;
-  const L = 36, B = 18, T = 8, R = 6;
+  const rows = o.labels.map(l => (l ? l.split('\n') : []));
+  const L = 36, B = 6 + 12 * Math.max(1, ...rows.map(r => r.length)), T = 8, R = 6;
   const max = Math.max(...values, 0);
   const step = max > 0 ? niceStep(max, 4) : 1;
   const ymax = max > 0 ? Math.ceil(max / step) * step : step * 4;
@@ -148,10 +155,9 @@ export function drawBarChart(c: HTMLCanvasElement, values: readonly number[], o:
   const gap = Math.max(2, Math.min(8, slot * 0.25));
   const centres = values.map((_, i) => L + (i + 0.5) * slot);
   const labelX = (i: number, tw: number) => Math.min(Math.max(centres[i]! - tw / 2, L), W - R - tw);
-  // The last label (current week) is always shown; the others only where they do not collide
-  const lastText = o.labels[n - 1] ?? '';
-  const lastX = labelX(n - 1, g.measureText(lastText).width);
-  let lastLabelEnd = -Infinity;
+  // Every bar is labelled when there is room; on a narrow screen every second or third, counted back from the last
+  const widest = Math.max(0, ...rows.flat().map(s => g.measureText(s).width));
+  const every = labelStep(widest, slot);
   values.forEach((v, i) => {
     const x = L + i * slot + gap / 2, w = slot - gap;
     if (v > 0) {
@@ -166,13 +172,9 @@ export function drawBarChart(c: HTMLCanvasElement, values: readonly number[], o:
       g.closePath(); g.fill();
       g.globalAlpha = 1;
     }
-    const text = o.labels[i] ?? '';
-    const tw = g.measureText(text).width;
-    const lx = labelX(i, tw);
-    if (text && (i === n - 1 || (lx > lastLabelEnd + 16 && lx + tw + 16 < lastX))) {
+    if (rows[i]!.length && (n - 1 - i) % every === 0) {
       g.fillStyle = o.active === i ? cssColor('--fg') : label;
-      g.fillText(text, lx, H - 3);
-      lastLabelEnd = lx + tw;
+      rows[i]!.forEach((text, line) => g.fillText(text, labelX(i, g.measureText(text).width), H - B + 12 + line * 12 - 1));
     }
   });
   return centres;

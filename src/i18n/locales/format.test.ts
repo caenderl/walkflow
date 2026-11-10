@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setUnits } from '../units';
-import { hoursMinutes, numberFormat, plural3, unitFormat, type UnitLabels } from './format';
+import { dateFormat, hoursMinutes, numberFormat, plural3, unitFormat, type UnitLabels } from './format';
 
 afterEach(() => setUnits('metric'));
 
@@ -48,5 +48,27 @@ describe('unit labels of a language', () => {
   it('write hours and minutes with the names of the language', () => {
     expect(hoursMinutes(7500, uk)).toBe('2 год 05 хв');
     expect(hoursMinutes(2700, uk)).toBe('45 хв');
+  });
+});
+
+describe('dateFormat dayTick (a chart label in two lines: the day, then the month)', () => {
+  const ts = new Date(2026, 10, 1, 12).getTime();
+
+  it('is 01. over Nov in German, with the day always two digits', () => {
+    expect(dateFormat('de').dayTick(ts)).toEqual(['01.', 'Nov']);
+    expect(dateFormat('de').dayTick(new Date(2026, 10, 15, 12).getTime())[0]).toBe('15.');
+  });
+
+  it('is 01 over Nov in English', () => {
+    expect(dateFormat('en').dayTick(ts)).toEqual(['01', 'Nov']);
+  });
+
+  it('has two short pieces without a trailing dot in every language', () => {
+    for (const l of ['de', 'en', 'fr', 'uk']) {
+      const [day, month] = dateFormat(l).dayTick(ts);
+      expect(day, l).toMatch(/^\d{2}\.?$/);
+      expect(month.length, l).toBeGreaterThan(1);
+      expect(month, l).not.toMatch(/\.$/);
+    }
   });
 });

@@ -430,6 +430,8 @@ export const en = {
     chartTitle: 'Distance per day, last 30 days',
     chartLabel: 'Distance per day, last 30 days',
     dayLabel: (ts: number) => d.numericDay(ts),
+    /** The label under a bar of the daily chart: the day, a line break, the month */
+    dayTick: (ts: number) => d.dayTick(ts).join('\n'),
     dayValue: (ts: number, m: number) => `${d.day(ts)}: ${u.dist(m, 1)}`,
     tableDay: 'Day',
     streak: 'Days in a row',

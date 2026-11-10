@@ -432,6 +432,8 @@ export const fr: Messages = {
     chartTitle: 'Distance par jour, 30 derniers jours',
     chartLabel: 'Distance par jour, 30 derniers jours',
     dayLabel: (ts: number) => d.numericDay(ts),
+    /** The label under a bar of the daily chart: the day, a line break, the month */
+    dayTick: (ts: number) => d.dayTick(ts).join('\n'),
     dayValue: (ts: number, m: number) => `${d.day(ts)} : ${u.dist(m, 1)}`,
     tableDay: 'Jour',
     streak: 'Jours d’affilée',
