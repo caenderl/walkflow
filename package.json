@@ -40,5 +40,18 @@
   "author": "Walkflow contributors",
   "dependencies": {
     "electron-updater": "6.8.11"
+  },
+  "overrides": {
+    "app-builder-lib": {
+      "minimatch": "^11.0.6"
+    },
+    "@electron/universal": {
+      "minimatch": "^11.0.6"
+    },
+    "workbox-build": {
+      "glob": {
+        "minimatch": "^11.0.6"
+      }
+    }
   }
 }
