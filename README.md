@@ -2,6 +2,8 @@
 
 Open-source control for treadmills with Bluetooth FTMS (Fitness Machine Service), right in the browser via Web Bluetooth or as a desktop app. No account, no server, no tracking. The app is available in English, German, French and Ukrainian.
 
+**[Product page](https://walkflow-app.github.io/walkflow/)** · **[Web app](https://walkflow-app.github.io/walkflow/app/)** · **[Downloads](https://github.com/walkflow-app/walkflow/releases/latest)** · **[Route store](https://github.com/walkflow-app/route-store)**
+
 > [!WARNING]
 > **Safety and liability notice.** Use at your own risk. The software is provided without warranty (see the [MIT license](LICENSE)).
 >
@@ -55,7 +57,7 @@ Other FTMS treadmills may work but are not tested.
 
 Web Bluetooth is available in Chrome (desktop, Android), Edge and Opera. Safari and Firefox do not have it; on iPhone/iPad no browser has it (workaround: browsers with their own Bluetooth bridge such as Bluefy, not tested). On Linux, depending on the version, it has to be enabled in Chrome via `chrome://flags` first.
 
-After the first deploy the web version runs at `https://<github-user>.github.io/<repo>/`. Links can set the language, e.g. `…/?lang=fr`.
+The web version runs at <https://walkflow-app.github.io/walkflow/app/> (a fork deploys to `https://<github-user>.github.io/<repo>/app/`). Links can set the language, e.g. `…/app/?lang=fr`. The product page is at <https://walkflow-app.github.io/walkflow/>.
 
 ## Desktop app
 
@@ -125,7 +127,7 @@ The source is split into layers, each in its own folder; a layer only uses the o
 | `src/main.ts` | Wires it all together |
 | `electron/` | Main process and preload of the desktop app (uses only pure code of `src/`) |
 | `tests/` | Tests about the project itself (structure rules); unit tests sit next to their code |
-| `public/legal/<lang>/` | Legal notice and privacy pages per language (placeholders) |
+| `public/legal/<lang>/` | Legal notice and privacy pages per language |
 | `site/` | The product page for GitHub Pages (English and German, plain HTML and CSS, screenshots in `site/img/`); `npm run build:pages` puts it at the root and the web app under `app/` |
 
 A second BLE path (e.g. native) only implements `BleAdapter`/`BleDevice` from `src/device/ble.ts`.
