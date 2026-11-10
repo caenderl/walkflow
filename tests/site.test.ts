@@ -7,11 +7,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain script without types, also run by node in the Pages build
-import { fillVersion } from '../scripts/site-version.mjs';
+import { fillPage } from '../scripts/site-version.mjs';
 
 const SITE = fileURLToPath(new URL('../site/', import.meta.url));
 const PAGES = ['index.html', 'de/index.html'];
 const read = (f: string) => readFileSync(`${SITE}${f}`, 'utf8');
+const VALUES = { version: '9.8.7', site: 'https://example.org/w' };
+const filled = (f: string): string => fillPage(read(f), VALUES);
 
 /** Local addresses in a page: href, src and the files of a srcset, without anchors, queries and other sites */
 function localAddresses(html: string): string[] {
@@ -19,7 +21,7 @@ function localAddresses(html: string): string[] {
   for (const m of html.matchAll(/\b(?:href|src|srcset)="([^"]*)"/g)) {
     for (const part of m[1]!.split(',')) {
       const url = part.trim().split(/\s+/)[0] ?? '';
-      if (!url || url.startsWith('#') || /^[a-z][a-z0-9+.-]*:/i.test(url)) continue;
+      if (!url || url.startsWith('#') || url.startsWith('{{') || /^[a-z][a-z0-9+.-]*:/i.test(url)) continue;
       found.push(url.split('#')[0]!.split('?')[0]!);
     }
   }
@@ -82,13 +84,43 @@ describe('the product page', () => {
   });
 
   it.each(PAGES)('%s: the download links point straight at the files of the release, named like the installers', page => {
-    const html: string = fillVersion(read(page), '9.8.7');
+    const html: string = fillPage(read(page), VALUES);
     const base = 'https://github.com/walkflow-app/walkflow/releases/download/v9.8.7/';
     for (const file of ['Walkflow-9.8.7-mac-arm64.dmg', 'Walkflow-9.8.7-mac-x64.dmg', 'Walkflow-9.8.7-win-x64.exe', 'Walkflow-9.8.7-linux-x86_64.AppImage', 'SHA256SUMS.txt']) {
       expect(html, file).toContain(`href="${base}${file}"`);
     }
     expect(html).toContain('href="https://github.com/walkflow-app/walkflow/releases/tag/v9.8.7"');
     expect(html).toContain('9.8.7');
+  });
+
+  it.each([['index.html', 'https://example.org/w/'], ['de/index.html', 'https://example.org/w/de/']])('%s: search engines and link previews get absolute addresses', (page, own) => {
+    const html = filled(page);
+    expect(html).toContain(`<link rel="canonical" href="${own}">`);
+    expect(html).toContain('<link rel="alternate" hreflang="en" href="https://example.org/w/">');
+    expect(html).toContain('<link rel="alternate" hreflang="de" href="https://example.org/w/de/">');
+    expect(html).toContain('<link rel="alternate" hreflang="x-default" href="https://example.org/w/">');
+    expect(html).toContain(`<meta property="og:url" content="${own}">`);
+    expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
+    const image = /<meta property="og:image" content="https:\/\/example\.org\/w\/([^"]+)">/.exec(html)?.[1];
+    expect(image, 'og:image').toBeTruthy();
+    expect(existsSync(`${SITE}${image}`), image).toBe(true);
+  });
+
+  it.each(PAGES)('%s: the structured data is valid JSON and describes the software', page => {
+    const m = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(filled(page));
+    expect(m, 'ld+json').toBeTruthy();
+    const data = JSON.parse(m![1]!);
+    expect(data['@type']).toBe('SoftwareApplication');
+    expect(data.name).toBe('Walkflow');
+    expect(data.softwareVersion).toBe('9.8.7');
+    expect(data.offers.price).toBe('0');
+    expect(data.url).toMatch(/^https:\/\/example\.org\/w\//);
+  });
+
+  it('the sitemap lists both pages', () => {
+    const xml = filled('sitemap.xml');
+    expect(xml).toContain('<loc>https://example.org/w/</loc>');
+    expect(xml).toContain('<loc>https://example.org/w/de/</loc>');
   });
 
   it('links to the legal pages of the web app in the language of the page', () => {

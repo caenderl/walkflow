@@ -51,6 +51,7 @@ jobs:
       - run: npm run build:pages
         env:
           WALKFLOW_RELEASE: ${{ steps.release.outputs.tag }}
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
           BASE_PATH: ${{ steps.pages.outputs.base_path }}/app/
           # Optional, set as a repository variable (Settings → Secrets and variables → Actions → Variables)
           VITE_DONATION_URL: ${{ vars.DONATION_URL }}
