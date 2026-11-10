@@ -19,39 +19,33 @@
   </nav>
   <h1>Datenschutzerklärung</h1>
 
-  <div class="box">
-    <strong>Platzhalter.</strong> Hier steht noch kein Rechtstext. Alle mit TODO markierten Abschnitte
-    müssen vor der Veröffentlichung ausgefüllt werden. Der Pages-Workflow bricht ab, solange hier noch TODO steht.
-  </div>
-
   <h2>Verantwortlich</h2>
-  <p><span class="todo">TODO</span></p>
+  <p>Walkflow, ein privates Open-Source-Projekt. Kontakt: <a href="mailto:walkflow.app@gmail.com">walkflow.app@gmail.com</a>. Walkflow betreibt keinen eigenen Server und speichert nichts über die Besucher dieser Seiten. Die App arbeitet auf deinem Gerät.</p>
 
   <h2>Hosting</h2>
-  <p><span class="todo">TODO: Hinweis zum Hosting über GitHub Pages</span></p>
+  <p>Diese Webseite und die Web-App werden über GitHub Pages ausgeliefert, einen Dienst von GitHub, Inc. (USA). Beim Aufruf verarbeitet GitHub in der Regel technisch notwendige Verbindungsdaten, darunter deine IP-Adresse, Datum und Uhrzeit des Abrufs und Browserangaben, um die Seiten auszuliefern und den Dienst abzusichern. Walkflow hat auf diese Daten keinen Zugriff und wertet sie nicht aus. Es gelten die <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">Datenschutzhinweise von GitHub</a>. Dasselbe gilt für Downloads der Desktop-App sowie für den Streckenspeicher und die Update-Prüfung der Desktop-App (siehe unten), die Server von GitHub ansprechen (github.com, api.github.com, raw.githubusercontent.com).</p>
 
   <h2>Rechte der betroffenen Personen</h2>
-  <p><span class="todo">TODO</span></p>
+  <p>Walkflow selbst speichert keine personenbezogenen Daten über dich. Die Daten der App (Läufe, Workouts, Strecken, Einstellungen) liegen auf deinem Gerät; dort kannst du sie jederzeit ansehen, exportieren und löschen (Einstellungen &amp; Daten). Soweit Daten bei GitHub anfallen, ist GitHub dafür verantwortlich.</p>
+  <p>Nach der Datenschutz-Grundverordnung hast du das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch sowie das Recht, dich bei einer Datenschutz-Aufsichtsbehörde zu beschweren. Anfragen richtest du per E-Mail an <a href="mailto:walkflow.app@gmail.com">walkflow.app@gmail.com</a>.</p>
 
-  <div class="box mute">
-    <strong>Technische Fakten zur App</strong> (als Grundlage beim Ausfüllen, kein Rechtstext; vor dem Veröffentlichen entfernen oder übernehmen):
-    <ul>
-      <li>Keine Konten, kein eigener Server, keine Cookies, kein Tracking, kein Analytics.</li>
-      <li>Keine Skripte, Schriften oder sonstigen Inhalte von Drittanbietern; alles wird von derselben Adresse geladen. Einzige Ausnahme ist die optionale Karte (siehe unten), und das erst, nachdem eine Person sie einschaltet.</li>
-      <li>Bluetooth-Daten des Laufbands werden nur im Browser verarbeitet und nirgendwohin gesendet.</li>
-      <li>Im localStorage des Browsers liegen nur Einstellungen: Speed-Limit, maximale Änderung pro Befehl, Verhalten im Hintergrund, Sportart für TCX, Sprache, Farbschema, bestätigter Sicherheitshinweis, ob Läufe gespeichert werden.</li>
-      <li>Ein Service Worker speichert die App-Dateien für die Offline-Nutzung im Browser-Cache.</li>
-      <li>Die laufende Aufzeichnung für Diagramm und CSV/TCX-Export liegt nur im Arbeitsspeicher, bis die Seite geschlossen wird.</li>
-      <li>Läufe werden in der IndexedDB des Browsers auf diesem Gerät gespeichert (Desktop-App: im Datenordner der App): Zeitpunkt, Geschwindigkeit, Strecke, Steigung, kcal und Puls (nur wenn das Laufband einen liefert), etwa einmal pro Sekunde. Sie verlassen das Gerät nur, wenn die Person selbst ein Backup oder einen Export herunterlädt. Das Speichern lässt sich abschalten; Läufe lassen sich einzeln oder alle löschen.</li>
-      <li>Gespeicherte Workouts und der Wochenplan liegen in derselben IndexedDB auf diesem Gerät. Sie verlassen es nur, wenn die Person ein Backup herunterlädt.</li>
-      <li>Importierte Strecken (GPX-Dateien) werden auf diesem Gerät gelesen und in derselben IndexedDB gespeichert. Die Datei wird nicht hochgeladen. Eine Strecke verlässt das Gerät nur, wenn die Person sie exportiert oder ein Backup herunterlädt.</li>
-      <li>Die optionale Streckenkarte (standardmäßig aus; die Wahl steht im localStorage) lädt Stil, Vektorkacheln, Symbole und Schriften von <code>tiles.openfreemap.org</code> (OpenFreeMap; die Adresse wird beim Bauen der App festgelegt). Dieser Server erhält die üblichen Verbindungsdaten (IP-Adresse, Browserangaben) und die Kachelkoordinaten des angesehenen Kartenausschnitts, die das Gebiet der Strecke erkennen lassen. Walkflow schickt ihm keine Trainingsdaten, keine Laufbanddaten und keine Streckenpunkte. Der Kartencode selbst gehört zur App und wird von derselben Adresse geladen. Ohne Karte geht keine Anfrage an diesen Server.</li>
-      <li>Die App enthält eine Beispielstrecke (Streckendaten © OpenStreetMap-Mitwirkende, ODbL). Sie gehört zu den App-Dateien und wird beim ersten Start in die eigene Streckenliste übernommen; sie lässt sich wie jede andere Strecke löschen.</li>
-      <li>Das Land einer Strecke (für die Flagge vor dem Namen) wird auf dem Gerät aus dem Start der Strecke bestimmt, mit Grenzdaten (Natural Earth) und Flaggenbildern (flag-icons), die zu den App-Dateien gehören. Es werden keine Koordinaten versendet. Der Ländercode wird mit der Strecke gespeichert und ist Teil eines Backups.</li>
-      <li>Nach dem ersten gespeicherten Lauf bittet die Web-App den Browser per <code>navigator.storage.persist()</code>, die Daten bei Platzmangel nicht zu löschen.</li>
-      <li>Die Desktop-App (nicht diese Webseite) fragt beim Start bei api.github.com nach einer neueren Version; abschaltbar.</li>
-    </ul>
-  </div>
+  <h2>Was die App verarbeitet</h2>
+  <ul>
+    <li>Keine Konten, kein eigener Server, keine Cookies, kein Tracking, kein Analytics.</li>
+    <li>Keine Skripte, Schriften oder sonstigen Inhalte von Drittanbietern; alles wird von derselben Adresse geladen. Ausnahmen sind die optionale Karte und der Streckenspeicher (siehe unten), und das erst, nachdem eine Person sie einschaltet.</li>
+    <li>Bluetooth-Daten des Laufbands werden nur im Browser verarbeitet und nirgendwohin gesendet.</li>
+    <li>Im localStorage des Browsers liegen nur Einstellungen: Speed-Limit, maximale Änderung pro Befehl, Verhalten im Hintergrund, Sportart für TCX, Sprache, Farbschema, bestätigter Sicherheitshinweis, ob Läufe gespeichert werden.</li>
+    <li>Ein Service Worker speichert die App-Dateien für die Offline-Nutzung im Browser-Cache.</li>
+    <li>Die laufende Aufzeichnung für Diagramm und CSV/TCX-Export liegt nur im Arbeitsspeicher, bis die Seite geschlossen wird.</li>
+    <li>Läufe werden in der IndexedDB des Browsers auf diesem Gerät gespeichert (Desktop-App: im Datenordner der App): Zeitpunkt, Geschwindigkeit, Strecke, Steigung, kcal und Puls (nur wenn das Laufband einen liefert), etwa einmal pro Sekunde. Sie verlassen das Gerät nur, wenn die Person selbst ein Backup oder einen Export herunterlädt. Das Speichern lässt sich abschalten; Läufe lassen sich einzeln oder alle löschen.</li>
+    <li>Gespeicherte Workouts und der Wochenplan liegen in derselben IndexedDB auf diesem Gerät. Sie verlassen es nur, wenn die Person ein Backup herunterlädt.</li>
+    <li>Importierte Strecken (GPX-Dateien) werden auf diesem Gerät gelesen und in derselben IndexedDB gespeichert. Die Datei wird nicht hochgeladen. Eine Strecke verlässt das Gerät nur, wenn die Person sie exportiert oder ein Backup herunterlädt.</li>
+    <li>Die optionale Streckenkarte (standardmäßig aus; die Wahl steht im localStorage) lädt Stil, Vektorkacheln, Symbole und Schriften von <code>tiles.openfreemap.org</code> (OpenFreeMap; die Adresse wird beim Bauen der App festgelegt). Dieser Server erhält die üblichen Verbindungsdaten (IP-Adresse, Browserangaben) und die Kachelkoordinaten des angesehenen Kartenausschnitts, die das Gebiet der Strecke erkennen lassen. Walkflow schickt ihm keine Trainingsdaten, keine Laufbanddaten und keine Streckenpunkte. Der Kartencode selbst gehört zur App und wird von derselben Adresse geladen. Ohne Karte geht keine Anfrage an diesen Server.</li>
+    <li>Das Land einer Strecke (für die Flagge vor dem Namen) wird auf dem Gerät aus dem Start der Strecke bestimmt, mit Grenzdaten (Natural Earth) und Flaggenbildern (flag-icons), die zu den App-Dateien gehören. Es werden keine Koordinaten versendet. Der Ländercode wird mit der Strecke gespeichert und ist Teil eines Backups.</li>
+    <li>Nach dem ersten gespeicherten Lauf bittet die Web-App den Browser per <code>navigator.storage.persist()</code>, die Daten bei Platzmangel nicht zu löschen.</li>
+    <li>Der Streckenspeicher wird nur geladen, wenn du in der Streckenliste „Streckenspeicher anzeigen“ wählst: Dann holt die App die Liste der Strecken und die von dir gewählten Strecken von <code>raw.githubusercontent.com</code> (Repository walkflow-app/route-store). GitHub erhält dabei deine IP-Adresse und die üblichen Verbindungsdaten; Cookies und Referrer werden nicht gesendet, Trainingsdaten werden nicht übertragen. Ohne diese Auswahl geht keine Anfrage dorthin. Die Strecken im Streckenspeicher enthalten Streckendaten © OpenStreetMap-Mitwirkende (ODbL); Autor, Lizenz und Quelle zeigt die App in den Details einer Strecke.</li>
+    <li>Die Desktop-App (nicht diese Webseite) fragt beim Start und danach alle paar Stunden bei GitHub (api.github.com, github.com) nach einer neueren Version; abschaltbar. Eine neue Version lädt sie erst nach deiner Zustimmung herunter und startet erst nach einer zweiten Zustimmung neu.</li>
+  </ul>
 </main>
 </body>
 </html>

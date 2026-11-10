@@ -19,39 +19,33 @@
   </nav>
   <h1>Privacy policy</h1>
 
-  <div class="box">
-    <strong>Placeholder.</strong> There is no legal text here yet. All sections marked TODO
-    must be filled in before publishing. The Pages workflow fails as long as TODO appears here.
-  </div>
-
   <h2>Controller</h2>
-  <p><span class="todo">TODO</span></p>
+  <p>Walkflow, a private open-source project. Contact: <a href="mailto:walkflow.app@gmail.com">walkflow.app@gmail.com</a>. Walkflow does not run a server of its own and stores nothing about the visitors of these pages. The app works on your device.</p>
 
   <h2>Hosting</h2>
-  <p><span class="todo">TODO: note on hosting via GitHub Pages</span></p>
+  <p>This website and the web app are served by GitHub Pages, a service of GitHub, Inc. (USA). When you open them, GitHub usually processes technically necessary connection data, including your IP address, the date and time of the request and browser details, to deliver the pages and to keep the service secure. Walkflow has no access to this data and does not evaluate it. <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub’s privacy statement</a> applies. The same goes for downloads of the desktop app and for the route store and the update check of the desktop app (see below), which contact GitHub’s servers (github.com, api.github.com, raw.githubusercontent.com).</p>
 
   <h2>Rights of data subjects</h2>
-  <p><span class="todo">TODO</span></p>
+  <p>Walkflow itself does not store any personal data about you. The data of the app (runs, workouts, routes, settings) is on your device, where you can look at it, export it and delete it at any time (Settings &amp; data). Where data arises at GitHub, GitHub is responsible for it.</p>
+  <p>Under the General Data Protection Regulation you have the right of access, rectification, erasure, restriction of processing, data portability and objection, and the right to lodge a complaint with a data protection supervisory authority. Send requests by email to <a href="mailto:walkflow.app@gmail.com">walkflow.app@gmail.com</a>.</p>
 
-  <div class="box mute">
-    <strong>Technical facts about the app</strong> (as a basis for filling this in, not legal text; remove or adopt before publishing):
-    <ul>
-      <li>No accounts, no own server, no cookies, no tracking, no analytics.</li>
-      <li>No scripts, fonts or other content from third parties; everything is loaded from the same address. The only exception is the optional map (see below), and only after a person switches it on.</li>
-      <li>Bluetooth data from the treadmill is processed only in the browser and sent nowhere.</li>
-      <li>The browser’s localStorage holds only settings: speed limit, maximum change per command, background behaviour, sport for TCX, language, theme, accepted safety notice, whether runs are saved.</li>
-      <li>A service worker stores the app files in the browser cache for offline use.</li>
-      <li>The current recording for the chart and the CSV/TCX export stays only in memory until the page is closed.</li>
-      <li>Runs are stored in the browser’s IndexedDB on this device (desktop app: in the app’s data folder): time, speed, distance, incline, kcal and heart rate (only if the treadmill reports one), about once per second. They leave the device only when the person downloads a backup or an export themselves. Saving can be turned off; runs can be deleted one by one or all at once.</li>
-      <li>Saved workouts and the week plan are kept in the same IndexedDB on this device. They leave it only when the person downloads a backup.</li>
-      <li>Imported routes (GPX files) are read on this device and kept in the same IndexedDB. The file is not uploaded. A route leaves the device only when the person exports it or downloads a backup.</li>
-      <li>The optional route map (off by default; the choice is kept in localStorage) loads its style, vector tiles, symbols and fonts from <code>tiles.openfreemap.org</code> (OpenFreeMap; the address is fixed when the app is built). That server receives the usual connection data (IP address, browser details) and the tile coordinates of the part of the map being looked at, which show the area of the route. Walkflow sends it no workout data, no treadmill data and no route points. The map code itself is part of the app and is loaded from the same address. Without the map, no request goes to that server.</li>
-      <li>The app contains one example route (track data © OpenStreetMap contributors, ODbL). It is part of the app files and is put into the person’s own library on the first start; it can be deleted like any other route.</li>
-      <li>The country of a route (for the flag next to its name) is worked out on the device from the start of the route, using border data (Natural Earth) and flag images (flag-icons) that are part of the app files. No coordinates are sent anywhere. The country code is saved with the route and is part of a backup.</li>
-      <li>After the first saved run, the web app asks the browser via <code>navigator.storage.persist()</code> not to delete the data when space runs low.</li>
-      <li>The desktop app (not this website) asks api.github.com for a newer version on startup; can be turned off.</li>
-    </ul>
-  </div>
+  <h2>What the app processes</h2>
+  <ul>
+    <li>No accounts, no own server, no cookies, no tracking, no analytics.</li>
+    <li>No scripts, fonts or other content from third parties; everything is loaded from the same address. The exceptions are the optional map and the route store (see below), and only after a person switches them on.</li>
+    <li>Bluetooth data from the treadmill is processed only in the browser and sent nowhere.</li>
+    <li>The browser’s localStorage holds only settings: speed limit, maximum change per command, background behaviour, sport for TCX, language, theme, accepted safety notice, whether runs are saved.</li>
+    <li>A service worker stores the app files in the browser cache for offline use.</li>
+    <li>The current recording for the chart and the CSV/TCX export stays only in memory until the page is closed.</li>
+    <li>Runs are stored in the browser’s IndexedDB on this device (desktop app: in the app’s data folder): time, speed, distance, incline, kcal and heart rate (only if the treadmill reports one), about once per second. They leave the device only when the person downloads a backup or an export themselves. Saving can be turned off; runs can be deleted one by one or all at once.</li>
+    <li>Saved workouts and the week plan are kept in the same IndexedDB on this device. They leave it only when the person downloads a backup.</li>
+    <li>Imported routes (GPX files) are read on this device and kept in the same IndexedDB. The file is not uploaded. A route leaves the device only when the person exports it or downloads a backup.</li>
+    <li>The optional route map (off by default; the choice is kept in localStorage) loads its style, vector tiles, symbols and fonts from <code>tiles.openfreemap.org</code> (OpenFreeMap; the address is fixed when the app is built). That server receives the usual connection data (IP address, browser details) and the tile coordinates of the part of the map being looked at, which show the area of the route. Walkflow sends it no workout data, no treadmill data and no route points. The map code itself is part of the app and is loaded from the same address. Without the map, no request goes to that server.</li>
+    <li>The country of a route (for the flag next to its name) is worked out on the device from the start of the route, using border data (Natural Earth) and flag images (flag-icons) that are part of the app files. No coordinates are sent anywhere. The country code is saved with the route and is part of a backup.</li>
+    <li>After the first saved run, the web app asks the browser via <code>navigator.storage.persist()</code> not to delete the data when space runs low.</li>
+    <li>The route store is only loaded when you choose “Show the route store” in the routes list: then the app fetches the list of routes and the ones you pick from <code>raw.githubusercontent.com</code> (repository walkflow-app/route-store). GitHub receives your IP address and the usual connection data; no cookies and no referrer are sent, and no training data is transmitted. Without this choice no request goes there. The routes in the route store contain track data © OpenStreetMap contributors (ODbL); the app shows author, licence and source in the details of a route.</li>
+    <li>The desktop app (not this website) asks GitHub (api.github.com, github.com) for a newer version on startup and every few hours after that; can be turned off. It downloads a new version only after you agree, and restarts only after a second agreement.</li>
+  </ul>
 </main>
 </body>
 </html>

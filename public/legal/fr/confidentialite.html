@@ -19,39 +19,33 @@
   </nav>
   <h1>Politique de confidentialité</h1>
 
-  <div class="box">
-    <strong>Page provisoire.</strong> Il n’y a pas encore de texte juridique ici. Toutes les sections marquées TODO
-    doivent être remplies avant la publication. Le workflow Pages échoue tant que TODO figure ici.
-  </div>
-
   <h2>Responsable du traitement</h2>
-  <p><span class="todo">TODO</span></p>
+  <p>Walkflow, un projet open source privé. Contact : <a href="mailto:walkflow.app@gmail.com">walkflow.app@gmail.com</a>. Walkflow n’exploite pas de serveur propre et ne conserve rien sur les visiteurs de ces pages. L’application fonctionne sur votre appareil.</p>
 
   <h2>Hébergement</h2>
-  <p><span class="todo">TODO : mention de l’hébergement via GitHub Pages</span></p>
+  <p>Ce site et l’application web sont fournis par GitHub Pages, un service de GitHub, Inc. (États-Unis). Lors de l’accès, GitHub traite en général les données de connexion techniquement nécessaires, notamment votre adresse IP, la date et l’heure de la requête et des informations sur le navigateur, afin de fournir les pages et de sécuriser le service. Walkflow n’a pas accès à ces données et ne les exploite pas. La <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">déclaration de confidentialité de GitHub</a> s’applique. Il en va de même pour les téléchargements de l’application de bureau, ainsi que pour le catalogue de parcours et la recherche de mises à jour de l’application de bureau (voir ci-dessous), qui contactent les serveurs de GitHub (github.com, api.github.com, raw.githubusercontent.com).</p>
 
   <h2>Droits des personnes concernées</h2>
-  <p><span class="todo">TODO</span></p>
+  <p>Walkflow lui-même ne conserve aucune donnée personnelle vous concernant. Les données de l’application (séances, entraînements, parcours, réglages) se trouvent sur votre appareil, où vous pouvez les consulter, les exporter et les supprimer à tout moment (Réglages et données). Lorsque des données sont traitées chez GitHub, GitHub en est responsable.</p>
+  <p>En vertu du règlement général sur la protection des données, vous disposez d’un droit d’accès, de rectification, d’effacement, de limitation du traitement, à la portabilité et d’opposition, ainsi que du droit d’introduire une réclamation auprès d’une autorité de contrôle. Adressez vos demandes par e-mail à <a href="mailto:walkflow.app@gmail.com">walkflow.app@gmail.com</a>.</p>
 
-  <div class="box mute">
-    <strong>Faits techniques sur l’application</strong> (comme base pour la rédaction, pas un texte juridique ; à supprimer ou reprendre avant la publication) :
-    <ul>
-      <li>Pas de compte, pas de serveur propre, pas de cookies, pas de suivi, pas d’outil d’analyse.</li>
-      <li>Aucun script, aucune police ni aucun autre contenu de tiers ; tout est chargé depuis la même adresse. La seule exception est la carte facultative (voir ci-dessous), et seulement après qu’une personne l’a activée.</li>
-      <li>Les données Bluetooth du tapis sont traitées uniquement dans le navigateur et ne sont envoyées nulle part.</li>
-      <li>Le localStorage du navigateur ne contient que des réglages : limite de vitesse, variation maximale par commande, comportement en arrière-plan, sport pour le TCX, langue, thème, avertissement de sécurité accepté, enregistrement des séances activé ou non.</li>
-      <li>Un service worker enregistre les fichiers de l’application dans le cache du navigateur pour l’utilisation hors ligne.</li>
-      <li>L’enregistrement en cours pour le graphique et l’export CSV/TCX reste uniquement en mémoire jusqu’à la fermeture de la page.</li>
-      <li>Les séances sont stockées dans l’IndexedDB du navigateur sur cet appareil (application de bureau : dans le dossier de données de l’application) : horodatage, vitesse, distance, inclinaison, kcal et fréquence cardiaque (seulement si le tapis en fournit une), environ une fois par seconde. Elles ne quittent l’appareil que si la personne télécharge elle-même une sauvegarde ou un export. L’enregistrement peut être désactivé ; les séances peuvent être supprimées une par une ou toutes à la fois.</li>
-      <li>Les séances types enregistrées et le plan de la semaine sont conservés dans la même IndexedDB sur cet appareil. Ils ne le quittent que si la personne télécharge une sauvegarde.</li>
-      <li>Les parcours importés (fichiers GPX) sont lus sur cet appareil et conservés dans la même IndexedDB. Le fichier n’est pas envoyé. Un parcours ne quitte l’appareil que si la personne l’exporte ou télécharge une sauvegarde.</li>
-      <li>La carte facultative du parcours (désactivée par défaut ; le choix est conservé dans le localStorage) charge son style, ses tuiles vectorielles, ses symboles et ses polices depuis <code>tiles.openfreemap.org</code> (OpenFreeMap ; l’adresse est fixée à la compilation de l’application). Ce serveur reçoit les données de connexion habituelles (adresse IP, informations du navigateur) et les coordonnées des tuiles de la partie de carte consultée, qui révèlent la zone du parcours. Walkflow ne lui envoie aucune donnée d’entraînement, aucune donnée du tapis et aucun point du parcours. Le code de la carte fait partie de l’application et est chargé depuis la même adresse. Sans la carte, aucune requête ne part vers ce serveur.</li>
-      <li>L’application contient un parcours d’exemple (données du tracé © les contributeurs d’OpenStreetMap, ODbL). Il fait partie des fichiers de l’application et est placé dans la liste personnelle au premier démarrage ; on peut le supprimer comme n’importe quel parcours.</li>
-      <li>Le pays d’un parcours (pour le drapeau devant son nom) est déterminé sur l’appareil à partir du départ du parcours, avec des données de frontières (Natural Earth) et des images de drapeaux (flag-icons) qui font partie des fichiers de l’application. Aucune coordonnée n’est envoyée. Le code du pays est enregistré avec le parcours et fait partie d’une sauvegarde.</li>
-      <li>Après la première séance enregistrée, l’application web demande au navigateur via <code>navigator.storage.persist()</code> de ne pas supprimer les données en cas de manque d’espace.</li>
-      <li>L’application de bureau (pas ce site web) interroge api.github.com au démarrage pour vérifier s’il existe une version plus récente ; désactivable.</li>
-    </ul>
-  </div>
+  <h2>Ce que traite l’application</h2>
+  <ul>
+    <li>Pas de compte, pas de serveur propre, pas de cookies, pas de suivi, pas d’outil d’analyse.</li>
+    <li>Aucun script, aucune police ni aucun autre contenu de tiers ; tout est chargé depuis la même adresse. Les exceptions sont la carte facultative et le catalogue de parcours (voir ci-dessous), et seulement après qu’une personne les a activés.</li>
+    <li>Les données Bluetooth du tapis sont traitées uniquement dans le navigateur et ne sont envoyées nulle part.</li>
+    <li>Le localStorage du navigateur ne contient que des réglages : limite de vitesse, variation maximale par commande, comportement en arrière-plan, sport pour le TCX, langue, thème, avertissement de sécurité accepté, enregistrement des séances activé ou non.</li>
+    <li>Un service worker enregistre les fichiers de l’application dans le cache du navigateur pour l’utilisation hors ligne.</li>
+    <li>L’enregistrement en cours pour le graphique et l’export CSV/TCX reste uniquement en mémoire jusqu’à la fermeture de la page.</li>
+    <li>Les séances sont stockées dans l’IndexedDB du navigateur sur cet appareil (application de bureau : dans le dossier de données de l’application) : horodatage, vitesse, distance, inclinaison, kcal et fréquence cardiaque (seulement si le tapis en fournit une), environ une fois par seconde. Elles ne quittent l’appareil que si la personne télécharge elle-même une sauvegarde ou un export. L’enregistrement peut être désactivé ; les séances peuvent être supprimées une par une ou toutes à la fois.</li>
+    <li>Les séances types enregistrées et le plan de la semaine sont conservés dans la même IndexedDB sur cet appareil. Ils ne le quittent que si la personne télécharge une sauvegarde.</li>
+    <li>Les parcours importés (fichiers GPX) sont lus sur cet appareil et conservés dans la même IndexedDB. Le fichier n’est pas envoyé. Un parcours ne quitte l’appareil que si la personne l’exporte ou télécharge une sauvegarde.</li>
+    <li>La carte facultative du parcours (désactivée par défaut ; le choix est conservé dans le localStorage) charge son style, ses tuiles vectorielles, ses symboles et ses polices depuis <code>tiles.openfreemap.org</code> (OpenFreeMap ; l’adresse est fixée à la compilation de l’application). Ce serveur reçoit les données de connexion habituelles (adresse IP, informations du navigateur) et les coordonnées des tuiles de la partie de carte consultée, qui révèlent la zone du parcours. Walkflow ne lui envoie aucune donnée d’entraînement, aucune donnée du tapis et aucun point du parcours. Le code de la carte fait partie de l’application et est chargé depuis la même adresse. Sans la carte, aucune requête ne part vers ce serveur.</li>
+    <li>Le pays d’un parcours (pour le drapeau devant son nom) est déterminé sur l’appareil à partir du départ du parcours, avec des données de frontières (Natural Earth) et des images de drapeaux (flag-icons) qui font partie des fichiers de l’application. Aucune coordonnée n’est envoyée. Le code du pays est enregistré avec le parcours et fait partie d’une sauvegarde.</li>
+    <li>Après la première séance enregistrée, l’application web demande au navigateur via <code>navigator.storage.persist()</code> de ne pas supprimer les données en cas de manque d’espace.</li>
+    <li>Le catalogue de parcours n’est chargé que lorsque vous choisissez « Afficher le catalogue de parcours » dans la liste des parcours : l’application récupère alors la liste des parcours et ceux que vous choisissez sur <code>raw.githubusercontent.com</code> (dépôt walkflow-app/route-store). GitHub reçoit votre adresse IP et les données de connexion habituelles ; aucun cookie et aucun référent ne sont envoyés, et aucune donnée d’entraînement n’est transmise. Sans ce choix, aucune requête n’y est envoyée. Les parcours du catalogue contiennent des données de tracé © contributeurs OpenStreetMap (ODbL) ; l’application affiche l’auteur, la licence et la source dans les détails d’un parcours.</li>
+    <li>L’application de bureau (pas ce site web) interroge GitHub (api.github.com, github.com) au démarrage, puis toutes les quelques heures, pour vérifier s’il existe une version plus récente ; désactivable. Elle ne télécharge une nouvelle version qu’avec votre accord et ne redémarre qu’avec un second accord.</li>
+  </ul>
 </main>
 </body>
 </html>
