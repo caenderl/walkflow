@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.0](https://github.com/walkflow-app/walkflow/compare/v0.2.0...v0.3.0) (2026-11-10)
+
+
+### Features
+
+* **pwa:** offer installing the web app in Settings → Info ([aeb077a](https://github.com/walkflow-app/walkflow/commit/aeb077ab89cdf372b14f5b64edbb9d83d81f5c58))
+* **site:** canonical and hreflang links, link previews, structured data and a sitemap ([f662565](https://github.com/walkflow-app/walkflow/commit/f66256520ea0f6fab9cae8f5da33c801875d70ce))
+* **site:** download links to the files of the latest release, version on top ([4856432](https://github.com/walkflow-app/walkflow/commit/48564327694e7731b44681d6110d57cc23ede876))
+
 ## [0.2.0](https://github.com/walkflow-app/walkflow/compare/v0.1.0...v0.2.0) (2026-11-10)
 
 
