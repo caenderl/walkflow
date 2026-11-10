@@ -5,7 +5,7 @@ body:
     attributes:
       value: |
         If the problem is that **the belt did not stop**, or started faster than asked, please do not post it here: use
-        [Report a vulnerability](https://github.com/caenderl/walkflow/security/advisories/new) (private). Thank you.
+        [Report a vulnerability](https://github.com/walkflow-app/walkflow/security/advisories/new) (private). Thank you.
   - type: textarea
     id: what
     attributes:

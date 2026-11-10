@@ -168,7 +168,7 @@ describe('verifyDownload', () => {
 
 describe('addresses', () => {
   it('index and files are below the base', () => {
-    const base = 'https://raw.githubusercontent.com/caenderl/walkflow/main/store';
+    const base = 'https://raw.githubusercontent.com/walkflow-app/walkflow/main/store';
     expect(storeIndexUrl(base)).toBe(`${base}/index.json`);
     expect(storeFileUrl(base, 'harbour-loop.walkflow')).toBe(`${base}/routes/harbour-loop.walkflow`);
   });
