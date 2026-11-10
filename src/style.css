@@ -537,6 +537,7 @@ html:not(.i18n-ready) body { visibility:hidden; animation:i18n-reveal 0s 1.5s fo
 .sd-panel { display:grid; gap:16px; max-width:560px; align-content:start; }
 .sd-panel:not(.grid) { display:block; }
 .sd-panel h3 { margin:0 0 4px; }
+#installBtn { margin:0 0 1em; }
 .sd-panel hr { width:100%; border:0; border-top:1px solid var(--card-border); margin:4px 0; }
 .sd-panel .menu-label { padding-left:0; }
 .settings-anchor { display:inline-flex; }

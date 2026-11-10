@@ -10,6 +10,7 @@ import { setupMenu, setupPrefs } from './ui/settings/menus';
 import { setupInterval } from './ui/workouts/interval-ui';
 import { ProgramRunner } from './core/training/program';
 import { setupPwa } from './ui/pwa';
+import { setupInstall } from './ui/install';
 import { StandstillDetector } from './core/safety/safety';
 import { COMMUNITY_ENABLED, STORE_BASE } from './platform/features';
 import { setupBackground } from './ui/background';
@@ -264,6 +265,8 @@ if (bluetoothSupportHint(env)) {
 }
 connection.setUi(false);
 setupPwa(() => session.connected());
+// Settings → Info: install the web app as an app of its own (web build only)
+setupInstall();
 setupDesktop({
   onGlobalStop: () => { if (session.connected()) { log(t.stop.globalShortcutLog); void belt.stop(() => t.stop.globalShortcut); } },
   // A file opened from outside goes to the view that fits what is in it; anything else gets the routes' message
