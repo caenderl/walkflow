@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.0](https://github.com/walkflow-app/walkflow/compare/v0.1.0...v0.2.0) (2026-11-10)
+
+
+### Features
+
+* **desktop:** update the app from inside, with a yes to download and a second yes to restart ([4d7951f](https://github.com/walkflow-app/walkflow/commit/4d7951f0ecbbd03ca239e83a26f30db3c3fd02f6))
+* **history:** a date under every day of the chart, in two lines ([609224d](https://github.com/walkflow-app/walkflow/commit/609224ddf57ae19a58301003a1b82a9c53b97ed4))
+* **history:** a gear in the corner of the card instead of the backup button ([0247119](https://github.com/walkflow-app/walkflow/commit/0247119658cf4d41ec3eb93f03136f21c5a5e187))
+* **history:** show the distance per day for the last 30 days, and mark a run as paused while the belt stands ([4255a39](https://github.com/walkflow-app/walkflow/commit/4255a396deacc56ed82477b93ae82b3e97d3297e))
+* **routes:** no privacy notice in the route store, the info dialog says it ([e7ca22e](https://github.com/walkflow-app/walkflow/commit/e7ca22e708275c222119fb946eaaaeb702192cb9))
+* **site:** a product page for GitHub Pages with the web app under app/ ([de5f81e](https://github.com/walkflow-app/walkflow/commit/de5f81e13c9a41c3c03234db6ec236bd59e72201))
+
+
+### Fixes
+
+* **history:** label only the Mondays and today in the daily chart ([da2fa2e](https://github.com/walkflow-app/walkflow/commit/da2fa2ee74135aff568ce906049a8bd6c7a39184))
+* **store:** find the app's code from the script's own folder, not from where it is run ([d7b0975](https://github.com/walkflow-app/walkflow/commit/d7b0975f1001069ad3943cb293fdb753b98c20ed))
+
 ## [0.1.0](https://github.com/caenderl/walkflow/compare/v0.0.1...v0.1.0) (2026-11-09)
 
 
