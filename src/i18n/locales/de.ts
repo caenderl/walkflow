@@ -259,7 +259,6 @@ export const de: Messages = {
   },
   routeStore: {
     title: 'Streckenspeicher',
-    hint: 'Strecken, die Menschen zum Projekt beigetragen haben. Sie liegen im Repository des Projekts auf GitHub. Beim Öffnen der Liste wird GitHub kontaktiert und sieht deine IP-Adresse; sonst wird nichts gesendet.',
     show: 'Streckenspeicher anzeigen',
     hide: 'Ausblenden',
     loading: 'Liste wird geladen …',

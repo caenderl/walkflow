@@ -260,7 +260,6 @@ export const en = {
   },
   routeStore: {
     title: 'Route store',
-    hint: 'Routes that people have contributed to the project. They are kept in the project’s repository on GitHub. Opening the list contacts GitHub, which sees your IP address; nothing else is sent.',
     show: 'Show the route store',
     hide: 'Hide',
     loading: 'Loading the list …',

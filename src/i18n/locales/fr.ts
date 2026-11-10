@@ -262,7 +262,6 @@ export const fr: Messages = {
   },
   routeStore: {
     title: 'Bibliothèque de parcours',
-    hint: 'Des parcours que des personnes ont apportés au projet. Ils sont conservés dans le dépôt du projet sur GitHub. Ouvrir la liste contacte GitHub, qui voit votre adresse IP ; rien d’autre n’est envoyé.',
     show: 'Afficher la bibliothèque de parcours',
     hide: 'Masquer',
     loading: 'Chargement de la liste …',
