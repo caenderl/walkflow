@@ -14,7 +14,7 @@ A walking pad: it has **no safety key** (nothing to hold on to), so all “pull 
 - **No `05` (target speed) and no `03` (safety key) status ever came.** The treadmill changes its speed in 0.1 km/h steps on the device without telling us in the Machine Status. Whether `ff` (control lost) ever comes is not recorded.
 - **Countdown after start:** about 3 s (the program waits 4.5 s, so it sets the first speed after the belt has started).
 - **Incline:** `Set Inclination` is accepted, the belt follows after about 5 s. The treadmill’s display shows **levels, not percent**: the app sent 1.0 %, 3.0 % and 0 % (`03 0a 00`, `03 1e 00`, `03 00 00`) and the display showed level 1, 3 and 0. The range “0 to 5 %” in the log is levels 0 to 5. The real slope of a level is unknown.
-- **Starting speed (finding):** the treadmill remembers the last `Set Speed`, also one set before the start, and runs up to it by itself after `Start` (0 to 2 km/h slowly in the test). Fixed in the app: after `Request Control` it now sends `Set Speed` with the lowest speed of the device (`→ 02 64 00` for 1.0 km/h) and only then `Start`. To be confirmed on the treadmill, see the first list below.
+- **Starting speed (finding):** the treadmill remembers the last `Set Speed`, also one set before the start, and runs up to it by itself after `Start` (0 to 2 km/h slowly in the test). Fixed in the app: after `Request Control` it now sends `Set Speed` with the lowest speed of the device (`→ 02 64 00` for 1.0 km/h) and only then `Start`. Confirmed on the treadmill on 2026-11-10, see below.
 - Texts that ask for the safety key are wrong for this device; the “%” label for the incline is wrong for level-based treadmills.
 
 ## Changed compared with the prototype, please double-check
@@ -22,6 +22,7 @@ A walking pad: it has **no safety key** (nothing to hold on to), so all “pull 
 - [x] **Connecting.** Same sequence as the prototype, except that the notification listener is now registered *before* `startNotifications`. Expected in the log: `Device: …`, `Manufacturer: …`, `Speed range: …`, `→ 00`, `← Request Control: OK`, then live values come in.
 - [x] **Ramp.** At 2 km/h press preset 5. Expected: `→ 02 fa 00` (2.5), `02 2c 01` (3.0), `02 5e 01` (3.5), `02 90 01` (4.0), `02 c2 01` (4.5), `02 f4 01` (5.0), each at least 1.5 s apart and with `← Set Speed: OK`. Suspicious would be: missing responses, `failed`, or the belt jerking at every step.
 - [x] **Stop takes priority.** Press Space during a ramp. Expected: `→ 08 01` comes right after the write in progress, possibly with `dropped: 02 …`. The belt stops.
+- [x] **Starting speed.** The speed was 1.5 km/h before the start. Expected: `→ 00`, `→ 02 64 00`, `→ 07`, each answered with OK, and then the ramp from 1.0 km/h, with no jump to the old speed. *sPad 500, 2026-11-10: exactly that; the belt started at 1.0 km/h and the app ramped up in 0.5 km/h steps (a route run, 2.54 km in 31:31, up to 6.0 km/h).*
 - [ ] **Lowering the limit while the belt runs.** (The settings are locked while the belt runs, so this cannot happen any more; the item is obsolete.) At 5 km/h set the limit to 4. Expected: `Limit lowered, regulating to 4.0 km/h` and `→ 02 90 01`.
 
 ## Machine Status (controls program abort)
@@ -133,10 +134,11 @@ The settings dialog and the training view only change what is shown, plus one se
 - [ ] **Workout package file.** Export a workout (**Workouts → ⋯ → Export as package**) and double click the `.walkflow` file: Walkflow opens the **Workouts** view and asks “Import this workout?” (not the Routes view, although the extension is the same); **Import** adds a new workout and selects it, **Cancel** adds nothing. A route package opened the same way still goes to Routes. Check the speed note in the question: a workout with a step above your speed limit must run at your limit, not above it (watch the speed in the log).
 - [ ] **Community in the desktop app** (not in the first release: only in a build with `WALKFLOW_COMMUNITY=on`). Switch **Community** on in the desktop app and in a browser (or a second computer): do they find each other (the status says “Connected to 1 device”)? Take a workout from one to the other: the question appears, it is saved, and the other side then lists it as offered by one more device. Check that the macOS firewall question (incoming connections) does not block it, and that switching Community off ends the connection (the other side forgets the device).
 
-## Stop and Start, hardened (not confirmed on a treadmill yet)
+## Stop and Start, hardened (partly confirmed on a treadmill)
 
 Covered by tests without hardware (`belt.test.ts`, `ble.test.ts`, `live-data.test.ts`, `safety.test.ts`); what only a treadmill can show:
 
+- [x] **Stop on a running belt (route run, sPad 500, 2026-11-10).** `→ 08 01` was answered with `← Stop/Pause: OK` at the first try, so no repeat was needed. `ℹ Status 02 01` came about 8 s later (a bit more than the 4–7 s seen before). No console error; the only warning was `Image "wood-pattern" could not be loaded` from the map library (harmless). The repeat and the refusal paths below are still not seen on a treadmill.
 - [ ] **Stop during the start.** Press Start, confirm, and press Space at once (while `→ 00` / `→ 02 64 00` are still going out). Expected: `→ 08 01` is the last command in the log, no `→ 07` after it, and the belt does not start. Before this change `→ 07` could follow the stop.
 - [ ] **Stop on a standing belt.** Connected, belt standing, press Stop. Which answer comes: `← Stop/Pause: OK` or `failed`? The warning “The treadmill did not take the stop” must *not* appear (it only appears while a speed above 0 is reported). Note the answer here.
 - [ ] **Pause while standing, Start while running:** note the `←` answers as well; a refused Set Speed (`← Set Speed: …` other than OK) now ends the ramp with `The treadmill refused the speed`.
