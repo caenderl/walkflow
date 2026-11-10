@@ -133,6 +133,20 @@ describe('RunRecorder: detecting runs', () => {
     expect(runs[0]!.summary.movingSec).toBe(120);
   });
 
+  it('says whether the belt stands while the run is still open (so the list can say "paused", not "running")', () => {
+    const h = harness();
+    expect(h.rec.standing).toBe(false);
+    walk(h.rec, 0, 120, 3);
+    expect(h.rec.standing).toBe(false);
+    walk(h.rec, 121, 130, 0);
+    expect(h.rec.recording).toBe(true);
+    expect(h.rec.standing).toBe(true);
+    walk(h.rec, 131, 140, 3);
+    expect(h.rec.standing).toBe(false);
+    h.rec.finish();
+    expect(h.rec.standing).toBe(false);
+  });
+
   it('also ends when the treadmill stops sending data', async () => {
     const h = harness();
     walk(h.rec, 0, 120, 3);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RunSummary } from './runs';
-import { countable, monthStart, overview, records, streaks, totals, weeklyDistance, weekStart } from './stats';
+import { countable, monthStart, overview, records, streaks, totals, dailyDistance, weekStart } from './stats';
 
 // Local time throughout, so the tests mean the same in every time zone
 const day = (y: number, m: number, d: number, h = 8) => new Date(y, m - 1, d, h, 0, 0).getTime();
@@ -50,19 +50,27 @@ describe('weeks and months', () => {
     expect(o.all.runs).toBe(4);
   });
 
-  it('distance per week: oldest first, ending with the current week, empty weeks included', () => {
+  it('distance per day: oldest first, ending with today, days without runs included, several runs on a day added', () => {
     const now = day(2026, 10, 28, 20);
-    const w = weeklyDistance([
-      run(day(2026, 10, 27), { dist: 1000 }), run(day(2026, 10, 28), { dist: 500 }),
-      run(day(2026, 10, 13), { dist: 2000 }),
+    const d = dailyDistance([
+      run(day(2026, 10, 28), { dist: 500 }), run(day(2026, 10, 28, 18), { dist: 700 }),
+      run(day(2026, 10, 26), { dist: 2000 }),
+      run(day(2026, 10, 24, 23), { dist: 111 }),
       run(day(2026, 1, 5), { dist: 9999 }),
     ], now, 4);
-    expect(w).toEqual([
-      { start: day(2026, 10, 5, 0), dist: 0 },
-      { start: day(2026, 10, 12, 0), dist: 2000 },
-      { start: day(2026, 10, 19, 0), dist: 0 },
-      { start: day(2026, 10, 26, 0), dist: 1500 },
+    expect(d).toEqual([
+      { start: day(2026, 10, 25, 0), dist: 0 },
+      { start: day(2026, 10, 26, 0), dist: 2000 },
+      { start: day(2026, 10, 27, 0), dist: 0 },
+      { start: day(2026, 10, 28, 0), dist: 1200 },
     ]);
+  });
+
+  it('distance per day over a clock change: every entry is a local midnight', () => {
+    // 2026-10-25 has 25 hours in Europe, 2026-03-29 has 23: a fixed 24 h step would land on 23:00 or 01:00
+    const d = dailyDistance([], day(2026, 10, 27, 12), 5);
+    expect(d.map(x => new Date(x.start).getHours())).toEqual([0, 0, 0, 0, 0]);
+    expect(d.map(x => new Date(x.start).getDate())).toEqual([23, 24, 25, 26, 27]);
   });
 });
 

@@ -51,6 +51,8 @@ export function dateFormat(locale: string) {
   const dateTime = f({ weekday: 'short', day: 'numeric', month: 'short', ...hm });
   const dateTimeYear = f({ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', ...hm });
   const day = f({ day: 'numeric', month: 'short' });
+  /** 9.11. (de), 11/9 (en), 09/11 (fr): for chart labels */
+  const numericDay = f({ day: 'numeric', month: 'numeric' });
   const dayYear = f({ day: 'numeric', month: 'short', year: 'numeric' });
   const time = f(hm);
   const weekday = f({ weekday: 'long' });
@@ -60,6 +62,8 @@ export function dateFormat(locale: string) {
     day: (ts: number) => (thisYear(ts) ? day : dayYear).format(ts),
     /** Short, for chart labels */
     shortDay: (ts: number) => day.format(ts),
+    /** Even shorter, only numbers */
+    numericDay: (ts: number) => numericDay.format(ts),
     weekday: (ts: number) => weekday.format(ts),
     time: (ts: number) => time.format(ts),
   };

@@ -200,6 +200,8 @@ export class RunRecorder {
   }
 
   get recording(): boolean { return this.samples.length > 0; }
+  /** A run is open but the belt stands (a pause, or the end of the walk before the run closes by itself) */
+  get standing(): boolean { return this.samples.length > 0 && !moving(this.samples.at(-1)); }
   /** Id of the run being recorded once it has been saved for the first time, otherwise null */
   get currentId(): string | null { return this.savedId; }
 

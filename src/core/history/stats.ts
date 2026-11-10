@@ -65,12 +65,24 @@ function weekSums(runs: readonly RunSummary[]): Map<number, number> {
   return sums;
 }
 
-/** The last `weeks` weeks, oldest first, ending with the current one; weeks without runs included. */
-export function weeklyDistance(runs: readonly RunSummary[], now: number, weeks: number): WeekTotal[] {
-  const sums = weekSums(runs);
-  const cur = new Date(weekStart(now));
-  return Array.from({ length: weeks }, (_, i) => {
-    const start = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() - 7 * (weeks - 1 - i)).getTime();
+export interface DayTotal {
+  /** Local midnight */
+  start: number;
+  dist: number;
+}
+
+/** The last `days` days, oldest first, ending with today; days without runs included. */
+export function dailyDistance(runs: readonly RunSummary[], now: number, days: number): DayTotal[] {
+  const sums = new Map<number, number>();
+  for (const r of runs) {
+    const d = new Date(r.start);
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    sums.set(day, (sums.get(day) ?? 0) + r.dist);
+  }
+  const today = new Date(now);
+  // Built from the local date parts, so a clock change does not shift a day by an hour
+  return Array.from({ length: days }, (_, i) => {
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1 - i)).getTime();
     return { start, dist: sums.get(start) ?? 0 };
   });
 }

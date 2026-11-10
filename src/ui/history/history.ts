@@ -12,14 +12,14 @@ import { getRouteStore } from '../../data/route-store';
 import { getRunStore } from '../../data/run-store';
 import { getWorkoutStore } from '../../data/workout-store';
 import { decodeTrack, parseBackup, RunRecorder, serializeBackup, type RunSummary } from '../../core/history/runs';
-import { countable, overview, records, streaks, weeklyDistance, type WeekTotal } from '../../core/history/stats';
+import { countable, overview, records, streaks, dailyDistance, type DayTotal } from '../../core/history/stats';
 import { onThemeChange } from '../theme';
 import { $, $button, $input, download } from '../ui';
 import { store } from '../store';
 
 const SAVE_RUNS_KEY = 'walkflow.saveRuns';
 const PAGE = 20;
-const WEEKS = 12;
+const CHART_DAYS = 30;
 
 export interface HistoryHost {
   log(msg: string): void;
@@ -44,13 +44,15 @@ export function setupHistory(host: HistoryHost) {
   let visible = false;
   let shown = PAGE;
   let runs: RunSummary[] = [];
-  let weeks: WeekTotal[] = [];
-  let activeWeek = -1;
+  let days: DayTotal[] = [];
+  let activeDay = -1;
   let barCentres: number[] = [];
   let failing = false;
   let persistAsked = false;
   let storage: 'memory' | 'desktop' | 'persisted' | 'best-effort' | null = null;
   let renderTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Whether the list was drawn with the belt standing, to redraw the badge when that changes */
+  let standingShown = false;
   /** Ids of the runs whose details are open, kept across re-renders */
   const open = new Set<string>();
   /** Redraw functions of the charts on screen */
@@ -131,12 +133,12 @@ export function setupHistory(host: HistoryHost) {
     period('hMonth', o.month);
     period('hAll', o.all);
 
-    weeks = weeklyDistance(real, now, WEEKS);
-    drawWeeks();
-    const table = $<HTMLTableElement>('weekTable');
-    table.replaceChildren(...weeks.map(w => {
+    days = dailyDistance(real, now, CHART_DAYS);
+    drawDays();
+    const table = $<HTMLTableElement>('dayTable');
+    table.replaceChildren(...days.map(w => {
       const tr = el('tr');
-      tr.append(el('th', undefined, `${t.history.tableWeek} ${t.history.weekOf(w.start)}`), el('td', undefined, t.history.km(w.dist)));
+      tr.append(el('th', undefined, `${t.history.tableDay} ${t.history.dayLabel(w.start)}`), el('td', undefined, t.history.km(w.dist)));
       return tr;
     }));
 
@@ -149,15 +151,15 @@ export function setupHistory(host: HistoryHost) {
     $('hDemoNote').hidden = real.length === runs.length;
   }
 
-  function drawWeeks() {
-    if (!weeks.length) return;
-    barCentres = drawBarChart($<HTMLCanvasElement>('weekChart'), weeks.map(w => toDist(w.dist)), {
-      labels: weeks.map(w => t.history.weekOf(w.start)),
-      active: activeWeek,
+  function drawDays() {
+    if (!days.length) return;
+    barCentres = drawBarChart($<HTMLCanvasElement>('dayChart'), days.map(w => toDist(w.dist)), {
+      labels: days.map(w => t.history.dayLabel(w.start)),
+      active: activeDay,
       format: v => t.number(v),
     });
-    const w = weeks[activeWeek] ?? weeks.at(-1)!;
-    $('weekReadout').textContent = t.history.weekValue(w.start, w.dist);
+    const w = days[activeDay] ?? days.at(-1)!;
+    $('dayReadout').textContent = t.history.dayValue(w.start, w.dist);
   }
 
   function renderList() {
@@ -166,13 +168,14 @@ export function setupHistory(host: HistoryHost) {
     $('runEmpty').hidden = runs.length > 0;
     $('runMore').hidden = runs.length <= shown;
     const current = recorder.currentId;
+    standingShown = recorder.standing;
     const existing = new Map([...list.children].map(li => [(li as HTMLElement).dataset.id, li as HTMLElement]));
     // Rows that did not change stay in place, so an open run keeps its chart and the focus
     items.forEach((r, i) => {
-      const key = `${lang}|${r.id === current}|${JSON.stringify(r)}`;
+      const key = `${lang}|${r.id === current}|${r.id === current && standingShown}|${JSON.stringify(r)}`;
       let li = existing.get(r.id);
       if (!li || li.dataset.key !== key) {
-        const fresh = renderRun(r, r.id === current);
+        const fresh = renderRun(r, r.id === current, standingShown);
         fresh.dataset.key = key;
         if (li) li.replaceWith(fresh);
         li = fresh;
@@ -183,14 +186,14 @@ export function setupHistory(host: HistoryHost) {
     for (const c of charts.keys()) if (!c.isConnected) { charts.delete(c); resize.unobserve(c); }
   }
 
-  function renderRun(r: RunSummary, isCurrent: boolean): HTMLLIElement {
+  function renderRun(r: RunSummary, isCurrent: boolean, standing: boolean): HTMLLIElement {
     const li = el('li', 'run');
     li.dataset.id = r.id;
     const det = el('details');
     const sum = el('summary');
     const head = el('span', 'run-head');
     head.append(el('span', 'run-when', t.history.when(r.start)));
-    if (isCurrent) head.append(el('span', 'badge rec', t.history.recording));
+    if (isCurrent) head.append(el('span', 'badge rec', standing ? t.history.recordingPaused : t.history.recording));
     if (r.source === 'demo') head.append(el('span', 'badge', t.history.demo));
     if (r.tag) head.append(el('span', 'badge tag', r.tag.name));
     sum.append(head, el('span', 'run-line', t.history.line(r.dist, r.movingSec, r.avgKmh)));
@@ -331,19 +334,19 @@ export function setupHistory(host: HistoryHost) {
   // ---------- Events ----------
   const resize = new ResizeObserver(entries => {
     for (const e of entries) {
-      if (e.target.id === 'weekChart') drawWeeks();
+      if (e.target.id === 'dayChart') drawDays();
       else charts.get(e.target as HTMLCanvasElement)?.();
     }
   });
-  const weekCanvas = $<HTMLCanvasElement>('weekChart');
-  resize.observe(weekCanvas);
-  weekCanvas.addEventListener('pointermove', e => {
-    const x = e.clientX - weekCanvas.getBoundingClientRect().left;
+  const dayCanvas = $<HTMLCanvasElement>('dayChart');
+  resize.observe(dayCanvas);
+  dayCanvas.addEventListener('pointermove', e => {
+    const x = e.clientX - dayCanvas.getBoundingClientRect().left;
     const slot = barCentres.length > 1 ? barCentres[1]! - barCentres[0]! : Infinity;
     const i = barCentres.findIndex(c => Math.abs(c - x) <= slot / 2);
-    if (i !== activeWeek) { activeWeek = i; drawWeeks(); }
+    if (i !== activeDay) { activeDay = i; drawDays(); }
   });
-  weekCanvas.addEventListener('pointerleave', () => { activeWeek = -1; drawWeeks(); });
+  dayCanvas.addEventListener('pointerleave', () => { activeDay = -1; drawDays(); });
 
   const autoSave = $input('autoSave');
   autoSave.checked = store.get(SAVE_RUNS_KEY) !== '0';
@@ -366,10 +369,12 @@ export function setupHistory(host: HistoryHost) {
   onLanguageChange(() => { if (visible) void render(); });
   onThemeChange(() => {
     if (!visible) return;
-    drawWeeks();
+    drawDays();
     for (const draw of charts.values()) draw();
   });
   void checkStorage();
+  // The saved run only changes every few seconds, but the badge follows the belt
+  setInterval(() => { if (visible && recorder.currentId && recorder.standing !== standingShown) scheduleRender(); }, 1000);
 
   return {
     recorder,
