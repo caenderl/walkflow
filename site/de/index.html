@@ -68,8 +68,8 @@
     <h1>Dein Laufband in deiner Hand</h1>
     <p class="lead">Walkflow verbindet sich per Bluetooth mit deinem Laufband und steuert es vom Computer aus: Workouts mit Schritten, echte Strecken auf der Karte und dein Verlauf. Kostenlos, Open Source, ohne Konto.</p>
     <div class="cta">
-      <a class="btn primary" id="dl-main" href="#download" data-label="Download für {os}">Download</a>
-      <a class="btn secondary" href="../app/?lang=de">Im Browser öffnen</a>
+      <a class="btn primary" id="dl-main" href="#download" data-label="Download für {os}" data-mac-label="In Chrome oder Edge öffnen" data-mac-href="../app/?lang=de">Download</a>
+      <a class="btn secondary" id="dl-second" href="../app/?lang=de" data-mac-hide>Im Browser öffnen</a>
     </div>
     <p class="note version">Neueste Version <strong>{{version}}</strong> · <a href="https://github.com/walkflow-app/walkflow/releases/tag/v{{version}}">Release Notes</a></p>
     <p class="note">Für Laufbänder mit Bluetooth-FTMS. Bisher getestet mit dem Sportstech sPad 500. <a href="#compat">Mehr zur Kompatibilität</a></p>
@@ -182,17 +182,17 @@
     <h2>Download</h2>
     <p class="intro">Kostenlos nutzbar. Die Installer liegen auf GitHub; die Links laden die Datei direkt herunter.</p>
     <div class="downloads">
-      <div class="dl split" data-os="mac" data-badge="Dein System"><strong><svg class="os" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></svg>macOS</strong><div class="halves"><a href="https://github.com/walkflow-app/walkflow/releases/download/v{{version}}/Walkflow-{{version}}-mac-arm64.dmg"><b>Apple Silicon</b><span>M1-Chip oder neuer</span></a><a href="https://github.com/walkflow-app/walkflow/releases/download/v{{version}}/Walkflow-{{version}}-mac-x64.dmg"><b>Intel</b><span>ältere Macs</span></a></div></div>
+      <a class="dl" data-os="mac" data-badge="Dein System" href="../app/?lang=de"><strong><svg class="os" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></svg>macOS</strong><span>Vorerst keine Desktop-App. Öffne Walkflow in Chrome oder Edge und installiere es in Einstellungen → Info als App.</span></a>
       <a class="dl" data-os="windows" data-badge="Dein System" href="https://github.com/walkflow-app/walkflow/releases/download/v{{version}}/Walkflow-{{version}}-win-x64.exe"><strong><svg class="os" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1"/><rect x="13" y="13" width="7.5" height="7.5" rx="1"/></svg>Windows</strong><span>64 Bit (.exe)</span></a>
       <a class="dl" data-os="linux" data-badge="Dein System" href="https://github.com/walkflow-app/walkflow/releases/download/v{{version}}/Walkflow-{{version}}-linux-x86_64.AppImage"><strong><svg class="os" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3.5 3L7 15M13 15h4"/></svg>Linux</strong><span>AppImage, 64 Bit. Bluetooth in der App ist unter Linux ungetestet.</span></a>
-      <a class="dl" href="../app/?lang=de"><strong><svg class="os" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>Im Browser</strong><span>Chrome oder Edge auf dem Computer oder einem Android-Handy. Nichts zu installieren.</span></a>
+      <a class="dl" href="../app/?lang=de"><strong><svg class="os" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>Im Browser</strong><span>Chrome oder Edge auf dem Computer oder einem Android-Handy. In Einstellungen → Info als App installierbar, ohne Download.</span></a>
     </div>
     <p class="release">Neueste Version <strong>{{version}}</strong> · <a href="https://github.com/walkflow-app/walkflow/releases/tag/v{{version}}">Release Notes</a> · <a href="https://github.com/walkflow-app/walkflow/releases/download/v{{version}}/SHA256SUMS.txt">SHA256SUMS.txt</a></p>
     <div class="unsigned">
       <h3>Die Installer sind nicht signiert</h3>
       <p style="margin: 0 0 6px">Dein System warnt dich beim ersten Öffnen. Das ist zu erwarten, und die Datei ist die von der GitHub-Seite dieses Projekts. Du kannst sie mit <code>SHA256SUMS.txt</code> (oben verlinkt) vergleichen.</p>
       <ul>
-        <li><strong>macOS:</strong> Ziehe die App in „Programme“ und öffne sie. Wähle bei der Warnung „Fertig“, öffne dann Systemeinstellungen → Datenschutz &amp; Sicherheit und klicke auf „Trotzdem öffnen“.</li>
+        <li><strong>macOS:</strong> Eine macOS-App gibt es vorerst nicht: Sie müsste von Apple notarisiert werden, das kostet eine jährliche Gebühr, und ohne das blockiert macOS sie. Öffne Walkflow stattdessen in Chrome oder Edge und klicke in Einstellungen → Info auf „Walkflow installieren“ (oder auf das Installations-Symbol in der Adressleiste). Dann öffnet es sich wie jede andere App und funktioniert offline.</li>
         <li><strong>Windows:</strong> Klicke bei „Der Computer wurde durch Windows geschützt“ auf „Weitere Informationen“ und dann auf „Trotzdem ausführen“.</li>
         <li><strong>Linux:</strong> Mach die Datei ausführbar (<code>chmod +x</code>) und starte sie.</li>
       </ul>

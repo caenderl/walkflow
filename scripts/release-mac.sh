@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the macOS app (arm64 and x64) on this Mac and adds it to the release of a tag, like the macOS job of the release
-# workflow would. For when GitHub has no macOS runner free: set the repository variable MAC_BUILD to "local" first, so the
-# workflow leaves its macOS job out. Usage: scripts/release-mac.sh v0.2.1   (run from a clean checkout of that tag)
+# workflow would with MAC_BUILD=github. For when GitHub has no macOS runner free: set the repository variable MAC_BUILD to
+# "local" (or leave it unset), so the workflow leaves its macOS job out. Usage: scripts/release-mac.sh v0.2.1   (run from a clean checkout of that tag)
 set -euo pipefail
 
 die() { echo "release-mac: $*" >&2; exit 1; }

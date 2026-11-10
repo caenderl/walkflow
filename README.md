@@ -39,7 +39,7 @@ Other FTMS treadmills may work but are not tested.
 - History: runs are saved automatically on the device. Totals per week and month, distance per week, days in a row, records, a chart per run, CSV/TCX per run, backup and restore as a JSON file. Saving can be turned off; demo runs are listed but not counted.
 - Log of sent/received bytes. The experiment console for the Control Point (raw commands, with the same checks) only shows in developer mode (Settings → General, switching it on asks first); in the desktop app the developer tools are only available then, too (no menu entry, one opened another way is closed again). That keeps them out of the way, it is not a security boundary
 - Demo mode with a simulated treadmill, no hardware needed
-- Works offline and can be installed (PWA)
+- Works offline and can be installed as an app (PWA): in Chrome or Edge with the button in *Settings → Info*, or the install icon in the address bar
 - English, German, French and Ukrainian; picked from the browser languages, switchable in the settings menu at the top right, or via `?lang=de|en|fr|uk` in the URL. Ukrainian has no legal pages of its own yet (they are in `public/legal/`): its links point to the English ones
 - Dark and light theme, or following the system (default), and a choice of colours on top of that: Standard, Lagoon (teal and violet) or Candy (each part of the app has its own colour: training green, routes blue, workouts violet, community pink, history yellow). Both are switchable in the settings dialog at the top right
 
@@ -57,13 +57,17 @@ Other FTMS treadmills may work but are not tested.
 
 Web Bluetooth is available in Chrome (desktop, Android), Edge and Opera. Safari and Firefox do not have it; on iPhone/iPad no browser has it (workaround: browsers with their own Bluetooth bridge such as Bluefy, not tested). On Linux, depending on the version, it has to be enabled in Chrome via `chrome://flags` first.
 
-The web version runs at <https://walkflow-app.github.io/walkflow/app/> (a fork deploys to `https://<github-user>.github.io/<repo>/app/`). Links can set the language, e.g. `…/app/?lang=fr`. The product page is at <https://walkflow-app.github.io/walkflow/>.
+The web version runs at <https://walkflow-app.github.io/walkflow/app/> (a fork deploys to `https://<github-user>.github.io/<repo>/app/`). Links can set the language, e.g. `…/app/?lang=fr`.
+
+**Install it as an app:** in Chrome or Edge, open *Settings → Info* and press **Install Walkflow** (or use the install icon at the right end of the address bar). Walkflow then opens in a window of its own from the Dock, the Start menu or the home screen, works offline, and needs no download and no signature. Where the browser does not offer it (Safari, Firefox, or after the offer was dismissed), the section says how to do it from the browser’s menu. The product page is at <https://walkflow-app.github.io/walkflow/>.
 
 ## Desktop app
 
-Downloads are on the **Releases** page. The app is not signed, so the system warns when you open it for the first time:
+> [!NOTE]
+> **There is no macOS app for now.** It would have to be notarized by Apple (a paid Apple developer account); without that, macOS blocks it at first and again after every update. On a Mac, use the [web app](https://walkflow-app.github.io/walkflow/app/) in Chrome or Edge and install it as an app (*Settings → Info → Install Walkflow*): it opens like any other app and does everything the desktop app does except the global stop shortcut and the device chooser of its own. You can still build the macOS app yourself with `npm run dist` on a Mac.
 
-- **macOS (Sequoia and later):** open the app and choose “Done” at the warning. Then open *System Settings → Privacy & Security*, scroll down and click **“Open Anyway”** next to Walkflow. macOS asks for Bluetooth permission on the first connect.
+Downloads for Windows and Linux are on the **Releases** page. The app is not signed, so the system warns when you open it for the first time:
+
 - **Windows:** at “Windows protected your PC”, click *More info → Run anyway*.
 - **Linux:** `chmod +x Walkflow-*.AppImage` and start it. Web Bluetooth on Linux is untested.
 
@@ -178,13 +182,10 @@ A breaking change is marked with `!` (`feat!: …`) or a `BREAKING CHANGE:` foot
 Releasing ([release-please](https://github.com/googleapis/release-please), config in `release-please-config.json`, last released version in `.release-please-manifest.json`):
 
 1. On every push to `main`, release-please keeps a pull request “chore: release x.y.z” up to date with the next version (in `package.json`) and `CHANGELOG.md`. It is created with the workflow token, so no CI run shows on it; CI runs on `main` after merging.
-2. Merging it creates the tag `vx.y.z` and a **draft release** with the changelog. The desktop app for macOS (arm64, x64), Windows and Linux is built and attached with checksums.
+2. Merging it creates the tag `vx.y.z` and a **draft release** with the changelog. The desktop app for Windows and Linux is built and attached with checksums. macOS is left out for now (not notarized, see [Desktop app](#desktop-app)).
 3. Check the changed areas on the treadmill (`HARDWARE-TESTS.md`), then publish the draft by hand. Only published releases reach the update notice of the desktop app.
 
-If GitHub has no macOS runner free (the macOS job is cancelled with “job was not acquired by Runner”), you can rerun the failed job, or build macOS on your own Mac:
-
-1. Set the repository variable `MAC_BUILD` to `local` (*Settings → Secrets and variables → Actions → Variables*). The workflow then builds only Windows and Linux. Delete the variable to build macOS on GitHub again (the default).
-2. When the draft exists: `git checkout v<version>` and run `scripts/release-mac.sh v<version>` on the Mac. It runs the checks, builds both macOS apps (arm64, x64), adds them to the draft and updates `SHA256SUMS.txt`. It needs `gh` (logged in with write access) and a clean checkout of the tag.
+The repository variable `MAC_BUILD` (*Settings → Secrets and variables → Actions → Variables*) decides about macOS. Not set (the default for now): no macOS app. `github`: built on a GitHub macOS runner like the others (do this once the build is signed and notarized). `local`: built on your own Mac, for when GitHub has no macOS runner free: when the draft exists, `git checkout v<version>` and run `scripts/release-mac.sh v<version>`. It runs the checks, builds both macOS apps (arm64, x64), adds them to the draft and updates `SHA256SUMS.txt`; it needs `gh` (logged in with write access) and a clean checkout of the tag.
 
 One-time setup: *Settings → Actions → General → Workflow permissions →* “Allow GitHub Actions to create and approve pull requests”. Without it, release-please cannot open its pull request.
 

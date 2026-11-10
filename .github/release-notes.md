@@ -2,10 +2,10 @@
 
 ### Download
 
+**No macOS app for now** (it is not notarized by Apple, so macOS would block it). On a Mac, use the [web app](https://walkflow-app.github.io/walkflow/app/) in Chrome or Edge and install it as an app in *Settings → Info*.
+
 | System | File |
 | --- | --- |
-| macOS (Apple Silicon) | `Walkflow-…-mac-arm64.dmg` |
-| macOS (Intel) | `Walkflow-…-mac-x64.dmg` |
 | Windows | `Walkflow-…-win-x64.exe` |
 | Linux | `Walkflow-…-linux-x86_64.AppImage` |
 
@@ -13,8 +13,7 @@ Checksums: `SHA256SUMS.txt`
 
 The app is **not signed**. The system warns when you open it for the first time:
 
-- **macOS:** drag the app to “Applications” and open it. Choose “Done” at the warning, then open *System Settings → Privacy & Security*, scroll down and click **“Open Anyway”** next to Walkflow.
 - **Windows:** at “Windows protected your PC”, click *More info → Run anyway*.
 - **Linux:** `chmod +x Walkflow-*.AppImage`, then start it. Web Bluetooth on Linux is untested.
 
-The app is available in English, German and French.
+The app is available in English, German, French and Ukrainian.

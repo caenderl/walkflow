@@ -49,6 +49,7 @@ nav.main a:hover { color: var(--fg); }
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border-radius: 12px;
   font-weight: 600; font-size: 1rem; text-decoration: none; border: 1px solid transparent; cursor: pointer;
 }
+.btn[hidden] { display: none; }
 .btn.primary { background: var(--primary); color: var(--primary-fg); }
 .btn.primary:hover { background: var(--primary-hover); }
 .btn.secondary { background: var(--btn); color: var(--fg); }
@@ -117,7 +118,7 @@ ol.steps span { color: var(--mute); font-size: .95rem; }
 .halves a:hover { background: var(--bg); }
 .halves b { display: block; font-size: .95rem; }
 .dl.recommended { border: 2px solid var(--primary); }
-.dl.recommended::after { content: attr(data-badge); position: absolute; top: 16px; right: 16px; font-size: .75rem; font-weight: 700; background: var(--primary); color: var(--primary-fg); border-radius: 999px; padding: 2px 10px; }
+.dl.recommended::after { content: attr(data-badge); position: absolute; top: -11px; right: 14px; white-space: nowrap; font-size: .75rem; font-weight: 700; background: var(--primary); color: var(--primary-fg); border-radius: 999px; padding: 2px 10px; }
 .release { color: var(--mute); font-size: .95rem; margin: 0 0 20px; }
 .release strong { color: var(--fg); }
 .unsigned { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; color: var(--mute); font-size: .95rem; }

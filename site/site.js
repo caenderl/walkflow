@@ -1,4 +1,5 @@
-// Two small conveniences, both optional: the download button names the visitor's system and the matching card is marked,
+// Two small conveniences, both optional: the download button names the visitor's system and the matching card is marked (on a
+// Mac the web app: there is no macOS app for now),
 // and a first visit from a German browser lands on the German page. Nothing is sent anywhere and nothing is stored.
 (() => {
   const ua = navigator.userAgent;
@@ -9,7 +10,15 @@
   else if (/win/i.test(platform) || /Windows/.test(ua)) os = 'windows';
   else if (/linux|x11/i.test(platform) || /Linux/.test(ua)) os = 'linux';
 
-  if (os) {
+  if (os === 'mac') {
+    // No macOS app for now (it is not notarized): on a Mac the main button opens the web app, and the card says so
+    const card = document.querySelector('.dl[data-os="mac"]');
+    if (card) card.classList.add('recommended');
+    const main = document.getElementById('dl-main');
+    if (main && main.dataset.macLabel) { main.textContent = main.dataset.macLabel; main.href = main.dataset.macHref; }
+    const second = document.getElementById('dl-second');
+    if (second && 'macHide' in second.dataset) second.hidden = true;
+  } else if (os) {
     const card = document.querySelector('.dl[data-os="' + os + '"]');
     const main = document.getElementById('dl-main');
     if (card) {
