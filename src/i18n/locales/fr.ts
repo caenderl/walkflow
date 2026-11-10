@@ -473,7 +473,7 @@ export const fr: Messages = {
     deleteTitle: 'Supprimer cette séance ?',
     deleteText: (when: string) => `${when}. Cette action est irréversible.`,
     dataTitle: 'Séances enregistrées',
-    openData: 'Sauvegarde et séances enregistrées…',
+    openData: 'Sauvegarde et séances enregistrées',
     autoSave: 'Enregistrer les séances automatiquement',
     storageLocal: 'Les séances sont stockées dans ce navigateur, sur cet appareil, nulle part ailleurs.',
     storageDesktop: 'Les séances sont stockées sur cet ordinateur, dans le dossier de données de l’application, nulle part ailleurs.',

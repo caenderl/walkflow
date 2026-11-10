@@ -471,7 +471,7 @@ export const en = {
     deleteTitle: 'Delete this run?',
     deleteText: (when: string) => `${when}. This cannot be undone.`,
     dataTitle: 'Saved runs',
-    openData: 'Backup and saved runs…',
+    openData: 'Backup and saved runs',
     autoSave: 'Save runs automatically',
     storageLocal: 'Runs are stored in this browser on this device, nowhere else.',
     storageDesktop: 'Runs are stored on this computer, in the app’s data folder, nowhere else.',

@@ -22,6 +22,7 @@
   <symbol id="i-walkflow" viewBox="0 0 24 24"><path d="M7 4.5l5 5-5 5M13 4.5l5 5-5 5M6 19h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3zM14.5 7.5l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M9.95 5.31 L10.33 2.55 L13.67 2.55 L14.05 5.31 L15.29 5.82 L17.51 4.14 L19.86 6.49 L18.18 8.71 L18.69 9.95 L21.45 10.33 L21.45 13.67 L18.69 14.05 L18.18 15.29 L19.86 17.51 L17.51 19.86 L15.29 18.18 L14.05 18.69 L13.67 21.45 L10.33 21.45 L9.95 18.69 L8.71 18.18 L6.49 19.86 L4.14 17.51 L5.82 15.29 L5.31 14.05 L2.55 13.67 L2.55 10.33 L5.31 9.95 L5.82 8.71 L4.14 6.49 L6.49 4.14 L8.71 5.82Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0M12 17l4-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v4.5M12 17.2v.1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
   <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="6" r="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -210,7 +211,10 @@
 
       <!-- History view (src/ui/history/history.ts). While connected, the stop bar keeps Stop in reach. -->
       <section class="card history-part hist-overview">
-        <h2 data-i18n="history.title">History</h2>
+        <div class="card-head">
+          <h2 data-i18n="history.title">History</h2>
+          <button id="openData" class="icon-btn" type="button" aria-label="Backup and saved runs" data-i18n-aria="history.openData"><svg class="icon" aria-hidden="true"><use href="#i-gear"/></svg></button>
+        </div>
         <div class="periods">
           <div class="period"><div class="l" data-i18n="history.week">This week</div><div class="v" id="hWeek">–</div><div class="hint" id="hWeekSub"></div></div>
           <div class="period"><div class="l" data-i18n="history.month">This month</div><div class="v" id="hMonth">–</div><div class="hint" id="hMonthSub"></div></div>
@@ -229,7 +233,6 @@
           <div><dt data-i18n="history.bestWeek">Best week</dt><dd id="hBestWeek">–</dd></div>
         </dl>
         <p class="hint" id="hDemoNote" data-i18n="history.demoNote" hidden>Demo runs are listed but not counted.</p>
-        <div class="row"><button id="openData" type="button" data-i18n="history.openData">Backup and saved runs…</button></div>
       </section>
 
       <section class="card grid history-part">

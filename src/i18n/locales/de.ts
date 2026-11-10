@@ -470,7 +470,7 @@ export const de: Messages = {
     deleteTitle: 'Diesen Lauf löschen?',
     deleteText: (when: string) => `${when}. Das lässt sich nicht rückgängig machen.`,
     dataTitle: 'Gespeicherte Läufe',
-    openData: 'Backup und gespeicherte Läufe …',
+    openData: 'Backup und gespeicherte Läufe',
     autoSave: 'Läufe automatisch speichern',
     storageLocal: 'Die Läufe liegen in diesem Browser auf diesem Gerät, nirgends sonst.',
     storageDesktop: 'Die Läufe liegen auf diesem Computer im Datenordner der App, nirgends sonst.',
