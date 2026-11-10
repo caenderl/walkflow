@@ -54,6 +54,9 @@ nav.main a:hover { color: var(--fg); }
 .btn.secondary { background: var(--btn); color: var(--fg); }
 .btn.secondary:hover { background: var(--btn-hover); }
 .hero .note { margin-top: 14px; font-size: .9rem; color: var(--mute); }
+.hero .note.version { margin-top: 12px; margin-bottom: 0; }
+.hero .note.version + .note { margin-top: 6px; }
+.hero .note.version strong { color: var(--fg); }
 
 /* Screenshots */
 .shot { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); background: var(--card); }
@@ -101,12 +104,22 @@ ol.steps span { color: var(--mute); font-size: .95rem; }
 
 /* Download */
 .downloads { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-bottom: 20px; }
-.dl { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; color: var(--fg); text-decoration: none; }
+.dl { position: relative; display: block; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; color: var(--fg); text-decoration: none; }
 .dl:hover { border-color: var(--primary); }
 .dl strong { display: block; font-size: 1.05rem; }
+.dl .os { width: 22px; height: 22px; margin-right: 8px; vertical-align: -5px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .dl span { color: var(--mute); font-size: .9rem; }
+.dl.split { padding: 0; overflow: hidden; }
+.dl.split > strong { padding: 18px 20px 10px; }
+.halves { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); }
+.halves a { display: block; padding: 12px 20px 16px; color: var(--fg); text-decoration: none; }
+.halves a + a { border-left: 1px solid var(--line); }
+.halves a:hover { background: var(--bg); }
+.halves b { display: block; font-size: .95rem; }
 .dl.recommended { border: 2px solid var(--primary); }
-.dl.recommended::after { content: attr(data-badge); float: right; font-size: .75rem; font-weight: 700; background: var(--primary); color: var(--primary-fg); border-radius: 999px; padding: 2px 10px; }
+.dl.recommended::after { content: attr(data-badge); position: absolute; top: 16px; right: 16px; font-size: .75rem; font-weight: 700; background: var(--primary); color: var(--primary-fg); border-radius: 999px; padding: 2px 10px; }
+.release { color: var(--mute); font-size: .95rem; margin: 0 0 20px; }
+.release strong { color: var(--fg); }
 .unsigned { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; color: var(--mute); font-size: .95rem; }
 .unsigned h3 { margin: 0 0 6px; color: var(--fg); font-size: 1rem; }
 .unsigned ul { margin: 0; padding-left: 1.2em; }

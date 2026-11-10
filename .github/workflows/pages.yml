@@ -38,9 +38,19 @@ jobs:
       - id: pages
         uses: actions/configure-pages@v6
 
+      # The download links of the product page name the files of the latest published release (not a draft)
+      - id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+          echo "Latest release: $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
       # The product page (site/) at the root, the web app under app/
       - run: npm run build:pages
         env:
+          WALKFLOW_RELEASE: ${{ steps.release.outputs.tag }}
           BASE_PATH: ${{ steps.pages.outputs.base_path }}/app/
           # Optional, set as a repository variable (Settings → Secrets and variables → Actions → Variables)
           VITE_DONATION_URL: ${{ vars.DONATION_URL }}

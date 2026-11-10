@@ -6,6 +6,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+// @ts-expect-error plain script without types, also run by node in the Pages build
+import { fillVersion } from '../scripts/site-version.mjs';
 
 const SITE = fileURLToPath(new URL('../site/', import.meta.url));
 const PAGES = ['index.html', 'de/index.html'];
@@ -77,6 +79,16 @@ describe('the product page', () => {
       expect(html).not.toMatch(/<link[^>]+href="https?:\/\/[^"]*"[^>]*rel="stylesheet"/);
     }
     expect(read('site.css')).not.toMatch(/@import|url\(\s*["']?https?:/);
+  });
+
+  it.each(PAGES)('%s: the download links point straight at the files of the release, named like the installers', page => {
+    const html: string = fillVersion(read(page), '9.8.7');
+    const base = 'https://github.com/walkflow-app/walkflow/releases/download/v9.8.7/';
+    for (const file of ['Walkflow-9.8.7-mac-arm64.dmg', 'Walkflow-9.8.7-mac-x64.dmg', 'Walkflow-9.8.7-win-x64.exe', 'Walkflow-9.8.7-linux-x86_64.AppImage', 'SHA256SUMS.txt']) {
+      expect(html, file).toContain(`href="${base}${file}"`);
+    }
+    expect(html).toContain('href="https://github.com/walkflow-app/walkflow/releases/tag/v9.8.7"');
+    expect(html).toContain('9.8.7');
   });
 
   it('links to the legal pages of the web app in the language of the page', () => {

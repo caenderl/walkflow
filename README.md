@@ -148,14 +148,14 @@ Every colour is a token at the top of `src/style.css`, defined once as `light-da
 
 ### GitHub Pages
 
-The site has two parts: the product page (`site/`: what Walkflow is, screenshots, download links to the latest release) at the root, and the web app under `app/` (so `https://<user>.github.io/<repo>/` is the page and `…/app/` the app). `npm run build:pages` builds both into `pages/`; for a local look, build with `BASE_PATH=/app/` and serve `pages/` with any static server. The page takes no scripts, fonts or other content from third parties. Its two pages (`site/index.html`, `site/de/index.html`) must keep the same shape, which `tests/site.test.ts` checks, together with every link and image.
+The site has two parts: the product page (`site/`: what Walkflow is, screenshots, download links to the latest release) at the root, and the web app under `app/` (so `https://<user>.github.io/<repo>/` is the page and `…/app/` the app). `npm run build:pages` builds both into `pages/` (the pages in `site/` carry `{{version}}` in the download links; the build fills in the tag from `WALKFLOW_RELEASE`, or the version in `package.json` if it is not set); for a local look, build with `BASE_PATH=/app/` and serve `pages/` with any static server. The page takes no scripts, fonts or other content from third parties. Its two pages (`site/index.html`, `site/de/index.html`) must keep the same shape, which `tests/site.test.ts` checks, together with every link and image.
 
 The screenshots in `site/img/` show the app with made-up runs and workouts and the routes of the route store (not a real person's data). They are `<dark|light>-<en|de>-<training|routes|workouts|history>.webp`, 1600 × 1000, and are taken again when the look of the app changes a lot.
 
 1. Repository settings → *Pages* → Source: **GitHub Actions**. (For a private repository, Pages needs a paid GitHub plan.)
 2. Fill in the pages under `public/legal/` (legal notice and privacy, per language). As long as they contain `TODO`, the Pages workflow fails on purpose. If you only want legal pages in one language, delete the others and point `info.imprintHref`/`info.privacyHref` in the locale files to the remaining ones.
 3. Optional: set the repository variable `DONATION_URL` (see below).
-4. Deploy by hand: *Actions → Pages → Run workflow*. To deploy on every push to `main`, re-enable the commented-out `push` trigger in `.github/workflows/pages.yml`.
+4. Deploy by hand: *Actions → Pages → Run workflow*. The download links and the version on the product page come from the latest published release, so run the workflow again after publishing a release. To deploy on every push to `main`, re-enable the commented-out `push` trigger in `.github/workflows/pages.yml`.
 
 ### Versions and releases
 
