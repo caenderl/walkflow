@@ -1,5 +1,5 @@
 // A small route with names, places, texts and credit in several languages, for tests. It is not used by the app: the routes that
-// come with Walkflow are in the route store (store/routes/), not in the code.
+// come with Walkflow are in the route store (the route-store repository), not in the code.
 
 import type { Route } from './routes';
 

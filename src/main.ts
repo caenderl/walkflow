@@ -92,7 +92,7 @@ const routes = setupRoutes({
   wanted: () => chosen.get() === 'route',
 });
 
-// The route store: routes from the project's repository, read from GitHub when the person opens the list (none without a repository)
+// The route store: routes from the route-store repository, read from GitHub when the person opens the list (none without a repository)
 const routeStore = setupRouteStore({ base: STORE_BASE, library: () => routes.libraryMarks(), take: (file, opts) => routes.takeFromStore(file, opts) });
 
 // Routes and workouts that other devices share. It reads the library from the stores, so it needs nothing but the two views to reload.

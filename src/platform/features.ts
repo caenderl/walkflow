@@ -7,5 +7,5 @@ declare const __COMMUNITY__: boolean;
 declare const __STORE_BASE__: string;
 
 export const COMMUNITY_ENABLED: boolean = __COMMUNITY__;
-/** The folder the route store is read from (platform/store-url.ts); null: this build has no store */
+/** The address the route store is read from (platform/store-url.ts); null: this build has no store */
 export const STORE_BASE: string | null = __STORE_BASE__ || null;

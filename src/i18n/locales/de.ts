@@ -287,7 +287,7 @@ export const de: Messages = {
     updateText: (name: string, from: number, to: number) => `„${name}“ in deiner Bibliothek ist Version ${from}, der Streckenspeicher hat Version ${to}. Die Aktualisierung ersetzt die Strecke durch die neue Version, auch deine eigenen Änderungen daran. Aktualisieren?`,
     updateConfirm: 'Aktualisieren',
     updated: (name: string, n: number) => `„${name}“ wurde auf Version ${n} aktualisiert.`,
-    contribute: 'Du kannst eigene Strecken beisteuern: Wie das geht, steht im Ordner „store“ des Repositorys.',
+    contribute: 'Du kannst eigene Strecken beisteuern: Wie das geht, steht im Repository „route-store“ auf GitHub.',
   },
   community: {
     title: 'Community',

@@ -1,13 +1,23 @@
-// The route store (docs/ROUTE-STORE.md): store/routes/*.walkflow are route packages, store/index.json names them.
-//   npm run store:build   writes store/index.json from the files
-//   npm run store:check   fails if a file is not a valid package or the index is not what the build would write (CI runs it)
+// The route store (docs/ROUTE-STORE.md) lives in its own repository, walkflow-app/route-store: <root>/routes/*.walkflow are route
+// packages, <root>/index.json names them. The CI of that repository checks out this repository and runs
+//   node scripts/build-store.mjs --root <path to the route-store checkout>                 writes index.json from the files
+//   node scripts/build-store.mjs --root <path> --check                                     also fails if index.json is not what the build would write
+//   node scripts/build-store.mjs --root <path> --check --files-only                        checks the files only (a pull request does not write the index)
 // The logic is src/core/store/route-index.ts; it is bundled on the fly because it is TypeScript with imports Node cannot resolve.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { build } from 'esbuild';
 
-const check = process.argv.includes('--check');
-const DIR = 'store/routes';
-const INDEX = 'store/index.json';
+const args = process.argv.slice(2);
+const check = args.includes('--check');
+const filesOnly = args.includes('--files-only');
+const rootAt = args.indexOf('--root');
+const root = rootAt >= 0 ? args[rootAt + 1] : undefined;
+if (!root || root.startsWith('--')) {
+  console.error('Usage: node scripts/build-store.mjs --root <the route-store checkout> [--check [--files-only]]');
+  process.exit(2);
+}
+const DIR = `${root}/routes`;
+const INDEX = `${root}/index.json`;
 
 const bundle = await build({
   stdin: {
@@ -34,7 +44,7 @@ for (const file of files) {
   const r = await entryFromPackage(file, text);
   if (!r.ok) { problems.push(`${DIR}/${file}: ${r.reason === 'fileName' ? 'the file name must be lower-case letters, digits, "." "_" "-" and end in .walkflow' : `not a valid route package (${r.reason})`}`); continue; }
   // A public repository: whoever contributes a route says under which terms it may be used
-  if (!String(JSON.parse(text).license ?? '').trim()) problems.push(`${DIR}/${file}: the package needs a "license" (e.g. "CC0-1.0"), see store/README.md`);
+  if (!String(JSON.parse(text).license ?? '').trim()) problems.push(`${DIR}/${file}: the package needs a "license" (e.g. "CC0-1.0"), see the README of the route-store repository`);
   // Every waypoint has to be on the route, or the app would leave it out
   const { route } = readPackage(text, 'x', 0);
   const lost = (route.waypoints?.length ?? 0) - placeWaypoints(route, analyzeRoute(route)).length;
@@ -48,9 +58,9 @@ if (entries.length > STORE_MAX_ROUTES) problems.push(`more than ${STORE_MAX_ROUT
 const indexText = serializeIndex(entries);
 if (!parseIndex(indexText).ok) problems.push('the index written for these files would not be accepted by the app');
 
-if (check) {
+if (check && !filesOnly) {
   const have = existsSync(INDEX) ? readFileSync(INDEX, 'utf8') : null;
-  if (have !== indexText) problems.push(`${INDEX} is not up to date: run "npm run store:build" and commit the result`);
+  if (have !== indexText) problems.push(`${INDEX} is not up to date: run build-store.mjs without --check and commit the result`);
 }
 if (problems.length) {
   for (const p of problems) console.error(`✗ ${p}`);

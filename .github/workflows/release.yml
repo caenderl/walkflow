@@ -37,7 +37,6 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
-      - run: npm run store:check
 
       - name: Tag matches the version in package.json?
         shell: bash

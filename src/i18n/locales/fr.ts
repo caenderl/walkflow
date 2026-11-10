@@ -290,7 +290,7 @@ export const fr: Messages = {
     updateText: (name: string, from: number, to: number) => `« ${name} » dans votre bibliothèque est en version ${from}, la bibliothèque de parcours a la version ${to}. La mise à jour remplace le parcours par la nouvelle version, y compris vos modifications. Mettre à jour ?`,
     updateConfirm: 'Mettre à jour',
     updated: (name: string, n: number) => `« ${name} » a été mis à jour vers la version ${n}.`,
-    contribute: 'Vous pouvez ajouter vos propres parcours : la marche à suivre est décrite dans le dossier « store » du dépôt.',
+    contribute: 'Vous pouvez ajouter vos propres parcours : la marche à suivre est décrite dans le dépôt « route-store » sur GitHub.',
   },
   community: {
     title: 'Communauté',

@@ -1,4 +1,4 @@
-// The route store in the routes view: the list of routes in the project's repository (core/store/route-index.ts), read from
+// The route store in the routes view: the list of routes in the route-store repository (core/store/route-index.ts), read from
 // GitHub when the person opens it, never before. A route is fetched when the person picks it, compared with the hash and the
 // length the list gave, read as a route package and then the person is asked before it is saved (the same question as for a
 // file from outside). Everything that comes from the network is data from outside: the list is read strictly, texts are only

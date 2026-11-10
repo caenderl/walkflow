@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { resolveStoreBase } from './store-url';
 
 describe('resolveStoreBase', () => {
-  it('is the store folder of the repository on its main branch', () => {
-    expect(resolveStoreBase('walkflow-app/walkflow')).toBe('https://raw.githubusercontent.com/walkflow-app/walkflow/main/store');
+  it('is the route-store repository of the same owner, on its main branch', () => {
+    expect(resolveStoreBase('walkflow-app/walkflow')).toBe('https://raw.githubusercontent.com/walkflow-app/route-store/main');
+    expect(resolveStoreBase('someone/walkflow-fork')).toBe('https://raw.githubusercontent.com/someone/route-store/main');
   });
 
   it('is none without a plausible repository, so a build without one has no store', () => {

@@ -288,7 +288,7 @@ export const en = {
     updateText: (name: string, from: number, to: number) => `“${name}” in your library is version ${from}, the route store has version ${to}. The update replaces the route with the new version, including any changes you made to it. Update it?`,
     updateConfirm: 'Update',
     updated: (name: string, n: number) => `“${name}” was updated to version ${n}.`,
-    contribute: 'You can add your own routes: how that works is described in the folder “store” of the repository.',
+    contribute: 'You can add your own routes: how that works is described in the “route-store” repository on GitHub.',
   },
   community: {
     title: 'Community',

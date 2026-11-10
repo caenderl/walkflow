@@ -17,7 +17,6 @@ pull request, these have to pass (CI runs them):
 ```bash
 npm run typecheck
 npm test
-npm run store:check
 ```
 
 ## Pull requests
@@ -38,9 +37,9 @@ npm run store:check
 
 ## Adding a route to the route store
 
-Routes are files in `store/routes/` and a pull request is how one gets in. How to make the file, what it has to say (author, licence,
-source) and how to run the check is in [`store/README.md`](store/README.md); the format is in
-[`docs/ROUTE-PACKAGE.md`](docs/ROUTE-PACKAGE.md).
+Routes are files in their own repository, [walkflow-app/route-store](https://github.com/walkflow-app/route-store), and a pull request there is
+how one gets in. How to make the file, what it has to say (author, licence, source) and how the check works is in its README; the
+format is in [`docs/ROUTE-PACKAGE.md`](docs/ROUTE-PACKAGE.md).
 
 Only add a route that you made yourself or that is under a licence that allows it, say which in the file, and do not add one that
 gives away where you live. A maintainer looks at every route before it is merged.

@@ -21,7 +21,7 @@ const mapStyles = resolveMapStyles(process.env.WALKFLOW_MAP_STYLE, process.env.W
 // Community (sharing between devices) is off unless the build says so (src/platform/features.ts)
 const community = process.env.WALKFLOW_COMMUNITY === 'on';
 
-// The route store: the store folder of the repository this build is made for (none without one); WALKFLOW_STORE_BASE is for trying it out
+// The route store: the route-store repository next to the repository this build is made for (none without one); WALKFLOW_STORE_BASE is for trying it out
 const storeBase = resolveStoreBase(githubRepo, process.env.WALKFLOW_STORE_BASE) ?? '';
 
 const CSP = buildCsp({ mapOrigins: mapStyles ? mapOrigins(mapStyles) : [], relays: sharingRelays(community), store: storeBase || null, header: false });

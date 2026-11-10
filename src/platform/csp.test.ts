@@ -59,7 +59,7 @@ describe('sharingRelays', () => {
 });
 
 describe('the route store', () => {
-  const store = 'https://raw.githubusercontent.com/walkflow-app/walkflow/main/store';
+  const store = 'https://raw.githubusercontent.com/walkflow-app/route-store/main';
 
   it('lets the page connect to the store folder, with a trailing slash so nothing else on the host is allowed', () => {
     const d = directives(buildCsp({ mapOrigins: [], relays: [], store, header: false }));

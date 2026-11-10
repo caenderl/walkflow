@@ -1,5 +1,5 @@
-// The route store: routes that people contributed to the project, kept as route package files in the project's repository
-// (store/routes/*.walkflow) with an index (store/index.json) that names each file, its SHA-256 and what is shown in the list.
+// The route store: routes that people contributed to the project, kept as route package files in the route-store repository
+// (routes/*.walkflow) with an index (index.json) that names each file, its SHA-256 and what is shown in the list.
 // The app reads the index from GitHub when the person opens the store, and a file only after the person picked it. Nothing
 // here is trusted: the index is read as strictly as a package, and a downloaded file is compared with the hash and the length
 // the index gave before it is read as a package (and the person confirms before it is saved). Pure: no DOM, no network.
@@ -17,7 +17,7 @@ export const STORE_MAX_ROUTES = 2000;
 
 /** What the list shows about one route file */
 export interface StoreRoute {
-  /** The file below store/routes/: lower-case letters, digits, `.`, `_`, `-`, ending in `.walkflow` */
+  /** The file below routes/ in the route-store repository: lower-case letters, digits, `.`, `_`, `-`, ending in `.walkflow` */
   file: string;
   /** The version of the route's content, a whole number from 1: a copy in the library with a lower one is offered an update */
   revision: number;
