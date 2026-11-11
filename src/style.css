@@ -18,6 +18,10 @@
   --stop: light-dark(#dc2626, #f87171);
   --stop-fg: light-dark(#ffffff, #2b0707);
   --link: light-dark(#1d4ed8, #60a5fa);
+  /* Icons of the speed presets (slow, normal, run): a light tint each */
+  --pace-slow: light-dark(#0e7490, #67c6d9);
+  --pace-mid: light-dark(#15803d, #6ee7a0);
+  --pace-run: light-dark(#c2410c, #fb9a62);
   --alarm-bg: light-dark(#b91c1c, #7f1d1d);
   --alarm-fg: light-dark(#ffffff, #ffffff);
   --alarm-border: light-dark(#7f1d1d, #f87171);
@@ -280,7 +284,25 @@ html:not(.connected) .hero .v { color:var(--mute); font-weight:300; }
 .target { text-align:center; }
 .target .l { color:var(--mute); font-size:.75rem; }
 #target { font-size:2rem; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.presets button { min-height:36px; border-radius:999px; font-variant-numeric:tabular-nums; }
+.presets button { min-height:40px; border-radius:999px; font-variant-numeric:tabular-nums; gap:8px; }
+.presets .icon { width:1.6em; height:1.05em; flex:none; }
+.icon.pace-slow { color:var(--pace-slow); }
+.icon.pace-mid { color:var(--pace-mid); }
+.icon.pace-run { color:var(--pace-run); }
+
+/* Settings → treadmill: the preset speeds */
+.preset-rows { display:grid; gap:12px; }
+.preset-row { display:grid; grid-template-columns:1fr auto; align-items:center; gap:4px 12px; }
+.preset-name { display:flex; align-items:center; gap:10px; font-weight:600; }
+.preset-name .icon { width:1.8em; height:1.2em; flex:none; }
+.preset-input { display:flex; align-items:center; gap:8px; }
+.preset-input input { width:6em; text-align:right; font-variant-numeric:tabular-nums; }
+.preset-input input[aria-invalid="true"] { border-color:var(--stop); }
+.preset-unit { color:var(--mute); min-width:3.2em; }
+.preset-err { grid-column:1 / -1; font-size:.85rem; }
+.preset-err:empty { display:none; }
+.preset-err[data-kind="error"] { color:var(--stop); }
+.preset-err[data-kind="warn"] { color:var(--mute); }
 
 /* Everything else: as many columns as fit */
 .more { display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); align-items:start; }

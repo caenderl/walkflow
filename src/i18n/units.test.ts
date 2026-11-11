@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { numberFormat, unitFormat } from './locales/format';
 import { LIMIT_CONFIRM_ABOVE, decideLimitChange, DEFAULT_SPEED_LIMIT, parseMaxStep } from '../core/safety/safety';
 import {
-  distUnit, fromShort, fromSpeed, KM_PER_MILE, onUnitsChange, parseUnits, setUnits, shortUnit, speedFromInput, speedPresets, speedStep,
+  distUnit, fromShort, fromSpeed, KM_PER_MILE, onUnitsChange, parseUnits, setUnits, shortUnit, speedFromInput, speedStep,
   speedUnit, toDist, toShort, toSpeed,
 } from './units';
 
@@ -104,20 +104,6 @@ describe('the speed limit in mph', () => {
     expect(parseMaxStep(speedFromInput('0.3'))).toBe(0.5);
     expect(parseMaxStep(speedFromInput('0.02'))).toBeNull();
     expect(parseMaxStep(speedFromInput('0.7'))).toBeNull();
-  });
-});
-
-describe('speedPresets', () => {
-  it('are the four quick-select speeds of the units, ascending and well below the default limit', () => {
-    for (const system of ['metric', 'imperial'] as const) {
-      setUnits(system);
-      const p = speedPresets();
-      expect(p).toHaveLength(4);
-      expect([...p].sort((a, b) => a - b)).toEqual(p);
-      expect(fromSpeed(p.at(-1)!)).toBeLessThanOrEqual(DEFAULT_SPEED_LIMIT);
-    }
-    setUnits('metric');
-    expect(speedPresets()).toEqual([2, 3, 4, 5]);
   });
 });
 

@@ -1,4 +1,4 @@
-// The speed in the training view and its limits: the target and the controls (slider, ±, presets, keys), the personal speed
+// The speed in the training view and its limits: the target and the controls (slider, ±, the slow/mid/run presets, keys), the personal speed
 // limit and the maximum change per command (settings → safety). It owns the speed governor, which is the only thing that
 // sends speed commands: it caps to the limit and the device range and approaches larger jumps in steps. The values stay km/h
 // inside; the fields and buttons show the units of the settings.
@@ -10,7 +10,11 @@ import {
   serializeLimit, SpeedGovernor,
 } from '../../core/safety/safety';
 import { t } from '../../i18n/i18n';
-import { fromSpeed, speedFromInput, speedPresets, speedStep, toSpeed } from '../../i18n/units';
+import {
+  loadSpeedPresets, PRESET_KEYS, presetCommand, type PresetKey, serializeSpeedPresets, SPEED_PRESETS_STORAGE_KEY,
+  type SpeedPresets,
+} from '../../core/safety/speed-presets';
+import { speedFromInput, speedStep, toSpeed } from '../../i18n/units';
 import { confirmDialog } from '../components/dialogs';
 import { $, $button, $input, log } from '../ui';
 import { store } from '../store';
@@ -30,6 +34,7 @@ export function setupSpeedControls(host: SpeedControlsHost) {
   let devMin = 1.0, devMax = 12.0;
   let limit = 6;
   let sliderDragging = false;
+  let presets: SpeedPresets = loadSpeedPresets(null);
 
   const governor = new SpeedGovernor({
     send: kmh => host.send(cmdSetSpeed(kmh)),
@@ -50,6 +55,27 @@ export function setupSpeedControls(host: SpeedControlsHost) {
     governor.setRange({ min: devMin, max: effectiveMax() });
     if (host.connected() && governor.target !== before && governor.target !== null) log(t.limit.lowered(governor.target));
     renderSpeed();
+    renderPresets();
+  }
+
+  const presetButtons = () => document.querySelectorAll<HTMLButtonElement>('.preset[data-preset]');
+
+  /**
+   * The slow/mid/run buttons: icon and stored speed. A preset above the highest allowed speed (limit or device) is
+   * disabled, not clamped (see speed-presets.ts), so a button never asks for more than the limit.
+   */
+  function renderPresets() {
+    const max = effectiveMax();
+    presetButtons().forEach(b => {
+      const key = b.dataset.preset as PresetKey;
+      if (!PRESET_KEYS.includes(key)) return;
+      const allowed = presetCommand(presets, key, max) !== null;
+      b.disabled = !host.connected() || !allowed;
+      b.querySelector('.pv')!.textContent = t.u.speedValue(presets[key], 1);
+      const label = allowed ? t.presets.button(t.presets[key], presets[key]) : t.presets.aboveLimitButton(t.presets[key], presets[key]);
+      b.title = label;
+      b.setAttribute('aria-label', label);
+    });
   }
 
   function renderRangeInfo() {
@@ -79,20 +105,14 @@ export function setupSpeedControls(host: SpeedControlsHost) {
     requestSpeed((governor.target ?? governor.base()) + delta);
   }
 
-  /** The limit and step fields and the quick-select buttons, in the units of the settings. The values stay km/h inside. */
+  /** The limit and step fields and the preset buttons, in the units of the settings. The values stay km/h inside. */
   function renderLimitFields() {
     const shown = (kmh: number) => String(Math.round(toSpeed(kmh) * 100) / 100);
     const metric = toSpeed(1) === 1;
     const cap = $input('cap'), step = $input('maxStep');
     cap.min = shown(LIMIT_MIN); cap.max = shown(LIMIT_MAX); cap.step = metric ? '0.5' : '0.1'; cap.value = shown(limit);
     step.min = shown(MAX_STEP_MIN); step.max = shown(MAX_STEP_MAX); step.step = metric ? '0.1' : '0.01'; step.value = shown(governor.maxStep);
-    const presets = speedPresets();
-    document.querySelectorAll<HTMLButtonElement>('.preset').forEach((b, i) => {
-      const v = presets[i];
-      if (v === undefined) return;
-      b.dataset.speed = String(v);
-      b.textContent = t.number(v);
-    });
+    renderPresets();
   }
 
   async function limitChanged() {
@@ -130,14 +150,30 @@ export function setupSpeedControls(host: SpeedControlsHost) {
   slider.onchange = () => { sliderDragging = false; requestSpeed(parseFloat(slider.value)); };
   $button('minus').onclick = () => stepSpeed(-speedStep());
   $button('plus').onclick = () => stepSpeed(speedStep());
-  document.querySelectorAll<HTMLButtonElement>('.preset').forEach(b => {
-    b.onclick = () => requestSpeed(fromSpeed(parseFloat(b.dataset.speed ?? '')));
+  presetButtons().forEach(b => {
+    // Checked again at the click: the limit may have changed since the button was drawn. The governor caps it anyway.
+    b.onclick = () => {
+      const v = presetCommand(presets, b.dataset.preset as PresetKey, effectiveMax());
+      if (v !== null) requestSpeed(v);
+    };
   });
   $input('cap').onchange = () => void limitChanged();
   $input('maxStep').onchange = maxStepChanged;
 
   return {
     governor,
+    /** The personal speed limit (settings → safety), km/h */
+    limit: () => limit,
+    /** The slow/mid/run presets, km/h */
+    presets: (): SpeedPresets => ({ ...presets }),
+    /** Stores presets that settings → treadmill has checked (checkPresetChange) and redraws the buttons */
+    setPresets(p: SpeedPresets) {
+      presets = { ...p };
+      store.set(SPEED_PRESETS_STORAGE_KEY, serializeSpeedPresets(presets));
+      renderPresets();
+    },
+    /** The connection changed: the preset buttons are enabled or disabled */
+    renderPresets,
     /** The highest speed that can be asked for: the device's maximum, capped by the personal limit */
     effectiveMax,
     /** What the treadmill reported about its speed range (before it did: the defaults) */
@@ -151,6 +187,7 @@ export function setupSpeedControls(host: SpeedControlsHost) {
       if (l.note) log(l.note);
       const ms = parseMaxStep(store.get(MAX_STEP_STORAGE_KEY) ?? '');
       if (ms !== null) governor.maxStep = ms;
+      presets = loadSpeedPresets(store.get(SPEED_PRESETS_STORAGE_KEY));
       renderLimitFields();
     },
     /** One step up or down (keys ↑ ↓): the size of the step follows the units */

@@ -29,6 +29,7 @@ import { loadChosen, setupStage } from './ui/live/stage';
 import { setupSpeedControls } from './ui/live/speed-controls';
 import { renderInfo } from './ui/settings/info';
 import { setupSettings } from './ui/settings/settings-ui';
+import { setupTreadmillSettings } from './ui/settings/treadmill';
 import { initTheme, onThemeChange } from './ui/theme';
 import { BeltBanner } from './core/safety/belt-banner';
 import { $, $button, log } from './ui/ui';
@@ -72,8 +73,10 @@ const speed = setupSpeedControls({
   connected: () => session.connected(),
   now,
   limitsChanged: () => workouts.refreshLimit(),
-  limitSet: () => readout.redrawChart(),
+  limitSet: () => { readout.redrawChart(); treadmill.render(); },
 });
+// Settings → treadmill: the speeds of the slow/mid/run buttons
+const treadmill = setupTreadmillSettings({ limit: speed.limit, presets: speed.presets, save: p => speed.setPresets(p) });
 const governor = speed.governor;
 const effectiveMax = () => speed.effectiveMax();
 
@@ -177,7 +180,7 @@ const connection = setupConnection({
   stop: reason => belt.stop(reason),
   renderStats: readout.renderStats,
   renderBanner: readout.renderBanner,
-  renderControls: readout.renderControls,
+  renderControls: () => { readout.renderControls(); speed.renderPresets(); },
   renderSettingsLock,
 });
 
@@ -221,6 +224,7 @@ onUnitsChange(u => {
 
 onLanguageChange(() => {
   speed.relabel();
+  treadmill.render();
   renderInfo();
   incline.relabel();
   readout.renderStats();
@@ -242,6 +246,7 @@ setupViews(v => {
   if (v === 'training') { void routes.refreshGoal(); void workouts.reload(); readout.redrawChart(); }
 });
 speed.load();
+treadmill.render();
 renderInfo();
 incline.render();
 readout.renderStats();

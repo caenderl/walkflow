@@ -23,6 +23,9 @@
   <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3zM14.5 7.5l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-gear" viewBox="0 0 24 24"><path d="M9.95 5.31 L10.33 2.55 L13.67 2.55 L14.05 5.31 L15.29 5.82 L17.51 4.14 L19.86 6.49 L18.18 8.71 L18.69 9.95 L21.45 10.33 L21.45 13.67 L18.69 14.05 L18.18 15.29 L19.86 17.51 L17.51 19.86 L15.29 18.18 L14.05 18.69 L13.67 21.45 L10.33 21.45 L9.95 18.69 L8.71 18.18 L6.49 19.86 L4.14 17.51 L5.82 15.29 L5.31 14.05 L2.55 13.67 L2.55 10.33 L5.31 9.95 L5.82 8.71 L4.14 6.49 L6.49 4.14 L8.71 5.82Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-pace-slow" viewBox="2.5 6 19 12.5"><path d="M4 17a8 8 0 1 1 16 0M12 17L7.7 14.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pace-mid" viewBox="2.5 6 19 12.5"><path d="M4 17a8 8 0 1 1 16 0M12 17v-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pace-run" viewBox="2.5 6 19 12.5"><path d="M4 17a8 8 0 1 1 16 0M12 17l4.3-2.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0M12 17l4-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v4.5M12 17.2v.1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
   <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="6" r="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -377,10 +380,9 @@
         <input type="range" id="slider" class="needs-conn" min="1" max="6" step="0.1" value="3" disabled aria-label="Target speed" data-i18n-aria="control.sliderLabel">
         <div class="hint center" id="rampInfo">&nbsp;</div>
         <div class="row presets">
-          <button class="preset needs-conn" data-speed="2" disabled>2</button>
-          <button class="preset needs-conn" data-speed="3" disabled>3</button>
-          <button class="preset needs-conn" data-speed="4" disabled>4</button>
-          <button class="preset needs-conn" data-speed="5" disabled>5</button>
+          <button type="button" class="preset" data-preset="slow" disabled><svg class="icon pace-slow" aria-hidden="true"><use href="#i-pace-slow"/></svg><span class="pv"></span></button>
+          <button type="button" class="preset" data-preset="mid" disabled><svg class="icon pace-mid" aria-hidden="true"><use href="#i-pace-mid"/></svg><span class="pv"></span></button>
+          <button type="button" class="preset" data-preset="run" disabled><svg class="icon pace-run" aria-hidden="true"><use href="#i-pace-run"/></svg><span class="pv"></span></button>
         </div>
         <div class="hint"><span data-i18n-rich="control.keys">Keyboard: Space or Esc = stop, ↑ / ↓ = speed ±0.5 (not in the slider or a text field).</span> <span id="globalStopHint"></span></div>
         <div class="hint" data-i18n="control.rampHint">The app approaches larger jumps in steps (see settings). Stop always takes effect immediately.</div>
@@ -411,6 +413,7 @@
     <div class="sd-tabs" role="tablist" aria-label="Settings sections" data-i18n-aria="settings.tabsLabel">
       <button type="button" role="tab" id="tab-general" aria-controls="sd-general" data-tab="general" data-i18n="settings.tabGeneral">General</button>
       <button type="button" role="tab" id="tab-safety" aria-controls="sd-safety" data-tab="safety" data-i18n="settings.tabSafety">Safety</button>
+      <button type="button" role="tab" id="tab-treadmill" aria-controls="sd-treadmill" data-tab="treadmill" data-i18n="settings.tabTreadmill">Treadmill</button>
       <button type="button" role="tab" id="tab-data" aria-controls="sd-data" data-tab="data" data-i18n="settings.tabData">Data</button>
       <button type="button" role="tab" id="tab-info" aria-controls="sd-info" data-tab="info" data-i18n="settings.tabInfo">Info</button>
     </div>
@@ -466,6 +469,29 @@
           <span class="sw-track" aria-hidden="true"></span>
           <span class="sw-text"><strong data-i18n="settings.quietLabel">Hide warnings and safety questions</strong><span class="hint" data-i18n="settings.quietHint">Hides the safety notice and the question before every start.</span></span>
         </label>
+      </section>
+
+      <section class="sd-panel grid" id="sd-treadmill" role="tabpanel" aria-labelledby="tab-treadmill" hidden>
+        <h3 data-i18n="presets.title">Speed presets</h3>
+        <p class="hint" data-i18n="presets.hint">The three buttons under the speed slider in the training view.</p>
+        <div class="preset-rows">
+          <div class="preset-row">
+            <span class="preset-name"><svg class="icon pace-slow" aria-hidden="true"><use href="#i-pace-slow"/></svg><span id="presetLabel-slow" data-i18n="presets.slow">Slow</span></span>
+            <span class="preset-input"><input type="text" inputmode="decimal" autocomplete="off" id="preset-slow" aria-labelledby="presetLabel-slow" aria-describedby="presetErr-slow"><span class="preset-unit">km/h</span></span>
+            <div class="preset-err" id="presetErr-slow" aria-live="polite"></div>
+          </div>
+          <div class="preset-row">
+            <span class="preset-name"><svg class="icon pace-mid" aria-hidden="true"><use href="#i-pace-mid"/></svg><span id="presetLabel-mid" data-i18n="presets.mid">Normal</span></span>
+            <span class="preset-input"><input type="text" inputmode="decimal" autocomplete="off" id="preset-mid" aria-labelledby="presetLabel-mid" aria-describedby="presetErr-mid"><span class="preset-unit">km/h</span></span>
+            <div class="preset-err" id="presetErr-mid" aria-live="polite"></div>
+          </div>
+          <div class="preset-row">
+            <span class="preset-name"><svg class="icon pace-run" aria-hidden="true"><use href="#i-pace-run"/></svg><span id="presetLabel-run" data-i18n="presets.run">Run</span></span>
+            <span class="preset-input"><input type="text" inputmode="decimal" autocomplete="off" id="preset-run" aria-labelledby="presetLabel-run" aria-describedby="presetErr-run"><span class="preset-unit">km/h</span></span>
+            <div class="preset-err" id="presetErr-run" aria-live="polite"></div>
+          </div>
+        </div>
+        <p class="hint" id="presetRange"></p>
       </section>
 
       <section class="sd-panel grid" id="sd-data" role="tabpanel" aria-labelledby="tab-data" hidden>

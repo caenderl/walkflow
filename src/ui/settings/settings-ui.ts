@@ -1,4 +1,4 @@
-// The settings dialog: one large modal with sections (general, safety, data, info). The fields in it keep the ids they had
+// The settings dialog: one large modal with sections (general, safety, treadmill, data, info). The fields in it keep the ids they had
 // as cards in the page, so the code that reads and writes them (limit, backup, export …) does not depend on where
 // they sit. This file only opens and closes it, switches sections, and holds quiet mode and developer mode.
 // Locked while the belt runs: the limit, the ramp and the other safety values are not changed in the middle of a run.
@@ -10,8 +10,8 @@ import { QUIET_STORAGE_KEY, readQuiet } from '../../core/safety/quiet';
 import { $, $button, $input } from '../ui';
 import { store } from '../store';
 
-export type SettingsTab = 'general' | 'safety' | 'data' | 'info';
-const TABS: readonly SettingsTab[] = ['general', 'safety', 'data', 'info'];
+export type SettingsTab = 'general' | 'safety' | 'treadmill' | 'data' | 'info';
+const TABS: readonly SettingsTab[] = ['general', 'safety', 'treadmill', 'data', 'info'];
 
 export function setupSettings() {
   const dlg = $<HTMLDialogElement>('settingsDlg');
