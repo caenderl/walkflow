@@ -113,6 +113,17 @@ export function setupSpeedControls(host: SpeedControlsHost) {
     cap.min = shown(LIMIT_MIN); cap.max = shown(LIMIT_MAX); cap.step = metric ? '0.5' : '0.1'; cap.value = shown(limit);
     step.min = shown(MAX_STEP_MIN); step.max = shown(MAX_STEP_MAX); step.step = metric ? '0.1' : '0.01'; step.value = shown(governor.maxStep);
     renderPresets();
+    renderStepButtons();
+  }
+
+  /** − and +: a large sign, the step below it in the shown unit, and the step in the accessible name */
+  function renderStepButtons() {
+    const step = speedStep();
+    for (const [id, label] of [['minus', t.control.minusLabel], ['plus', t.control.plusLabel]] as const) {
+      const b = $button(id);
+      b.querySelector('.step-val')!.textContent = t.control.stepValue(step);
+      b.setAttribute('aria-label', label(step));
+    }
   }
 
   async function limitChanged() {

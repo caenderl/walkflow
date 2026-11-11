@@ -107,8 +107,10 @@ export const de: Messages = {
     keys: 'Tastatur: **Leertaste** oder **Esc** = Stop, **↑ / ↓** = Speed ±0,5 (nicht im Slider/Textfeld).',
     target: 'Ziel',
     sliderLabel: 'Zielgeschwindigkeit',
-    minus: '− 0,5',
-    plus: '+ 0,5',
+    /** The value under − and +: one step, in the shown unit */
+    stepValue: (kmh: number) => u.speedValue(kmh, 1),
+    minusLabel: (kmh: number) => `Tempo verringern um ${u.speed(kmh, 1)}`,
+    plusLabel: (kmh: number) => `Tempo erhöhen um ${u.speed(kmh, 1)}`,
     rampHint: 'Größere Sprünge fährt die App in Stufen an (siehe Einstellungen). Stop wirkt immer sofort.',
     speed: (kmh: number) => `${u.speed(kmh, 1)}`,
     ramping: (from: number, to: number) => `Tempo wird in Stufen angepasst: ${u.speedValue(from, 1)} → ${u.speed(to, 1)}`,

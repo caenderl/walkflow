@@ -108,8 +108,10 @@ export const en = {
     keys: 'Keyboard: **Space** or **Esc** = stop, **↑ / ↓** = speed ±0.5 (not in the slider or a text field).',
     target: 'Target',
     sliderLabel: 'Target speed',
-    minus: '− 0.5',
-    plus: '+ 0.5',
+    /** The value under − and +: one step, in the shown unit */
+    stepValue: (kmh: number) => u.speedValue(kmh, 1),
+    minusLabel: (kmh: number) => `Decrease speed by ${u.speed(kmh, 1)}`,
+    plusLabel: (kmh: number) => `Increase speed by ${u.speed(kmh, 1)}`,
     rampHint: 'The app approaches larger jumps in steps (see settings). Stop always takes effect immediately.',
     speed: (kmh: number) => `${u.speed(kmh, 1)}`,
     ramping: (from: number, to: number) => `Changing speed in steps: ${u.speedValue(from, 1)} → ${u.speed(to, 1)}`,
