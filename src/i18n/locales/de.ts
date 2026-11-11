@@ -579,6 +579,7 @@ export const de: Messages = {
     maxStepRange: (min: number, max: number) => `❌ Maximale Änderung muss zwischen ${u.speedValue(min, 1)} und ${u.speed(max, 1)} liegen`,
     noAllowedSpeed: (max: number, min: number) => `❌ Kein erlaubter Speed: Limit ${n(max)} liegt unter dem Geräte-Minimum ${n(min)}`,
     rampAborted: '❌ Stufenweise Tempoänderung abgebrochen (Schreibfehler)',
+    heldUntilMoving: (kmh: number) => `Ziel ${u.speed(kmh, 1)}: wird in Stufen angefahren, sobald das Band läuft`,
     speedRefused: '❌ Das Laufband hat das Tempo abgelehnt. Stufenweise Tempoänderung abgebrochen.',
   },
   console: {

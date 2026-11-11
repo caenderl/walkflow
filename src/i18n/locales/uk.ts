@@ -588,6 +588,7 @@ export const uk = {
     maxStepRange: (min: number, max: number) => `❌ Максимальна зміна має бути від ${u.speedValue(min, 1)} до ${u.speed(max, 1)}`,
     noAllowedSpeed: (max: number, min: number) => `❌ Немає дозволеної швидкості: ліміт ${n(max)} нижчий за мінімум пристрою ${n(min)}`,
     rampAborted: '❌ Поступову зміну швидкості перервано (помилка запису)',
+    heldUntilMoving: (kmh: number) => `Ціль ${u.speed(kmh, 1)}: буде досягнута поступово, щойно доріжка запрацює`,
     speedRefused: '❌ Доріжка відхилила швидкість. Поступову зміну швидкості перервано.',
   },
   console: {

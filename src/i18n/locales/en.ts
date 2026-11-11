@@ -580,6 +580,7 @@ export const en = {
     maxStepRange: (min: number, max: number) => `❌ The maximum change must be between ${u.speedValue(min, 1)} and ${u.speed(max, 1)}`,
     noAllowedSpeed: (max: number, min: number) => `❌ No allowed speed: limit ${n(max)} is below the device minimum ${n(min)}`,
     rampAborted: '❌ Stepwise speed change aborted (write error)',
+    heldUntilMoving: (kmh: number) => `Target ${u.speed(kmh, 1)}: approached in steps once the belt is running`,
     speedRefused: '❌ The treadmill refused the speed. Stepwise speed change aborted.',
   },
   console: {

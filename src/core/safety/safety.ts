@@ -152,9 +152,16 @@ export interface GovernorOptions {
   freshMs: number;
 }
 
+/** A measured speed from which the belt counts as moving (km/h) */
+const MOVING_KMH = 0.3;
+
 /**
  * The only place that creates speed commands. Approaches every target in steps of at most maxStep,
  * with at least intervalMs between two commands, and never beyond the range.
+ *
+ * While the belt stands, a target is held and nothing is sent: a treadmill remembers a speed set while standing and runs up
+ * to it by itself after Start (a sPad 500 does), past the ramp. Once the belt is seen moving, the held target is approached
+ * in steps like any other. After reset (stop, start, new connection) the belt counts as standing until it is seen moving.
  */
 export class SpeedGovernor {
   maxStep = DEFAULT_MAX_STEP;
@@ -165,6 +172,9 @@ export class SpeedGovernor {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private sending = false;
   private gen = 0;
+  /** null: not known yet (nothing measured, no reset), which holds nothing */
+  private moving: boolean | null = null;
+  private loggedHeld: number | null = null;
   private readonly opts: GovernorOptions;
 
   constructor(private readonly deps: GovernorDeps, opts: Partial<GovernorOptions> = {}) {
@@ -175,6 +185,8 @@ export class SpeedGovernor {
   get target() { return this._target; }
   get lastCommand() { return this.last ? { ...this.last } : null; }
   get ramping() { return this.timer !== null || this.sending; }
+  /** A target waits for the belt to move */
+  get holding() { return this.moving === false && this._target !== null; }
   get currentRange(): SpeedRange { return { ...this.range }; }
 
   msSinceLastCommand(): number {
@@ -183,6 +195,9 @@ export class SpeedGovernor {
 
   noteMeasured(kmh: number, at = this.deps.now()) {
     this.measured = { kmh, at };
+    const was = this.moving;
+    this.moving = kmh >= MOVING_KMH;
+    if (this.moving && was === false) { this.pump(); this.deps.onChange?.(); }
   }
 
   /** Speed command sent from outside (console): ends the ramp and counts for the minimum interval. */
@@ -220,6 +235,10 @@ export class SpeedGovernor {
       return null;
     }
     this._target = clamped;
+    if (this.moving === false && this.loggedHeld !== clamped) {
+      this.loggedHeld = clamped;
+      this.deps.log?.(t.limit.heldUntilMoving(clamped));
+    }
     this.pump();
     this.deps.onChange?.();
     return clamped;
@@ -250,6 +269,7 @@ export class SpeedGovernor {
     if (this.timer !== null) clearTimeout(this.timer);
     this.timer = null;
     this._target = null;
+    this.loggedHeld = null;
     this.deps.onChange?.();
   }
 
@@ -267,10 +287,11 @@ export class SpeedGovernor {
     this.cancel();
     this.last = null;
     this.measured = null;
+    this.moving = false;
   }
 
   private pump() {
-    if (this.sending || this.timer !== null || this._target === null) return;
+    if (this.sending || this.timer !== null || this._target === null || this.moving === false) return;
     const now = this.deps.now();
     const wait = this.last ? this.last.at + this.opts.intervalMs - now : 0;
     if (wait > 0) {
@@ -358,8 +379,6 @@ export function beltMaybeRunning(s: { startedByApp: boolean; lastMeasuredKmh: nu
   return s.startedByApp || (s.lastMeasuredKmh ?? 0) > 0;
 }
 
-/** A measured speed from which the belt counts as moving (km/h) */
-const MOVING_KMH = 0.3;
 /** A speed reading older than this does not count as known: a treadmill that stops reporting must not lock Start */
 const READING_FRESH_MS = 5000;
 

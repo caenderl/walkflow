@@ -582,6 +582,7 @@ export const fr: Messages = {
     maxStepRange: (min: number, max: number) => `❌ La variation maximale doit être comprise entre ${u.speedValue(min, 1)} et ${u.speed(max, 1)}`,
     noAllowedSpeed: (max: number, min: number) => `❌ Aucune vitesse autorisée : la limite ${n(max)} est inférieure au minimum de l’appareil ${n(min)}`,
     rampAborted: '❌ Ajustement par paliers interrompu (erreur d’écriture)',
+    heldUntilMoving: (kmh: number) => `Objectif ${u.speed(kmh, 1)} : atteint par paliers dès que le tapis tourne`,
     speedRefused: '❌ Le tapis a refusé la vitesse. Ajustement par paliers interrompu.',
   },
   console: {

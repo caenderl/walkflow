@@ -85,6 +85,8 @@ export function setupBelt(host: BeltHost) {
     const c = session.client;
     if (!c) return false;
     const mine = ++epoch;
+    // A speed chosen while the belt stood is asked for again once Start went out; the governor holds it until the belt moves
+    const chosen = governor.target;
     governor.reset();
     standstill.disarm();
     const a = await c.send(cmdRequestControl());
@@ -97,7 +99,11 @@ export function setupBelt(host: BeltHost) {
     const b = await c.send(cmdStart());
     // A stop that came in while Start was on its way was sent after it, and the belt is its business now
     if (epoch !== mine) return false;
-    if (b) { session.beltStarted = true; banner.startRequested(host.now()); }
+    if (b) {
+      session.beltStarted = true;
+      banner.startRequested(host.now());
+      if (chosen !== null && chosen !== undefined) governor.request(chosen);
+    }
     return a && b;
   }
 
