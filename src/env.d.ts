@@ -2,7 +2,6 @@
 
 interface ImportMetaEnv {
   readonly VITE_TARGET?: 'web' | 'desktop';
-  readonly VITE_DONATION_URL?: string;
 }
 
 interface ImportMeta {

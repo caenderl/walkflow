@@ -56,8 +56,6 @@ jobs:
           BASE_PATH: /app/
           # The former address (the project page of this repository) forwards to the new one
           OLD_PATH: /walkflow
-          # Optional, set as a repository variable (Settings → Secrets and variables → Actions → Variables)
-          VITE_DONATION_URL: ${{ vars.DONATION_URL }}
 
       # One commit with the whole site, replacing what was there (the history of the site is the history of this repository)
       - name: Push the site

@@ -9,8 +9,3 @@ export const APP_VERSION: string = __APP_VERSION__;
 export const GITHUB_REPO: string = __GITHUB_REPO__;
 /** 'web' (GitHub Pages) or 'desktop' (Electron) */
 export const BUILD_TARGET: 'web' | 'desktop' = import.meta.env.VITE_TARGET === 'desktop' ? 'desktop' : 'web';
-/**
- * Optional link for voluntary support. Empty = show nothing.
- * Only shown in the web build, never in the desktop app.
- */
-export const DONATION_URL: string = import.meta.env.VITE_DONATION_URL ?? '';

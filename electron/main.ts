@@ -14,6 +14,7 @@ import { devToolsAllowed } from '../src/core/safety/dev-mode';
 import { devOrigin } from '../src/platform/dev-url';
 import { mapOrigins, resolveMapStyles } from '../src/core/routes/map-config';
 import { mimeFor } from '../src/platform/mime';
+import { DONATION_URL } from '../src/platform/donation';
 import { OPEN_MAX_BYTES, packagePaths } from '../src/platform/open-files';
 import { autoUpdater } from 'electron-updater';
 import { createUpdateController, selfUpdateSupported, type UpdaterPort } from '../src/platform/update-controller';
@@ -99,7 +100,7 @@ const fromWindow = (e: IpcMainEvent | IpcMainInvokeEvent) => !!win && e.sender =
 const releasesUrl = () => (__GITHUB_REPO__ ? `https://github.com/${__GITHUB_REPO__}/releases` : '');
 
 function isAllowedExternal(url: string): boolean {
-  return /^https:\/\/github\.com\//.test(url);
+  return /^https:\/\/github\.com\//.test(url) || url === DONATION_URL;
 }
 
 async function serve(request: Request): Promise<Response> {
