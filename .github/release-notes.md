@@ -2,7 +2,7 @@
 
 ### Download
 
-**No macOS app for now** (it is not notarized by Apple, so macOS would block it). On a Mac, use the [web app](https://walkflow-app.github.io/walkflow/app/) in Chrome or Edge and install it as an app in *Settings → Info*.
+**No macOS app for now** (it is not notarized by Apple, so macOS would block it). On a Mac, use the [web app](https://walkflow-app.github.io/app/) in Chrome or Edge and install it as an app in *Settings → Info*.
 
 | System | File |
 | --- | --- |

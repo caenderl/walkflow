@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain script without types, also run by node in the Pages build
-import { fillPage, releaseVersion, siteUrl } from '../scripts/site-version.mjs';
+import { fillPage, redirectPage, releaseVersion, siteUrl } from '../scripts/site-version.mjs';
 
 describe('releaseVersion (the version of the latest release, for the download links)', () => {
   it('takes a release tag or a plain version', () => {
@@ -39,5 +39,20 @@ describe('fillPage', () => {
     const v = { version: '0.2.0', site: 'https://x.example' };
     expect(() => fillPage('{{versoin}}', v)).toThrow(/versoin/);
     expect(() => fillPage('{{ version }}', v)).toThrow();
+  });
+});
+
+describe('redirectPage (the former address of the site forwards to the new one)', () => {
+  it('points to the new address and keeps query and anchor', () => {
+    const page = redirectPage('https://walkflow-app.github.io/app/');
+    expect(page).toContain('url=https://walkflow-app.github.io/app/"');
+    expect(page).toContain('<link rel="canonical" href="https://walkflow-app.github.io/app/">');
+    expect(page).toContain('location.replace("https://walkflow-app.github.io/app/" + location.search + location.hash)');
+  });
+
+  it('refuses an address that is not a plain secure one', () => {
+    for (const bad of ['', 'http://example.org/', 'https://example.org/"><script>', 'javascript:alert(1)']) {
+      expect(() => redirectPage(bad), bad).toThrow();
+    }
   });
 });

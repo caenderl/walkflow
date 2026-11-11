@@ -2,7 +2,7 @@
 
 Open-source control for treadmills with Bluetooth FTMS (Fitness Machine Service), right in the browser via Web Bluetooth or as a desktop app. No account, no server, no tracking. The app is available in English, German, French and Ukrainian.
 
-**[Product page](https://walkflow-app.github.io/walkflow/)** · **[Web app](https://walkflow-app.github.io/walkflow/app/)** · **[Downloads](https://github.com/walkflow-app/walkflow/releases/latest)** · **[Route store](https://github.com/walkflow-app/route-store)**
+**[Product page](https://walkflow-app.github.io/)** · **[Web app](https://walkflow-app.github.io/app/)** · **[Downloads](https://github.com/walkflow-app/walkflow/releases/latest)** · **[Route store](https://github.com/walkflow-app/route-store)**
 
 > [!WARNING]
 > **Safety and liability notice.** Use at your own risk. The software is provided without warranty (see the [MIT license](LICENSE)).
@@ -57,14 +57,14 @@ Other FTMS treadmills may work but are not tested.
 
 Web Bluetooth is available in Chrome (desktop, Android), Edge and Opera. Safari and Firefox do not have it; on iPhone/iPad no browser has it (workaround: browsers with their own Bluetooth bridge such as Bluefy, not tested). On Linux, depending on the version, it has to be enabled in Chrome via `chrome://flags` first.
 
-The web version runs at <https://walkflow-app.github.io/walkflow/app/> (a fork deploys to `https://<github-user>.github.io/<repo>/app/`). Links can set the language, e.g. `…/app/?lang=fr`.
+The web version runs at <https://walkflow-app.github.io/app/> (the Pages workflow pushes the built site to the repository `walkflow-app/walkflow-app.github.io`; a fork sets `SITE_REPO` and `SITE_URL` in `.github/workflows/pages.yml` and the secret `PAGES_DEPLOY_KEY`). Links can set the language, e.g. `…/app/?lang=fr`.
 
-**Install it as an app:** in Chrome or Edge, open *Settings → Info* and press **Install Walkflow** (or use the install icon at the right end of the address bar). Walkflow then opens in a window of its own from the Dock, the Start menu or the home screen, works offline, and needs no download and no signature. Where the browser does not offer it (Safari, Firefox, or after the offer was dismissed), the section says how to do it from the browser’s menu. The product page is at <https://walkflow-app.github.io/walkflow/>.
+**Install it as an app:** in Chrome or Edge, open *Settings → Info* and press **Install Walkflow** (or use the install icon at the right end of the address bar). Walkflow then opens in a window of its own from the Dock, the Start menu or the home screen, works offline, and needs no download and no signature. Where the browser does not offer it (Safari, Firefox, or after the offer was dismissed), the section says how to do it from the browser’s menu. The product page is at <https://walkflow-app.github.io/>.
 
 ## Desktop app
 
 > [!NOTE]
-> **There is no macOS app for now.** It would have to be notarized by Apple (a paid Apple developer account); without that, macOS blocks it at first and again after every update. On a Mac, use the [web app](https://walkflow-app.github.io/walkflow/app/) in Chrome or Edge and install it as an app (*Settings → Info → Install Walkflow*): it opens like any other app and does everything the desktop app does except the global stop shortcut and the device chooser of its own. You can still build the macOS app yourself with `npm run dist` on a Mac.
+> **There is no macOS app for now.** It would have to be notarized by Apple (a paid Apple developer account); without that, macOS blocks it at first and again after every update. On a Mac, use the [web app](https://walkflow-app.github.io/app/) in Chrome or Edge and install it as an app (*Settings → Info → Install Walkflow*): it opens like any other app and does everything the desktop app does except the global stop shortcut and the device chooser of its own. You can still build the macOS app yourself with `npm run dist` on a Mac.
 
 Downloads for Windows and Linux are on the **Releases** page. The app is not signed, so the system warns when you open it for the first time:
 
@@ -152,9 +152,9 @@ Every colour is a token at the top of `src/style.css`, defined once as `light-da
 
 ### GitHub Pages
 
-The site has two parts: the product page (`site/`: what Walkflow is, screenshots, download links to the latest release) at the root, and the web app under `app/` (so `https://<user>.github.io/<repo>/` is the page and `…/app/` the app). `npm run build:pages` builds both into `pages/` (the pages in `site/` carry `{{version}}` in the download links; the build fills in the tag from `WALKFLOW_RELEASE`, or the version in `package.json` if it is not set); for a local look, build with `BASE_PATH=/app/` and serve `pages/` with any static server. The page takes no scripts, fonts or other content from third parties. Its two pages (`site/index.html`, `site/de/index.html`) must keep the same shape, which `tests/site.test.ts` checks, together with every link and image.
+The site has two parts: the product page (`site/`: what Walkflow is, screenshots, download links to the latest release) at the root, and the web app under `app/` (so `https://walkflow-app.github.io/` is the page and `…/app/` the app; the former address `…/walkflow/` forwards there). `npm run build:pages` builds both into `pages/` (the pages in `site/` carry `{{version}}` in the download links; the build fills in the tag from `WALKFLOW_RELEASE`, or the version in `package.json` if it is not set); for a local look, build with `BASE_PATH=/app/` and serve `pages/` with any static server. The page takes no scripts, fonts or other content from third parties. Its two pages (`site/index.html`, `site/de/index.html`) must keep the same shape, which `tests/site.test.ts` checks, together with every link and image.
 
-For search engines and link previews the pages carry a canonical address, `hreflang` links, Open Graph and Twitter tags, structured data (`SoftwareApplication`) and `sitemap.xml`; `{{site}}` in them is the address of the site (`SITE_URL`, set by the Pages workflow). `site/img/social-<en|de>.png` (1200 × 630) is the preview image; make it again from the training screenshot when that changes. GitHub Pages serves a project from a subfolder, where `robots.txt` is not read: submit `…/sitemap.xml` in the Google Search Console and Bing Webmaster Tools yourself.
+For search engines and link previews the pages carry a canonical address, `hreflang` links, Open Graph and Twitter tags, structured data (`SoftwareApplication`) and `sitemap.xml`; `{{site}}` in them is the address of the site (`SITE_URL`, set by the Pages workflow). `site/img/social-<en|de>.png` (1200 × 630) is the preview image; make it again from the training screenshot when that changes. `robots.txt` names the sitemap; submitting `…/sitemap.xml` in the Google Search Console and Bing Webmaster Tools still speeds things up.
 
 The screenshots in `site/img/` show the app with made-up runs and workouts and the routes of the route store (not a real person's data). They are `<dark|light>-<en|de>-<training|routes|workouts|history>.webp`, 1600 × 1000, and are taken again when the look of the app changes a lot.
 

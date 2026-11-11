@@ -23,3 +23,27 @@ export function fillPage(text, { version, site }) {
   if (left) throw new Error(`Unknown placeholder in the page: ${left[0]}`);
   return out;
 }
+
+/** A page that sends visitors of an old address on to the new one, keeping the query (e.g. ?lang=fr) and the anchor */
+export function redirectPage(target) {
+  const to = siteUrl(target.replace(/\/$/, '')) + (target.endsWith('/') ? '/' : '');
+  return `<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<title>Walkflow has moved</title>
+<link rel="canonical" href="${to}">
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="0; url=${to}">
+<script>location.replace(${JSON.stringify(to)} + location.search + location.hash)</script>
+</head><body><p>Walkflow has moved to <a href="${to}">${to}</a>.</p></body></html>
+`;
+}
+
+/** A service worker for an old address of the app: it clears its caches and unregisters itself, so an installed copy reaches the redirect */
+export const retiredServiceWorker = `self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', event => event.waitUntil((async () => {
+  for (const key of await caches.keys()) await caches.delete(key);
+  await self.registration.unregister();
+  for (const client of await self.clients.matchAll({ type: 'window' })) client.navigate(client.url);
+})()));
+`;
