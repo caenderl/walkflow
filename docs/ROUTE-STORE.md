@@ -76,6 +76,50 @@ The check does not (yet) test that a changed file has a higher revision; a revie
   (with a trailing slash, so nothing else on `raw.githubusercontent.com`), in addition to what was allowed before.
 - **No path to the belt.** A route only shows progress; it sends nothing to the treadmill (see ROUTE-PACKAGE.md).
 
+## Making routes
+
+The routes that the project adds itself (author `Walkflow`) are made with `scripts/make-route.mjs`: the outline of a lake or a park
+is taken from OpenStreetMap, laid onto the paths around it, and the pieces are joined by shortest paths, so the loop follows the real
+paths. A person who adds a route to the store exports it from the app instead (see the README of the route-store repository).
+
+1. **Pick the place.** A lake with a path along its shore works well. A park only works if its outline follows a path: with
+   three parks that were tried (Regent's Park, Vondelpark, Tempelhofer Feld) the loop wandered off through the park. A lake that is
+   several pieces in OpenStreetMap (Sortedams Sø in Copenhagen) gives only its largest piece. Take the
+   OpenStreetMap id from the address of its page (`openstreetmap.org/relation/62215` → `relation/62215`, a way is `way/<id>`).
+2. **Write a spec**, `scripts/route-specs/<file>.json` (the five in that folder are examples):
+
+   | Field | Meaning |
+   |---|---|
+   | `file` | Name of the package without `.walkflow`: lower-case letters, digits, `.` `_` `-`. Place first, then the feature (`berlin-schlachtensee`). |
+   | `osm` | `relation/<id>` or `way/<id>` of the lake or park. |
+   | `step`, `snapDist`, `corr`, `pen` | How the loop is laid, all optional: the outline is sampled every `step` m (200); a sample is snapped to a path within `snapDist` m (60); only paths within `corr` m of the outline are used (60), and the further from it, the dearer (`pen`, 15: bigger is stricter about staying close to the outline). |
+   | `country`, `tags`, `name`, `place`, `description`, `waypoints` | As in [the package format](ROUTE-PACKAGE.md). In a `description`, `{km}` and `{mi}` are replaced by the length of the loop (a comma as the decimal sign except in English, Japanese, Chinese and Korean). |
+   | `author`, `license`, `source`, `defaultSpeed`, `revision` | Optional: `Walkflow`, `ODbL-1.0`, `© OpenStreetMap contributors (ODbL)`, 4, 1. Raise `revision` when a route that is already in the store changes. |
+   | `sources` | Where the facts of the texts come from (addresses). Not written into the package, but kept so the next person can check them. |
+
+3. **Run it** with the route-store checkout next to this repository, and look at the picture:
+
+   ```
+   node scripts/make-route.mjs scripts/route-specs/berlin-schlachtensee.json --root ../route-store --preview berlin.svg
+   ```
+
+   It prints the length, the number of pieces it could not route, and whether the loop closes. It stops (and writes nothing) if a
+   piece could not be routed, the loop does not close, or its length is not within 80 to 120 % of the outline's: look at the picture,
+   then change `step`, `snapDist`, `corr` or `pen`. `--force` writes anyway. When it writes the file it runs the store check
+   (`build-store.mjs --check --files-only`) on the checkout, so a file that was written has passed it.
+4. **Waypoints and texts.** Take the coordinates of a place from OpenStreetMap (the waypoint has to be within 150 m of the route; the
+   script says which one is not) and the facts from sources you have read, not from memory. Where sources disagree, say less (a decade
+   instead of a year) rather than pick one. A name is up to 80 characters, a waypoint text up to 300, a description up to 1000; a longer
+   one is refused. Keep the languages of the existing routes (`en`, `de`, `fr`, `uk`) and have the French and Ukrainian read.
+5. **Open a pull request** in the route-store repository from a branch with the new files only. `index.json` is written by its CI
+   after the merge.
+
+The script asks Nominatim for one outline and Overpass for one area per route and keeps the answers in a folder in the temporary
+folder of the system (`--cache`), so running it again asks for nothing. Overpass is often busy and answers `502`: the script tries
+eight times with a growing pause, and running it again later is the way to go on. OpenStreetMap changes, so a run months later can give a
+slightly different track from the file in the store; the file in the store is what counts. `tests/make-route.test.ts` tests the
+pieces on a made-up lake, without the network, and checks that what the script writes is what the app itself would write.
+
 ## What it does not do
 
 - It does not check who made a route or whether the data may be used: that is what the `license` and `source` of a package are
