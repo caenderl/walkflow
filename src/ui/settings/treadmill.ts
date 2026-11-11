@@ -1,7 +1,7 @@
 // Settings → treadmill: the speeds of the slow/mid/run buttons in the training view. Each field shows its preset in the
 // units of the settings with the decimal separator of the language; a value is only stored when checkPresetChange
 // accepts it (2.0 km/h up to the personal limit, slow < mid < run). The checks and the guard against the limit live in
-// core/safety/speed-presets.ts.
+// core/safety/speed-presets.ts. The incline levels slider in the same tab belongs to incline-card.ts.
 
 import { checkPresetChange, PRESET_KEYS, PRESET_MIN, presetCommand, type PresetKey, type SpeedPresets } from '../../core/safety/speed-presets';
 import { t } from '../../i18n/i18n';
