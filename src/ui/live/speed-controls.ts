@@ -5,7 +5,7 @@
 
 import { cmdSetSpeed } from '../../core/protocol/ftms';
 import {
-  decideLimitChange, effectiveMax as calcEffectiveMax, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE, LIMIT_MAX, LIMIT_MIN,
+  decideLimitChange, effectiveMax as calcEffectiveMax, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE,
   LIMIT_STORAGE_KEY, loadLimit, MAX_STEP_MAX, MAX_STEP_MIN, MAX_STEP_STORAGE_KEY, parseMaxStep, RAMP_INTERVAL_MS,
   serializeLimit, SpeedGovernor,
 } from '../../core/safety/safety';
@@ -14,7 +14,7 @@ import {
   loadSpeedPresets, PRESET_KEYS, presetCommand, type PresetKey, serializeSpeedPresets, SPEED_PRESETS_STORAGE_KEY,
   type SpeedPresets,
 } from '../../core/safety/speed-presets';
-import { speedFromInput, speedStep, toSpeed } from '../../i18n/units';
+import { speedFieldText, speedFromInput, speedStep } from '../../i18n/units';
 import { confirmDialog } from '../components/dialogs';
 import { $, $button, $input, log } from '../ui';
 import { store } from '../store';
@@ -107,11 +107,9 @@ export function setupSpeedControls(host: SpeedControlsHost) {
 
   /** The limit and step fields and the preset buttons, in the units of the settings. The values stay km/h inside. */
   function renderLimitFields() {
-    const shown = (kmh: number) => String(Math.round(toSpeed(kmh) * 100) / 100);
-    const metric = toSpeed(1) === 1;
-    const cap = $input('cap'), step = $input('maxStep');
-    cap.min = shown(LIMIT_MIN); cap.max = shown(LIMIT_MAX); cap.step = metric ? '0.5' : '0.1'; cap.value = shown(limit);
-    step.min = shown(MAX_STEP_MIN); step.max = shown(MAX_STEP_MAX); step.step = metric ? '0.1' : '0.01'; step.value = shown(governor.maxStep);
+    // Text fields with the language's decimal separator; decideLimitChange and parseMaxStep check the range
+    $input('cap').value = speedFieldText(limit, t.number);
+    $input('maxStep').value = speedFieldText(governor.maxStep, t.number);
     renderPresets();
     renderStepButtons();
   }
