@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.4.0](https://github.com/walkflow-app/walkflow/compare/v0.3.0...v0.4.0) (2026-11-11)
+
+
+### Safety
+
+* **start:** hold a speed chosen while standing, ramp up to it after Start ([#9](https://github.com/walkflow-app/walkflow/issues/9)) ([c54b711](https://github.com/walkflow-app/walkflow/commit/c54b711a737590c1631e0c92b32ccf4dde11dc18))
+
+
+### Features
+
+* **info:** Ko-fi button for voluntary support ([6006c7a](https://github.com/walkflow-app/walkflow/commit/6006c7ae15d4e27fdc6c30061c6abe267dddfc70))
+* **settings:** move the incline levels slider to the treadmill tab ([12fab47](https://github.com/walkflow-app/walkflow/commit/12fab47884ccfcb9b0e277cb56cb0669d03731f8))
+* **site:** serve the site at https://walkflow-app.github.io/ ([49ea894](https://github.com/walkflow-app/walkflow/commit/49ea894a21e3cbbaa0e42bcbfbc7a2ec775d1c8a))
+* **training:** large − and + with the step below ([6165164](https://github.com/walkflow-app/walkflow/commit/616516422b566ee764b1eb739911027c0644ac90))
+* **training:** slow/mid/run speed presets ([8301b58](https://github.com/walkflow-app/walkflow/commit/8301b584f71c52f250a154b75bdf9134a629ba1e))
+
+
+### Fixes
+
+* **settings:** accept a decimal comma in the limit and step fields ([#8](https://github.com/walkflow-app/walkflow/issues/8)) ([ba4aed5](https://github.com/walkflow-app/walkflow/commit/ba4aed5512c64649cc5faad2cb9beb57add671f6))
+
 ## [0.3.0](https://github.com/walkflow-app/walkflow/compare/v0.2.0...v0.3.0) (2026-11-10)
 
 
