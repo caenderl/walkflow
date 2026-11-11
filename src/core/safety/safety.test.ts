@@ -307,10 +307,11 @@ describe('SpeedGovernor', () => {
     expect(gov.base()).toBe(2);
   });
 
-  it('from standstill, the ramp starts at the device minimum', async () => {
+  it('from standstill, the ramp starts at the device minimum once the belt moves', async () => {
     const { gov, sent } = make();
     gov.noteMeasured(0);
     gov.request(2);
+    gov.noteMeasured(0.3);
     await vi.advanceTimersByTimeAsync(10_000);
     expect(sent.map(s => s[1])).toEqual([1, 1.5, 2]);
   });
@@ -373,9 +374,10 @@ describe('SpeedGovernor', () => {
     gov.reset();
     expect(gov.lastCommand).toBeNull();
     gov.request(2);
+    gov.noteMeasured(1);
     await vi.advanceTimersByTimeAsync(10_000);
-    // after reset: no minimum interval reference any more, base = device minimum
-    expect(sent.map(s => s[1])).toEqual([3.5, 1.5, 2]);
+    // after reset: no minimum interval reference any more, the next step goes out at once from the measured speed
+    expect(sent).toEqual([[0, 3.5], [100, 1.5], [1600, 2]]);
   });
 
   it('an external command (console) counts as base and for the minimum interval', async () => {
@@ -394,6 +396,93 @@ describe('SpeedGovernor', () => {
     gov.request(4);
     await vi.advanceTimersByTimeAsync(10_000);
     expect(sent.map(s => s[1])).toEqual([3, 4]);
+  });
+
+  describe('a speed chosen while the belt stands', () => {
+    it('is held, not sent: a treadmill would remember it and run up to it by itself after Start', async () => {
+      const { gov, sent } = make();
+      gov.noteMeasured(0);
+      expect(gov.request(5)).toBe(5);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(sent).toEqual([]);
+      expect(gov.target).toBe(5);
+      expect(gov.holding).toBe(true);
+    });
+
+    it('counts as standing after reset (stop, start, new connection) until the belt is seen moving', async () => {
+      const { gov, sent } = make();
+      gov.noteMeasured(3);
+      gov.reset();
+      gov.request(4);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(sent).toEqual([]);
+      expect(gov.holding).toBe(true);
+    });
+
+    it('is approached in steps from the starting speed once the belt moves', async () => {
+      const { gov, sent } = make();
+      gov.reset();
+      await gov.startSpeed();
+      gov.request(3);
+      gov.noteMeasured(0);
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(sent.map(s => s[1])).toEqual([1]);
+      gov.noteMeasured(1);
+      expect(gov.holding).toBe(false);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(sent.map(s => s[1])).toEqual([1, 1.5, 2, 2.5, 3]);
+      for (let i = 1; i < sent.length - 1; i++) expect(sent[i + 1]![0] - sent[i]![0]).toBeGreaterThanOrEqual(RAMP_INTERVAL_MS);
+    });
+
+    it('a movement below 0.3 km/h is not moving yet', async () => {
+      const { gov, sent } = make();
+      gov.reset();
+      gov.request(3);
+      gov.noteMeasured(0.2);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(sent).toEqual([]);
+    });
+
+    it('is clamped to the limit like any request, also when the limit is lowered while it is held', async () => {
+      const { gov, sent } = make();
+      gov.reset();
+      expect(gov.request(9)).toBe(6);
+      gov.setRange({ min: 1, max: 4 });
+      expect(gov.target).toBe(4);
+      gov.noteMeasured(1);
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(Math.max(...sent.map(s => s[1]))).toBe(4);
+    });
+
+    it('is forgotten by reset (a stop) and never sent', async () => {
+      const { gov, sent } = make();
+      gov.reset();
+      gov.request(4);
+      gov.reset();
+      expect(gov.target).toBeNull();
+      gov.noteMeasured(2);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(sent).toEqual([]);
+    });
+
+    it('a belt that comes to a stand holds the next request again', async () => {
+      const { gov, sent } = make();
+      gov.noteMeasured(2);
+      gov.noteMeasured(0);
+      gov.request(2.5);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(sent).toEqual([]);
+    });
+
+    it('says once in the log that it is held, not again for the same speed', () => {
+      const { gov, logs } = make();
+      gov.reset();
+      gov.request(4);
+      gov.request(4);
+      expect(logs).toHaveLength(1);
+      gov.request(4.5);
+      expect(logs).toHaveLength(2);
+    });
   });
 
   describe('startSpeed: the speed the belt starts at', () => {

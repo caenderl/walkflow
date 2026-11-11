@@ -7,7 +7,7 @@ import { setupBelt, STOP_ATTEMPTS } from './belt';
 import { Session } from './session';
 
 /** Everything the belt touches, in the order it happens */
-function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean | Promise<boolean>); client?: boolean; startSpeedOk?: boolean } = {}) {
+function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean | Promise<boolean>); client?: boolean; startSpeedOk?: boolean; target?: number } = {}) {
   const calls: string[] = [];
   const session = new Session();
   if (opts.client !== false) {
@@ -25,6 +25,8 @@ function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean | Promise<boo
     startRequested: vi.fn(() => calls.push('banner start')),
   } as unknown as BeltBanner;
   const governor = {
+    target: opts.target ?? null,
+    request: vi.fn((kmh: number) => { calls.push(`governor request ${kmh}`); return kmh; }),
     reset: vi.fn(() => calls.push('governor reset')),
     startSpeed: vi.fn(async () => { calls.push('governor startSpeed'); return opts.startSpeedOk ?? true; }),
   } as unknown as SpeedGovernor;
@@ -180,6 +182,31 @@ describe('start', () => {
     expect(await r.belt.start()).toBe(false);
     expect(r.session.beltStarted).toBe(false);
     expect(r.banner.startRequested).not.toHaveBeenCalled();
+  });
+
+  it('keeps a speed chosen while the belt stood: it asks for it again after Start, for the governor to ramp up to', async () => {
+    const r = rig({ target: 5 });
+    expect(await r.belt.start()).toBe(true);
+    expect(r.calls).toEqual(['governor reset', 'standstill disarm', 'send 00', 'governor startSpeed', 'send 07', 'banner start', 'governor request 5']);
+  });
+
+  it('asks for nothing when no speed was chosen', async () => {
+    const r = rig();
+    await r.belt.start();
+    expect(r.governor.request).not.toHaveBeenCalled();
+  });
+
+  it('does not ask for the chosen speed if Start failed', async () => {
+    const r = rig({ target: 5, ok: h => h !== '07' });
+    await r.belt.start();
+    expect(r.governor.request).not.toHaveBeenCalled();
+  });
+
+  it('a stop while starting also drops the chosen speed', async () => {
+    const r = rig({ target: 5 });
+    (r.governor.startSpeed as ReturnType<typeof vi.fn>).mockImplementationOnce(async () => { void r.belt.stop(); return true; });
+    expect(await r.belt.start()).toBe(false);
+    expect(r.governor.request).not.toHaveBeenCalled();
   });
 
   it('sends nothing without a connection', async () => {
