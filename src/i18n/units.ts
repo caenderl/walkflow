@@ -67,5 +67,3 @@ export function speedFromInput(raw: string): string {
  */
 export const speedFieldText = (kmh: number, n: (v: number) => string): string => n(Math.round(toSpeed(kmh) * 100) / 100);
 
-/** The quick-select speeds, in the shown unit: 2 to 5 km/h, or 1.5 to 3 mph */
-export const speedPresets = (): readonly number[] => (imperial() ? [1.5, 2, 2.5, 3] : [2, 3, 4, 5]);
