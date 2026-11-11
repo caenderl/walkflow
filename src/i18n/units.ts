@@ -60,5 +60,12 @@ export function speedFromInput(raw: string): string {
   return imperial() ? String(Math.round(fromSpeed(v) * 100) / 100) : String(v);
 }
 
+/**
+ * A speed for a text field: in the shown unit, up to 2 decimals, with the decimal separator of the language (`n` is
+ * t.number). speedFromInput reads it back. Text fields, not type="number": those drop "4,5" when the browser's locale
+ * uses a decimal point.
+ */
+export const speedFieldText = (kmh: number, n: (v: number) => string): string => n(Math.round(toSpeed(kmh) * 100) / 100);
+
 /** The quick-select speeds, in the shown unit: 2 to 5 km/h, or 1.5 to 3 mph */
 export const speedPresets = (): readonly number[] => (imperial() ? [1.5, 2, 2.5, 3] : [2, 3, 4, 5]);
