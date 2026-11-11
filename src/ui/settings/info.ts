@@ -2,7 +2,8 @@
 // Filled in from the texts and the build settings; called at the start and after a language change.
 
 import { t } from '../../i18n/i18n';
-import { BUILD_TARGET, DONATION_URL, GITHUB_REPO, APP_VERSION } from '../../platform/config';
+import { BUILD_TARGET, GITHUB_REPO, APP_VERSION } from '../../platform/config';
+import { DONATION_URL } from '../../platform/donation';
 import { $ } from '../ui';
 
 export function renderInfo() {
@@ -21,8 +22,10 @@ export function renderInfo() {
   const links: HTMLElement[] = [];
   if (BUILD_TARGET === 'web') links.push(link(t.info.imprintHref, t.info.imprint), link(t.info.privacyHref, t.info.privacyLink));
   if (source) links.push(link(source, t.info.sourceLink));
-  // Web build only, and only if configured. Nothing in return, no feature depends on it.
-  if (BUILD_TARGET === 'web' && DONATION_URL) links.push(link(DONATION_URL, t.info.donation));
+  // Nothing in return, no feature depends on it.
+  links.push(link(DONATION_URL, t.info.donation));
+  const support = $('supportLink') as HTMLAnchorElement;
+  support.href = DONATION_URL;
   $('footerLinks').replaceChildren(...links.flatMap((a, i) => (i ? [' · ', a] : [a])));
 }
 

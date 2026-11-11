@@ -160,8 +160,7 @@ The screenshots in `site/img/` show the app with made-up runs and workouts and t
 
 1. Repository settings → *Pages* → Source: **GitHub Actions**. (For a private repository, Pages needs a paid GitHub plan.)
 2. Fill in the pages under `public/legal/` (legal notice and privacy, per language). As long as they contain `TODO`, the Pages workflow fails on purpose. If you only want legal pages in one language, delete the others and point `info.imprintHref`/`info.privacyHref` in the locale files to the remaining ones.
-3. Optional: set the repository variable `DONATION_URL` (see below).
-4. Deploy by hand: *Actions → Pages → Run workflow*. The download links and the version on the product page come from the latest published release, so run the workflow again after publishing a release. To deploy on every push to `main`, re-enable the commented-out `push` trigger in `.github/workflows/pages.yml`.
+3. Deploy by hand: *Actions → Pages → Run workflow*. The download links and the version on the product page come from the latest published release, so run the workflow again after publishing a release. To deploy on every push to `main`, re-enable the commented-out `push` trigger in `.github/workflows/pages.yml`.
 
 ### Versions and releases
 

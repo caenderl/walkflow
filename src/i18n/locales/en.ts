@@ -750,6 +750,9 @@ export const en = {
     privacyLink: 'Privacy',
     sourceLink: 'Source code',
     donation: 'Voluntary support (nothing in return)',
+    supportTitle: 'Support Walkflow',
+    supportText: 'Walkflow is free and stays free. If you like it, you can support it voluntarily.',
+    supportButton: 'Support on Ko-fi',
     /** Relative to the app; see public/legal/ */
     imprintHref: 'legal/en/legal-notice.html',
     privacyHref: 'legal/en/privacy.html',

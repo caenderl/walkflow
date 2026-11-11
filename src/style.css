@@ -236,6 +236,8 @@ a.btn {
   border:1px solid var(--btn-border); border-radius:12px; background:var(--btn); color:var(--fg); text-decoration:none; font-weight:500;
 }
 a.btn:hover { background:var(--btn-hover); }
+a.support { display:inline-block; margin:4px 0 12px; border-radius:9px; }
+a.support img { display:block; height:36px; width:auto; }
 .sb-controls .icon { display:none; }
 
 /* The full controls only in the training view */

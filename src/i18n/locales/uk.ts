@@ -758,6 +758,9 @@ export const uk = {
     privacyLink: 'Конфіденційність',
     sourceLink: 'Вихідний код',
     donation: 'Добровільна підтримка (нічого натомість)',
+    supportTitle: 'Підтримати Walkflow',
+    supportText: 'Walkflow безкоштовний і таким залишиться. Якщо застосунок вам подобається, ви можете добровільно його підтримати.',
+    supportButton: 'Підтримати на Ko-fi',
     /** Relative to the app; see public/legal/. There are no Ukrainian legal pages yet: the English ones are shown. */
     imprintHref: 'legal/en/legal-notice.html',
     privacyHref: 'legal/en/privacy.html',
