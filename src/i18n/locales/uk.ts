@@ -115,8 +115,10 @@ export const uk = {
     keys: 'Клавіатура: **Пробіл** або **Esc** = стоп, **↑ / ↓** = швидкість ±0,5 (не в повзунку й не в текстовому полі).',
     target: 'Ціль',
     sliderLabel: 'Цільова швидкість',
-    minus: '− 0,5',
-    plus: '+ 0,5',
+    /** The value under − and +: one step, in the shown unit */
+    stepValue: (kmh: number) => u.speedValue(kmh, 1),
+    minusLabel: (kmh: number) => `Зменшити швидкість на ${u.speed(kmh, 1)}`,
+    plusLabel: (kmh: number) => `Збільшити швидкість на ${u.speed(kmh, 1)}`,
     rampHint: 'Більші стрибки застосунок виконує поступово (див. налаштування). Стоп завжди діє негайно.',
     speed: (kmh: number) => `${u.speed(kmh, 1)}`,
     ramping: (from: number, to: number) => `Швидкість змінюється поступово: ${u.speedValue(from, 1)} → ${u.speed(to, 1)}`,

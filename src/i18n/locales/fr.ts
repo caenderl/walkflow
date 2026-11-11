@@ -109,8 +109,10 @@ export const fr: Messages = {
     keys: 'Clavier : **Espace** ou **Échap** = arrêt, **↑ / ↓** = vitesse ±0,5 (pas dans le curseur ni dans un champ de texte).',
     target: 'Cible',
     sliderLabel: 'Vitesse cible',
-    minus: '− 0,5',
-    plus: '+ 0,5',
+    /** The value under − and +: one step, in the shown unit */
+    stepValue: (kmh: number) => u.speedValue(kmh, 1),
+    minusLabel: (kmh: number) => `Réduire la vitesse de ${u.speed(kmh, 1)}`,
+    plusLabel: (kmh: number) => `Augmenter la vitesse de ${u.speed(kmh, 1)}`,
     rampHint: 'L’application effectue les grands écarts par paliers (voir les réglages). L’arrêt est toujours immédiat.',
     speed: (kmh: number) => `${u.speed(kmh, 1)}`,
     ramping: (from: number, to: number) => `Vitesse ajustée par paliers : ${u.speedValue(from, 1)} → ${u.speed(to, 1)}`,
