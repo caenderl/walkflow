@@ -20,6 +20,10 @@ export interface ReadoutHost {
   inclineReported(): boolean;
   /** The person set incline levels in the settings ("none" hides everything about the incline in training) */
   inclineWanted(): boolean;
+  /** The card shows level buttons: the figure is the level too, not the percent (which a level-based treadmill does not mean) */
+  inclineShowsLevels(): boolean;
+  /** The level of a reported incline, null if there is none */
+  inclineLevel(pct: number | undefined): number | null;
 }
 
 export function setupReadout(host: ReadoutHost) {
@@ -57,7 +61,12 @@ export function setupReadout(host: ReadoutHost) {
     // Without a connection the current speed is unknown; do not leave the last value standing
     $('vSpeed').textContent = connected ? f(cur.speed === undefined ? undefined : toSpeed(cur.speed), 1) : '–';
     $('vDist').textContent = f(cur.dist === undefined ? undefined : toDist(cur.dist), 2);
-    $('vIncl').textContent = f(cur.incl, 1);
+    const levels = host.inclineShowsLevels();
+    const level = levels ? host.inclineLevel(cur.incl) : null;
+    $('vIncl').textContent = levels ? (level === null ? '–' : String(level)) : f(cur.incl, 1);
+    const label = $('statIncl').querySelector<HTMLElement>('.l')!;
+    const key = levels ? 'stats.inclineLevel' : 'stats.incline';
+    if (label.dataset.i18n !== key) { label.dataset.i18n = key; label.textContent = levels ? t.stats.inclineLevel : t.stats.incline; }
     $('statIncl').hidden = !host.inclineWanted() || (!host.inclineReported() && cur.incl === undefined);
     $('vTime').textContent = cur.time === undefined ? '–' : fmtTime(cur.time);
     $('vHr').textContent = cur.hr === undefined ? '–' : String(cur.hr);

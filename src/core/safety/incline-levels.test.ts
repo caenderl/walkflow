@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Range } from 'ftms-treadmill/protocol';
-import { followReportedIncline, INCLINE_LEVELS_MAX, INCLINE_LEVELS_MIN, INCLINE_SETTLE_MS, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount } from './incline-levels';
+import { followReportedIncline, levelOf, INCLINE_LEVELS_MAX, INCLINE_LEVELS_MIN, INCLINE_SETTLE_MS, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount } from './incline-levels';
 
 const range = (min: number, max: number, step = 1): Range => ({ min, max, step });
 
@@ -82,5 +82,31 @@ describe('followReportedIncline', () => {
 
   it('a choice the treadmill never reaches gives way after a while', () => {
     expect(followReportedIncline(0, { pct: 4, at: 1000 }, 1000 + INCLINE_SETTLE_MS)).toEqual({ shown: 0, choice: null });
+  });
+});
+
+describe('levelOf', () => {
+  it('is the level whose incline is nearest to the one the treadmill reports', () => {
+    const levels = levelsFromCount(5, range(0, 5));
+    expect(levelOf(0, levels)).toBe(0);
+    expect(levelOf(3, levels)).toBe(3);
+    expect(levelOf(2.4, levels)).toBe(2);
+    expect(levelOf(2.6, levels)).toBe(3);
+    expect(levelOf(5, levels)).toBe(5);
+  });
+
+  it('works for levels that are not whole percent', () => {
+    expect(levelOf(4.1, levelsFromCount(5, range(0, 10)))).toBe(2);
+  });
+
+  it('a reading outside the range is the nearest end', () => {
+    const levels = levelsFromCount(5, range(0, 5));
+    expect(levelOf(-1, levels)).toBe(0);
+    expect(levelOf(9, levels)).toBe(5);
+  });
+
+  it('has no level without levels or without a reading', () => {
+    expect(levelOf(2, [])).toBeNull();
+    expect(levelOf(Number.NaN, levelsFromCount(5, range(0, 5)))).toBeNull();
   });
 });

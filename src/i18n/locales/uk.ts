@@ -104,6 +104,7 @@ export const uk = {
     get dist() { return u.distUnit(); },
     time: 'Час',
     incline: 'Нахил, %',
+    inclineLevel: 'Рівень нахилу',
     heartRate: 'Пульс (уд/хв)',
     kcal: 'ккал',
   },

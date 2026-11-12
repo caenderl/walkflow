@@ -175,6 +175,9 @@ exactly as before. Checked in the demo, then on a sPad 500 (2026-11-12): the who
   showing it while the treadmill's motor passes the levels in between, and does not jump back.
 - [x] **Incline levels from 0.** With 5 levels the card shows the buttons 0 to 5; for the sPad 500 (range 0–5) they send
   `03 00 00`, `03 0a 00`, … `03 32 00`, and the treadmill shows the same level.
+- [ ] **Incline figure as a level (2026-11-12).** With levels set, the incline figure over the chart is labelled “Incline
+  level” and shows the level the treadmill reports (0 to 5 on the sPad 500), also after a change with the treadmill's own
+  buttons.
 - [x] **Connection loss while running.** The red warning appears as before, the workout ends.
 - [x] **Experiment console.** `02 bc 02` (7 km/h) is blocked with `above the limit`; `07` asks first; `08 01` stops at once.
 

@@ -97,6 +97,7 @@ export const en = {
     get dist() { return u.distUnit(); },
     time: 'Time',
     incline: 'Incline %',
+    inclineLevel: 'Incline level',
     heartRate: 'Heart rate (bpm)',
     kcal: 'kcal',
   },
