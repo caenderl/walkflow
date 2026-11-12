@@ -1,14 +1,14 @@
 // The speed in the training view and its limits: the target and the controls (slider, ±, the slow/mid/run presets, keys), the personal speed
-// limit and the maximum change per command (settings → safety). It owns the speed governor, which is the only thing that
-// sends speed commands: it caps to the limit and the device range and approaches larger jumps in steps. The values stay km/h
-// inside; the fields and buttons show the units of the settings.
+// limit and the maximum change per command (settings → safety), stored here. The treadmill (device/treadmill.ts) owns the
+// speed governor, the only thing that sends speed commands: it caps to the limit and the device range and approaches larger
+// jumps in steps. The values stay km/h inside; the fields and buttons show the units of the settings.
 
-import { cmdSetSpeed } from '../../core/protocol/ftms';
 import {
-  decideLimitChange, effectiveMax as calcEffectiveMax, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE,
+  decideLimitChange, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE,
   LIMIT_STORAGE_KEY, loadLimit, MAX_STEP_MAX, MAX_STEP_MIN, MAX_STEP_STORAGE_KEY, parseMaxStep, RAMP_INTERVAL_MS,
-  serializeLimit, SpeedGovernor,
+  serializeLimit,
 } from '../../core/safety/safety';
+import type { Treadmill } from '../../device/treadmill';
 import { t } from '../../i18n/i18n';
 import { noticeText } from './treadmill-text';
 import {
@@ -21,10 +21,7 @@ import { $, $button, $input, log } from '../ui';
 import { store } from '../store';
 
 export interface SpeedControlsHost {
-  /** Sends a command to the treadmill; false if there is no connection or it failed */
-  send(bytes: Uint8Array): Promise<boolean>;
-  connected(): boolean;
-  now(): number;
+  tm: Pick<Treadmill, 'state' | 'setSpeed' | 'changeSpeed' | 'setLimits' | 'on'>;
   /** The device range or the limit changed: what shows the limit elsewhere (the workout editor) is updated */
   limitsChanged(): void;
   /** The person changed the limit: the chart is drawn again (its axis follows the limit) */
@@ -32,29 +29,24 @@ export interface SpeedControlsHost {
 }
 
 export function setupSpeedControls(host: SpeedControlsHost) {
-  let devMin = 1.0, devMax = 12.0;
+  const { tm } = host;
+  /** The limit as stored, and whether a person confirmed it (above LIMIT_CONFIRM_ABOVE) */
   let limit = 6;
+  let limitConfirmed = false;
   let sliderDragging = false;
   let presets: SpeedPresets = loadSpeedPresets(null);
 
-  const governor = new SpeedGovernor({
-    send: kmh => host.send(cmdSetSpeed(kmh)),
-    now: host.now,
-    notice: n => log(noticeText(n)),
-    onChange: renderSpeed,
-  });
+  tm.on('target', () => renderSpeed());
 
-  function effectiveMax() { return calcEffectiveMax(devMax, limit); }
+  function effectiveMax() { return tm.state.effectiveMax; }
 
+  /** The device range or the limit changed: the slider, the figures and the presets follow (the treadmill caps by itself) */
   function applyLimits() {
     const sl = $input('slider');
-    sl.min = String(devMin); sl.max = String(effectiveMax());
+    sl.min = String(tm.state.deviceRange.min); sl.max = String(effectiveMax());
     if (parseFloat(sl.value) > parseFloat(sl.max)) sl.value = sl.max;
     if (parseFloat(sl.value) < parseFloat(sl.min)) sl.value = sl.min;
     renderRangeInfo();
-    const before = governor.target;
-    governor.setRange({ min: devMin, max: effectiveMax() });
-    if (host.connected() && governor.target !== before && governor.target !== null) log(t.limit.lowered(governor.target));
     renderSpeed();
     renderPresets();
   }
@@ -71,7 +63,7 @@ export function setupSpeedControls(host: SpeedControlsHost) {
       const key = b.dataset.preset as PresetKey;
       if (!PRESET_KEYS.includes(key)) return;
       const allowed = presetCommand(presets, key, max) !== null;
-      b.disabled = !host.connected() || !allowed;
+      b.disabled = !tm.state.connected || !allowed;
       b.querySelector('.pv')!.textContent = t.u.speedValue(presets[key], 1);
       const label = allowed ? t.presets.button(t.presets[key], presets[key]) : t.presets.aboveLimitButton(t.presets[key], presets[key]);
       b.title = label;
@@ -80,37 +72,39 @@ export function setupSpeedControls(host: SpeedControlsHost) {
   }
 
   function renderRangeInfo() {
-    $('rangeInfo').textContent = t.settings.range(devMin, devMax, effectiveMax(), governor.maxStep, RAMP_INTERVAL_MS);
-    $('deviceInfo').textContent = t.connection.deviceInfo(devMin, devMax, effectiveMax());
+    const { deviceRange: d, maxStep } = tm.state;
+    $('rangeInfo').textContent = t.settings.range(d.min, d.max, effectiveMax(), maxStep, RAMP_INTERVAL_MS);
+    $('deviceInfo').textContent = t.connection.deviceInfo(d.min, d.max, effectiveMax());
     host.limitsChanged();
   }
 
   function renderSpeed() {
     const sl = $input('slider');
-    const target = governor.target;
+    const { target, lastCommand: lc, ramping } = tm.state;
     if (target !== null && !sliderDragging) sl.value = String(target);
     $('target').textContent = t.control.speed(target ?? parseFloat(sl.value));
-    const lc = governor.lastCommand;
-    $('rampInfo').textContent = governor.ramping && target !== null && lc && lc.kmh !== target
+    $('rampInfo').textContent = ramping && target !== null && lc && lc.kmh !== target
       ? t.control.ramping(lc.kmh, target)
       : ' ';
   }
 
   function requestSpeed(kmh: number) {
-    if (!host.connected() || !Number.isFinite(kmh)) return;
-    governor.request(kmh);
+    if (!tm.state.connected || !Number.isFinite(kmh)) return;
+    tm.setSpeed(kmh);
     renderSpeed();
   }
 
   function stepSpeed(delta: number) {
-    requestSpeed((governor.target ?? governor.base()) + delta);
+    if (!tm.state.connected) return;
+    tm.changeSpeed(delta);
+    renderSpeed();
   }
 
   /** The limit and step fields and the preset buttons, in the units of the settings. The values stay km/h inside. */
   function renderLimitFields() {
     // Text fields with the language's decimal separator; decideLimitChange and parseMaxStep check the range
     $input('cap').value = speedFieldText(limit, t.number);
-    $input('maxStep').value = speedFieldText(governor.maxStep, t.number);
+    $input('maxStep').value = speedFieldText(tm.state.maxStep, t.number);
     renderPresets();
     renderStepButtons();
   }
@@ -129,16 +123,20 @@ export function setupSpeedControls(host: SpeedControlsHost) {
     const input = $input('cap');
     const d = decideLimitChange(speedFromInput(input.value), limit);
     if (!d.ok) { log(`❌ ${noticeText(d.reason)}`); renderLimitFields(); return; }
+    let confirmed = d.value > LIMIT_CONFIRM_ABOVE && limitConfirmed;
     if (d.needsConfirmation) {
       const ok = await confirmDialog(t.limit.confirmTitle(d.value), [
         t.limit.risk(LIMIT_CONFIRM_ABOVE),
         t.limit.onlyIf,
       ], t.limit.allow(d.value));
       if (!ok) { renderLimitFields(); return; }
+      confirmed = true;
     }
     limit = d.value;
+    limitConfirmed = confirmed;
+    tm.setLimits({ speedLimit: limit, limitConfirmed });
     renderLimitFields();
-    store.set(LIMIT_STORAGE_KEY, serializeLimit(limit, limit > LIMIT_CONFIRM_ABOVE));
+    store.set(LIMIT_STORAGE_KEY, serializeLimit(limit, limitConfirmed));
     applyLimits();
     host.limitSet();
   }
@@ -147,7 +145,7 @@ export function setupSpeedControls(host: SpeedControlsHost) {
     const input = $input('maxStep');
     const v = parseMaxStep(speedFromInput(input.value));
     if (v === null) { log(t.limit.maxStepRange(MAX_STEP_MIN, MAX_STEP_MAX)); renderLimitFields(); return; }
-    governor.maxStep = v;
+    tm.setLimits({ maxStep: v });
     renderLimitFields();
     store.set(MAX_STEP_STORAGE_KEY, String(v));
     applyLimits();
@@ -171,7 +169,6 @@ export function setupSpeedControls(host: SpeedControlsHost) {
   $input('maxStep').onchange = maxStepChanged;
 
   return {
-    governor,
     /** The personal speed limit (settings → safety), km/h */
     limit: () => limit,
     /** The slow/mid/run presets, km/h */
@@ -186,17 +183,16 @@ export function setupSpeedControls(host: SpeedControlsHost) {
     renderPresets,
     /** The highest speed that can be asked for: the device's maximum, capped by the personal limit */
     effectiveMax,
-    /** What the treadmill reported about its speed range (before it did: the defaults) */
-    setDeviceRange(min: number, max: number) { devMin = min; devMax = max; },
-    /** The range or the limit changed: slider, governor and the figures follow */
+    /** The range or the limit changed: slider and figures follow */
     applyLimits,
     /** Reads the saved limit and maximum change */
     load() {
       const l = loadLimit(store.get(LIMIT_STORAGE_KEY), store.get(LEGACY_LIMIT_KEY));
       limit = l.value;
+      limitConfirmed = l.confirmed === true;
       if (l.note) log(noticeText(l.note));
       const ms = parseMaxStep(store.get(MAX_STEP_STORAGE_KEY) ?? '');
-      if (ms !== null) governor.maxStep = ms;
+      tm.setLimits({ speedLimit: limit, limitConfirmed, ...(ms !== null ? { maxStep: ms } : {}) });
       presets = loadSpeedPresets(store.get(SPEED_PRESETS_STORAGE_KEY));
       renderLimitFields();
     },

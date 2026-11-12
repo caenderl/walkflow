@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { TreadmillClient } from '../../device/ble';
-import { Session } from './session';
+import type { TreadmillClient } from './ble';
+import { BeltState } from './belt-state';
 
 const fakeClient = (connected: boolean, ok = true) => {
   const send = vi.fn(async () => ok);
   return { client: { connected, send } as unknown as TreadmillClient, send };
 };
 
-describe('Session', () => {
+describe('BeltState', () => {
   it('is not connected without a client or with a client that is not', () => {
-    const s = new Session();
+    const s = new BeltState();
     expect(s.connected()).toBe(false);
     s.client = fakeClient(false).client;
     expect(s.connected()).toBe(false);
@@ -18,11 +18,11 @@ describe('Session', () => {
   });
 
   it('sends nothing without a client', async () => {
-    expect(await new Session().send(new Uint8Array([0x08, 0x01]))).toBe(false);
+    expect(await new BeltState().send(new Uint8Array([0x08, 0x01]))).toBe(false);
   });
 
   it('passes the command and its options on to the client', async () => {
-    const s = new Session();
+    const s = new BeltState();
     const { client, send } = fakeClient(true);
     s.client = client;
     const bytes = new Uint8Array([0x08, 0x01]);
@@ -31,7 +31,7 @@ describe('Session', () => {
   });
 
   it('thinks the belt may be running when it was started by the app or was measured moving', () => {
-    const s = new Session();
+    const s = new BeltState();
     expect(s.maybeRunning()).toBe(false);
     s.lastMeasured = 0;
     expect(s.maybeRunning()).toBe(false);
@@ -43,7 +43,7 @@ describe('Session', () => {
   });
 
   it('forgets what it knew about the belt', () => {
-    const s = new Session();
+    const s = new BeltState();
     s.beltStarted = true;
     s.lastMeasured = 3;
     s.controlLost = true;
@@ -54,7 +54,7 @@ describe('Session', () => {
   });
 
   it('begins a connection with nothing known, and keeps what the treadmill reports from then on', () => {
-    const s = new Session();
+    const s = new BeltState();
     s.beltStarted = true;
     s.lastMeasured = 3;
     s.controlLost = true;

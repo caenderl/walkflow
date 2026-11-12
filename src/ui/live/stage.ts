@@ -6,7 +6,7 @@ import type { RunRecorder, RunTag } from '../../core/history/runs';
 import { routeDescription, routeName } from '../../core/routes/route-text';
 import { fmtDistance, fmtLength, programLength, type ProgramRunner, type ProgramStep } from '../../core/training/program';
 import { ACTIVE_STORAGE_KEY, readActive, type Active } from '../../core/training/selection';
-import type { SpeedGovernor, StandstillDetector } from '../../core/safety/safety';
+import type { Treadmill } from '../../device/treadmill';
 import { lang, t } from '../../i18n/i18n';
 import { bindText } from '../i18n-dom';
 import type { setupRoutes } from '../routes/route-ui';
@@ -33,8 +33,7 @@ export interface StageHost {
   interval: Pick<ReturnType<typeof setupInterval>, 'render' | 'renderPreview' | 'reset'>;
   runner: ProgramRunner;
   recorder: RunRecorder;
-  governor: SpeedGovernor;
-  standstill: StandstillDetector;
+  tm: Pick<Treadmill, 'state' | 'setProgramActive'>;
   connected(): boolean;
   effectiveMax(): number;
   /** The question before a start, with an optional introduction */
@@ -89,7 +88,7 @@ export function setupStage(host: StageHost) {
     clear.disabled = runner.active;
 
     $('stageInterval').hidden = mode !== 'interval';
-    if (runningSteps) interval.render(p, host.governor.target);
+    if (runningSteps) interval.render(p, host.tm.state.target);
     else if (workout) interval.renderPreview(workout.steps);
     $('stageChart').hidden = mode !== 'chart';
     $('stageFreeHint').hidden = kind !== null;
@@ -112,12 +111,14 @@ export function setupStage(host: StageHost) {
     const token = recorder.begin(tag);
     const mine = activeRun = { kind: tag.kind, name: tag.name };
     interval.reset();
+    // Start stays locked while it runs; a belt that stands still ends it (the treadmill watches while it runs)
+    host.tm.setProgramActive(true);
     const result = await runner.run(steps);
     // A newer run may have replaced this one in the meantime
     if (activeRun === mine) activeRun = null;
     render();
     recorder.complete(token, result === 'finished');
-    host.standstill.disarm();
+    if (!runner.active) host.tm.setProgramActive(false);
     // The run is saved by now (or has failed): today's goal in the route card may have moved
     void recorder.settled().then(() => routes.refreshGoal());
   }

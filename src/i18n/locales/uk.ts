@@ -584,6 +584,7 @@ export const uk = {
     notANumber: 'Це не число',
     outOfRange: (min: number, max: number) => `Ліміт має бути від ${u.speedValue(min)} до ${u.speed(max)}`,
     storedUnconfirmed: (value: number, fallback: number) => `Збережений ліміт ${u.speed(value)} так і не підтверджено, повернуто ${u.speed(fallback)}`,
+    unconfirmed: (value: number, applied: number) => `Ліміт ${u.speed(value)} не прийнято без підтвердження, діє ${u.speed(applied)}`,
     legacyNotAdopted: (value: number, above: number) => `Ліміт ${u.speed(value)} із прототипу не прийнято (вище ${u.speed(above)} потрібне підтвердження)`,
     maxStepRange: (min: number, max: number) => `❌ Максимальна зміна має бути від ${u.speedValue(min, 1)} до ${u.speed(max, 1)}`,
     noAllowedSpeed: (max: number, min: number) => `❌ Немає дозволеної швидкості: ліміт ${n(max)} нижчий за мінімум пристрою ${n(min)}`,

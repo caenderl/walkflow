@@ -21,16 +21,17 @@ src/
     history/            runs, statistics, CSV/TCX export
     id.ts               ids of things the person creates
   platform/           pure helpers around the shell: build settings, features that are on or off, version, the logic of the desktop update (two yeses, never while connected), CSP, MIME types, dev server address, opened files
-  device/             the treadmill: Web Bluetooth adapter, simulator
+  device/             the treadmill: the Treadmill facade (treadmill.ts: connect, start, stop, speed, limits, what the
+                      treadmill reports), the belt commands and their order, the Web Bluetooth adapter, the simulator
   net/                the connection to other people's devices for sharing (not there yet, see docs/P2P.md); never the treadmill
   data/               IndexedDB storage (workouts, routes, runs)
   ui/                 everything that draws or listens
     components/         reusable parts: dialogs, the "⋯" menu, the speed chart, element builders (el, button, iconButton)
     settings/           settings dialog, header menus
-    live/               the training view's live parts: session state, the belt commands (start, pause, stop), what the treadmill
-                        reports (live-data), the figures and banner (readout), connecting and disconnecting, the buttons and
-                        keys, speed and limits (owns the governor), incline card, stage (chosen workout or route, and
-                        starting it), experiment console
+    live/               the training view's live parts: what the treadmill reports as the app shows it (live-data), the
+                        texts for its codes (treadmill-text), the figures and banner (readout, belt-banner), connecting and
+                        disconnecting, the buttons and keys, the speed controls and the stored limits, incline card, stage
+                        (chosen workout or route, and starting it), experiment console. They only ask the Treadmill and draw.
     routes/ workouts/ history/ community/ settings/   one folder per feature view (history also has the export buttons)
     background.ts       wake lock, tab in the background, leaving the page
     desktop.ts pwa.ts theme.ts views.ts i18n-dom.ts   integration of the page
@@ -95,11 +96,10 @@ tests/                tests about the project itself
 
 ## Known debt (small, on purpose not done in one go)
 
-- `src/main.ts` (about 255 lines) only creates the parts and wires them together. The treadmill session is split by job:
-  `ui/live/belt.ts` (start, pause, stop), `live-data.ts` (what the treadmill reports), `readout.ts` (figures, banner, buttons,
-  chart), `connection.ts` (connect, disconnect, header status) and `controls.ts` (buttons and keys). `belt.ts` and
-  `live-data.ts` have no DOM and are tested for the order of their steps (a stop ends the program, forgets the ramp and goes
-  out urgently); the rest is display and was checked by hand in the demo; the real treadmill still has to confirm the split (HARDWARE-TESTS.md).
+- `src/main.ts` (about 250 lines) only creates the parts and wires them together. Everything that drives the belt is behind
+  the Treadmill facade (`device/treadmill.ts`, with `belt-commands.ts` and `reports.ts`, tested for the order of their steps:
+  a stop tells the program, forgets the ramp and goes out urgently); `ui/live/` only asks it and draws. It was checked by hand
+  in the demo; the real treadmill still has to confirm it (HARDWARE-TESTS.md, “Treadmill facade”).
 - `ui/routes/route-ui.ts` (about 355 lines) still holds the library list, the card in the training view and the map switch;
   `ui/workouts/workout-ui.ts` (about 270 lines) the library and the editor. The week plan, the step row, the elevation
   profile, the import, the library upkeep, the route details and the route editor are their own modules. What is left in

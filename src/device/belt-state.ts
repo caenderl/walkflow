@@ -1,24 +1,18 @@
-// What is known about the connected treadmill and the person on it, shared by the parts of the training view that read or
-// change it: the connection, the live figures, the stop/pause/start commands, the stage and the experiment console.
-// Plain state, no DOM; everything that is drawn or sent is done by the modules that hold this object.
+// What is known about the connected treadmill's belt, shared by the parts that send commands (belt-commands.ts) and read what
+// the treadmill reports (reports.ts). Plain state; the Treadmill facade (treadmill.ts) owns it.
 
-import type { TreadmillClient } from '../../device/ble';
-import type { Sample } from '../../core/history/export';
-import { beltMaybeRunning } from '../../core/safety/safety';
+import type { TreadmillClient } from './ble';
+import { beltMaybeRunning } from '../core/safety/safety';
 
-export class Session {
+export class BeltState {
   client: TreadmillClient | null = null;
   /** Started by the app or according to Machine Status, and not stopped since */
   beltStarted = false;
   lastMeasured: number | undefined;
-  /** When the speed was last reported (performance.now), to tell a fresh reading from an old one */
+  /** When the speed was last reported (clock of the facade), to tell a fresh reading from an old one */
   lastMeasuredAt = 0;
   /** The treadmill said that control was lost; the next stop asks for control first */
   controlLost = false;
-  /** Latest measured values */
-  readonly cur: Omit<Sample, 'ts'> = {};
-  /** Recording since the page was opened (1 Hz), for the chart and export */
-  readonly samples: Sample[] = [];
 
   connected(): boolean { return !!this.client?.connected; }
 

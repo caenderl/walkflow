@@ -576,6 +576,7 @@ export const en = {
     notANumber: 'Not a number',
     outOfRange: (min: number, max: number) => `The limit must be between ${u.speedValue(min)} and ${u.speed(max)}`,
     storedUnconfirmed: (value: number, fallback: number) => `Stored limit ${u.speed(value)} was never confirmed, back to ${u.speed(fallback)}`,
+    unconfirmed: (value: number, applied: number) => `Limit ${u.speed(value)} not taken without a confirmation, using ${u.speed(applied)}`,
     legacyNotAdopted: (value: number, above: number) => `Limit ${u.speed(value)} from the prototype not adopted (above ${u.speed(above)} needs a confirmation)`,
     maxStepRange: (min: number, max: number) => `❌ The maximum change must be between ${u.speedValue(min, 1)} and ${u.speed(max, 1)}`,
     noAllowedSpeed: (max: number, min: number) => `❌ No allowed speed: limit ${n(max)} is below the device minimum ${n(min)}`,

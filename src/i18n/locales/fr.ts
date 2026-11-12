@@ -578,6 +578,7 @@ export const fr: Messages = {
     notANumber: 'Pas un nombre',
     outOfRange: (min: number, max: number) => `La limite doit être comprise entre ${u.speedValue(min)} et ${u.speed(max)}`,
     storedUnconfirmed: (value: number, fallback: number) => `Limite enregistrée de ${u.speed(value)} jamais confirmée, retour à ${u.speed(fallback)}`,
+    unconfirmed: (value: number, applied: number) => `Limite de ${u.speed(value)} non prise sans confirmation, ${u.speed(applied)} s’applique`,
     legacyNotAdopted: (value: number, above: number) => `Limite de ${u.speed(value)} du prototype non reprise (au-delà de ${u.speed(above)}, une confirmation est nécessaire)`,
     maxStepRange: (min: number, max: number) => `❌ La variation maximale doit être comprise entre ${u.speedValue(min, 1)} et ${u.speed(max, 1)}`,
     noAllowedSpeed: (max: number, min: number) => `❌ Aucune vitesse autorisée : la limite ${n(max)} est inférieure au minimum de l’appareil ${n(min)}`,

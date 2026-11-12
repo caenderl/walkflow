@@ -1,13 +1,11 @@
 // The connection to the treadmill as the person sees it: connecting (the real one or the demo), disconnecting, a connection
-// that is lost, the header status, and which buttons need a connection. It owns the two adapters. What the treadmill reports
-// while connected is live-data.ts, the commands are belt.ts.
+// that is lost, the header status, and which buttons need a connection. It owns the two adapters. The treadmill itself
+// (connecting, asking for control, forgetting the belt) is device/treadmill.ts; what it reports is shown by live-data.ts.
 
-import { type BleAdapter, type ConnectResult, TreadmillClient, WebBluetoothAdapter, type TreadmillEvents } from '../../device/ble';
+import { type BleAdapter, type ConnectResult, WebBluetoothAdapter } from '../../device/ble';
 import { SimulatorAdapter } from '../../device/sim';
-import { cmdRequestControl } from '../../core/protocol/ftms';
+import type { Treadmill } from '../../device/treadmill';
 import type { RunSource } from '../../core/history/runs';
-import type { BeltBanner } from '../../core/safety/belt-banner';
-import type { SpeedGovernor, StandstillDetector } from '../../core/safety/safety';
 import type { ProgramRunner } from '../../core/training/program';
 import { t, type Text } from '../../i18n/i18n';
 import { APP_VERSION } from '../../platform/config';
@@ -17,21 +15,14 @@ import { ensureDisclaimer } from '../disclaimer';
 import { bindText } from '../i18n-dom';
 import { $, $button, log } from '../ui';
 import { stopPlacement, type View } from '../views';
-import type { Session } from './session';
+import type { BeltBanner } from './belt-banner';
 import { errorText } from './treadmill-text';
 
 export interface ConnectionHost {
-  session: Session;
-  banner: BeltBanner;
-  governor: SpeedGovernor;
-  standstill: StandstillDetector;
+  tm: Pick<Treadmill, 'state' | 'connect' | 'disconnect' | 'on'>;
+  banner: Pick<BeltBanner, 'setConnected'>;
   runner: Pick<ProgramRunner, 'abort'>;
-  /** What the treadmill client calls, except the disconnect (which is handled here) */
-  events: Omit<TreadmillEvents, 'disconnected'>;
-  speed: {
-    setDeviceRange(min: number, max: number): void;
-    applyLimits(): void;
-  };
+  speed: { applyLimits(): void };
   incline: {
     reset(): void;
     onConnected(info: ConnectResult, real: boolean): void;
@@ -50,36 +41,36 @@ export interface ConnectionHost {
 }
 
 export function setupConnection(host: ConnectionHost) {
-  const { session, banner, governor, standstill } = host;
+  const { tm, banner } = host;
   const webAdapter = new WebBluetoothAdapter();
   let sim: SimulatorAdapter | null = null;
   let view: View = 'training';
   let uiConnected = false;
 
-  const connected = () => session.connected();
-  const maybeRunning = () => session.maybeRunning();
+  const connected = () => tm.state.connected;
+  const maybeRunning = () => tm.state.maybeRunning;
+  let connecting = false;
+
+  tm.on('disconnected', ({ wasRunning }) => onDisconnected(wasRunning));
 
   async function connect(kind: 'ble' | 'demo') {
-    if (connected() || !(await ensureDisclaimer())) return;
+    if (connected() || connecting || !(await ensureDisclaimer())) return;
+    connecting = true;
     $button('connect').disabled = true;
     $button('demo').disabled = true;
     try {
       setStatus(() => kind === 'demo' ? t.connection.demoConnecting : t.connection.searching);
       let adapter: BleAdapter = webAdapter;
       if (kind === 'demo') adapter = sim ??= new SimulatorAdapter({ version: APP_VERSION });
-      const c = new TreadmillClient(adapter, { ...host.events, disconnected: onDisconnected });
-      session.begin(c);
       const source: RunSource = kind === 'demo' ? 'demo' : 'ble';
       host.live.setSource(source);
-      host.speed.setDeviceRange(1.0, 12.0);
       host.incline.reset();
-      const info = await c.connect();
+      // Connects, reads the treadmill and asks for control
+      const info = await tm.connect(adapter);
 
-      if (info.speedRange) host.speed.setDeviceRange(info.speedRange.min, info.speedRange.max);
       host.incline.onConnected(info, source === 'ble');
       host.renderStats();
 
-      governor.reset();
       await host.background.acquireWakeLock();
       host.speed.applyLimits();
       setUi(true);
@@ -93,27 +84,23 @@ export function setupConnection(host: ConnectionHost) {
         return kind === 'demo' ? t.connection.demoConnected(shown) : t.connection.connected(shown);
       }, () => (kind === 'demo' ? t.connection.demoConnectedShort : t.connection.connectedShort));
       desktop?.connectionChanged(true);
-      await c.send(cmdRequestControl());
     } catch (e) {
       log(`❌ ${errorText(e)}`);
       if (!connected()) {
-        session.client = null;
         setStatus(() => t.connection.notConnected);
         setUi(false);
       }
+    } finally {
+      connecting = false;
     }
   }
 
-  function onDisconnected() {
-    const wasRunning = maybeRunning();
+  /** The treadmill has already forgotten the belt; the page follows */
+  function onDisconnected(wasRunning: boolean) {
     log(t.disconnect.log);
     host.runner.abort(() => t.disconnect.programEnded);
-    governor.reset();
-    standstill.disarm();
     host.background.releaseWakeLock();
     desktop?.connectionChanged(false);
-    session.client = null;
-    session.forgetBelt();
     setStatus(() => t.connection.notConnected);
     host.renderStats();
     $('demoBanner').hidden = true;
@@ -129,7 +116,7 @@ export function setupConnection(host: ConnectionHost) {
   }
 
   async function disconnectClicked() {
-    if (!session.client) return;
+    if (!connected()) return;
     if (maybeRunning()) {
       const choice = await choose({
         title: t.disconnect.runningTitle,
@@ -145,12 +132,12 @@ export function setupConnection(host: ConnectionHost) {
       if (choice === 'stop') {
         const ok = await host.stop(() => t.stop.beforeDisconnect);
         if (!(ok && await waitUntil(() => !maybeRunning(), 10_000))) {
-          const force = await confirmDialog(t.disconnect.stillMovingTitle, [t.disconnect.stillMovingText(session.lastMeasured)], t.disconnect.force);
+          const force = await confirmDialog(t.disconnect.stillMovingTitle, [t.disconnect.stillMovingText(tm.state.lastMeasured)], t.disconnect.force);
           if (!force) return;
         }
       }
     }
-    session.client?.disconnect();
+    tm.disconnect();
   }
 
   function waitUntil(cond: () => boolean, timeoutMs: number): Promise<boolean> {

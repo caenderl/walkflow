@@ -53,6 +53,11 @@ export type Notice =
   | { code: 'no-allowed-speed'; min: number; max: number }
   | { code: 'speed-held-until-moving'; kmh: number }
   | { code: 'ramp-aborted' }
+  // Start and stop, and what the treadmill answered
+  | { code: 'start-speed-failed' }
+  | { code: 'speed-refused' }
+  | { code: 'limit-lowered'; kmh: number }
+  | { code: 'limit-unconfirmed'; requested: number; applied: number }
   | LimitProblem
   | LimitNote
   | ConsoleBlock;

@@ -137,9 +137,37 @@ The settings dialog and the training view only change what is shown, plus one se
 - [ ] **macOS update.** The macOS app is not signed, so the banner only opens the release page. Check that it does, and that it does not offer “Download and install”. (Once builds are signed and notarized, this item becomes the same test as above.)
 - [ ] **Community in the desktop app** (not in the first release: only in a build with `WALKFLOW_COMMUNITY=on`). Switch **Community** on in the desktop app and in a browser (or a second computer): do they find each other (the status says “Connected to 1 device”)? Take a workout from one to the other: the question appears, it is saved, and the other side then lists it as offered by one more device. Check that the macOS firewall question (incoming connections) does not block it, and that switching Community off ends the connection (the other side forgets the device).
 
+## Treadmill facade (branch `feat/ftms-treadmill-lib`, not yet on a treadmill)
+
+Everything that drives the belt now sits behind one object (`src/device/treadmill.ts`, docs/LIBRARY.md); the training view
+only asks it and draws. The commands and their order are meant to be exactly as before, and the log is meant to read
+exactly as before. Checked in the demo; on the real treadmill, please go through this list once, with the log open
+(Settings → General → Developer mode shows the experiment console and its log).
+
+- [ ] **Connecting.** Same log as before: `Device: …`, `Manufacturer: …`, `Features: …`, `Controllable: …`, `Speed range: …`,
+  `Inclination range: …`, `→ 00`, `← Request Control: OK`, then live values.
+- [ ] **Start.** `→ 00`, `→ 02 64 00`, `→ 07`, each answered with OK; the green banner while the treadmill counts down;
+  Start stays locked until the belt moves or 4.5 s are over.
+- [ ] **Ramp.** At 2 km/h press a preset of 3.5: `→ 02 fa 00`, `→ 02 2c 01`, `→ 02 5e 01`, at least 1.5 s apart.
+- [ ] **Stop (button, Space, Esc).** `→ 08 01` at once, the red banner (`Belt stopping …`, stronger as the belt slows,
+  then `Belt stopped`), Start free again. Same with **Pause** (`→ 08 02`).
+- [ ] **Stop during a ramp.** Space while the ramp runs: `→ 08 01` right after the write in progress, the rest of the ramp
+  is not sent.
+- [ ] **Stop during the start.** Press Start, confirm, press Space at once: `→ 08 01` is the last command, no `→ 07` after it.
+- [ ] **Device stop during a workout.** Start a workout, stop with the treadmill's button: `ℹ Status 02 01`, the workout
+  ends (`Program ended: …`), no further speed command.
+- [ ] **Speed chosen while standing.** Choose 3.0 km/h while the belt stands, then Start: no `→ 02 …` before Start, then
+  the ramp from 1.0 km/h.
+- [ ] **Limit.** Settings → Safety: lower the limit to 4 while connected (belt standing); the slider and the presets follow.
+  Raise it to 7: the question appears; after Yes the slider goes up to 7. Reload the page: the limit is still 7
+  (stored as confirmed), and no `not taken without a confirmation` line in the log.
+- [ ] **Incline.** Press a level: `→ 03 …` as before, the treadmill follows.
+- [ ] **Connection loss while running.** The red warning appears as before, the workout ends.
+- [ ] **Experiment console.** `02 bc 02` (7 km/h) is blocked with `above the limit`; `07` asks first; `08 01` stops at once.
+
 ## Stop and Start, hardened (partly confirmed on a treadmill)
 
-Covered by tests without hardware (`belt.test.ts`, `ble.test.ts`, `live-data.test.ts`, `safety.test.ts`); what only a treadmill can show:
+Covered by tests without hardware (`belt-commands.test.ts`, `reports.test.ts`, `treadmill.test.ts`, `ble.test.ts`, `safety.test.ts`); what only a treadmill can show:
 
 - [x] **Stop on a running belt (route run, sPad 500, 2026-11-10).** `→ 08 01` was answered with `← Stop/Pause: OK` at the first try, so no repeat was needed. `ℹ Status 02 01` came about 8 s later (a bit more than the 4–7 s seen before). No console error; the only warning was `Image "wood-pattern" could not be loaded` from the map library (harmless). The repeat and the refusal paths below are still not seen on a treadmill.
 - [ ] **Stop during the start.** Press Start, confirm, and press Space at once (while `→ 00` / `→ 02 64 00` are still going out). Expected: `→ 08 01` is the last command in the log, no `→ 07` after it, and the belt does not start. Before this change `→ 07` could follow the stop.

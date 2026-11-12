@@ -86,7 +86,8 @@ describe('stored limit', () => {
   });
 
   it('confirmed values above 6 are kept', () => {
-    expect(loadLimit(serializeLimit(8, true), null)).toEqual({ value: 8 });
+    expect(loadLimit(serializeLimit(8, true), null)).toEqual({ value: 8, confirmed: true });
+    expect(loadLimit(serializeLimit(5, false), null)).toEqual({ value: 5 });
   });
 
   it('unconfirmed values above 6 are not adopted', () => {

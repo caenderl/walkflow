@@ -56,15 +56,16 @@ function validStoredLimit(v: unknown): v is number {
 }
 
 /**
- * Loads the stored limit. Values above 6 km/h only count if they were stored as confirmed.
+ * Loads the stored limit. Values above 6 km/h only count if they were stored as confirmed, and then say so (`confirmed`).
  * The prototype value ("cap") was never confirmed and is therefore only adopted up to 6 km/h.
  */
-export function loadLimit(stored: string | null, legacyCap: string | null): { value: number; note?: LimitNote } {
+export function loadLimit(stored: string | null, legacyCap: string | null): { value: number; note?: LimitNote; confirmed?: true } {
   if (stored !== null) {
     try {
       const o = JSON.parse(stored) as { value?: unknown; confirmedAbove6?: unknown };
       if (validStoredLimit(o.value)) {
-        if (o.value <= LIMIT_CONFIRM_ABOVE || o.confirmedAbove6 === true) return { value: o.value };
+        if (o.value <= LIMIT_CONFIRM_ABOVE) return { value: o.value };
+        if (o.confirmedAbove6 === true) return { value: o.value, confirmed: true };
         return { value: DEFAULT_SPEED_LIMIT, note: { code: 'limit-stored-unconfirmed', value: o.value, applied: DEFAULT_SPEED_LIMIT } };
       }
     } catch { /* broken → fall through */ }

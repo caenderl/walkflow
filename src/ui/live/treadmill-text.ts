@@ -66,6 +66,10 @@ export function noticeText(n: Notice): string {
     case 'no-allowed-speed': return t.limit.noAllowedSpeed(n.max, n.min);
     case 'speed-held-until-moving': return t.limit.heldUntilMoving(n.kmh);
     case 'ramp-aborted': return t.limit.rampAborted;
+    case 'start-speed-failed': return t.start.startSpeedFailed;
+    case 'speed-refused': return t.limit.speedRefused;
+    case 'limit-lowered': return t.limit.lowered(n.kmh);
+    case 'limit-unconfirmed': return t.limit.unconfirmed(n.requested, n.applied);
     case 'limit-not-a-number': return t.limit.notANumber;
     case 'limit-out-of-range': return t.limit.outOfRange(n.min, n.max);
     case 'limit-stored-unconfirmed': return t.limit.storedUnconfirmed(n.value, n.applied);

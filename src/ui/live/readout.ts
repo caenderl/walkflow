@@ -3,48 +3,36 @@
 // the way of a stop (the drawing of banner and buttons swallows its own errors).
 
 import { drawChart } from '../components/chart';
-import type { BeltBanner } from '../../core/safety/belt-banner';
-import { controlAvailability } from '../../core/safety/safety';
 import { fmtTime } from '../../core/training/program';
+import type { Treadmill } from '../../device/treadmill';
 import { t } from '../../i18n/i18n';
 import { toDist, toSpeed } from '../../i18n/units';
 import { $, $button } from '../ui';
-import type { Session } from './session';
+import type { BeltBanner } from './belt-banner';
+import type { Figures } from './live-data';
 
 export interface ReadoutHost {
-  session: Session;
-  banner: BeltBanner;
+  tm: Pick<Treadmill, 'state'>;
+  figures: Figures;
+  banner: Pick<BeltBanner, 'state'>;
   now(): number;
-  /** A workout or route is running */
-  programActive(): boolean;
   /** The treadmill said it can change its incline (the figure is hidden until then) */
   inclineReported(): boolean;
   /** The person set incline levels in the settings ("none" hides everything about the incline in training) */
   inclineWanted(): boolean;
-  /** The highest speed that may be sent: the chart's axis follows it */
-  effectiveMax(): number;
-  /** The speed the belt is being regulated to, if any */
-  target(): number | null;
 }
 
 export function setupReadout(host: ReadoutHost) {
-  const { session, banner } = host;
-  const { cur, samples } = session;
+  const { tm, banner } = host;
+  const { cur, samples } = host.figures;
 
   /**
-   * Start waits while the belt moves, a start was just sent or a program runs; Pause is there while the belt may be running.
-   * Stop is not touched here: the connection enables it, and nothing takes it away (controlAvailability).
+   * Start waits while the belt moves, a start was just sent or a program runs; Pause is there while the belt may be running
+   * (the treadmill decides: state.controls). Stop is not touched here: the connection enables it, and nothing takes it away.
    */
   function renderControls() {
     try {
-      const a = controlAvailability({
-        connected: session.connected(),
-        measuredKmh: session.lastMeasured,
-        measuredAgeMs: host.now() - session.lastMeasuredAt,
-        startedByApp: session.beltStarted,
-        startingNow: banner.state(host.now()).kind === 'start',
-        programActive: host.programActive(),
-      });
+      const a = tm.state.controls;
       $button('start').disabled = !a.start;
       $button('pause').disabled = !a.pause;
     } catch { /* display only */ }
@@ -65,7 +53,7 @@ export function setupReadout(host: ReadoutHost) {
 
   function renderStats() {
     const f = (v: number | undefined, digits: number) => (v === undefined ? '–' : t.number(v, digits));
-    const connected = session.connected();
+    const { connected, lastMeasured } = tm.state;
     // Without a connection the current speed is unknown; do not leave the last value standing
     $('vSpeed').textContent = connected ? f(cur.speed === undefined ? undefined : toSpeed(cur.speed), 1) : '–';
     $('vDist').textContent = f(cur.dist === undefined ? undefined : toDist(cur.dist), 2);
@@ -77,11 +65,12 @@ export function setupReadout(host: ReadoutHost) {
     // Stop bar (views other than training)
     $('sbSpeed').textContent = connected && cur.speed !== undefined ? t.control.speed(cur.speed) : '–';
     $('sbMore').textContent = connected && cur.time !== undefined ? t.stopBar.more(fmtTime(cur.time), cur.dist ?? 0) : '';
-    $('sbState').textContent = (session.lastMeasured ?? 0) > 0 ? t.stopBar.running : t.stopBar.idle;
+    $('sbState').textContent = (lastMeasured ?? 0) > 0 ? t.stopBar.running : t.stopBar.idle;
   }
 
   function redrawChart() {
-    drawChart($<HTMLCanvasElement>('chart'), samples, { now: Date.now(), limit: host.effectiveMax(), target: host.target() ?? 0 });
+    const { effectiveMax, target } = tm.state;
+    drawChart($<HTMLCanvasElement>('chart'), samples, { now: Date.now(), limit: effectiveMax, target: target ?? 0 });
   }
 
   return { renderControls, renderBanner, renderStats, redrawChart };

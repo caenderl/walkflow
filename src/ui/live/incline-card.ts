@@ -2,7 +2,7 @@
 // levels") and what the treadmill said about the incline. It asks the treadmill (features and range) and shows only what it
 // supports; the value that is sent is always inside the range the treadmill reported.
 
-import { cmdSetInclination, type Features, type Range } from '../../core/protocol/ftms';
+import type { Features, Range } from '../../core/protocol/ftms';
 import { clampIncline, inclineSupport, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount, type InclineSupport } from '../../core/safety/incline';
 import { t } from '../../i18n/i18n';
 import { $, $input, log } from '../ui';
@@ -13,8 +13,8 @@ const INCLINE_LEVELS_KEY = 'walkflow.inclineLevelCount';
 const INCLINE_SEEN_KEY = 'walkflow.inclineSupport';
 
 export interface InclineCardHost {
-  /** Sends a command to the treadmill; false if there is no connection or it failed */
-  send(bytes: Uint8Array): Promise<boolean>;
+  /** Sets the incline on the treadmill (it clamps to its range again); false if not settable, not connected or failed */
+  setIncline(pct: number): Promise<boolean>;
   /** The page shows a connection (the buttons can be pressed) */
   uiConnected(): boolean;
   /** The incline levels setting changed: the figures redraw (the incline figure follows it) */
@@ -62,7 +62,7 @@ export function setupInclineCard(host: InclineCardHost) {
     $input('inclSlider').value = String(pct);
     shown = pct;
     render();
-    return host.send(cmdSetInclination(pct));
+    return host.setIncline(pct);
   }
 
   /** What the last real treadmill said about the incline: remembered so that the editor can hide it while disconnected. */

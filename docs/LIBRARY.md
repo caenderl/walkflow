@@ -1,15 +1,16 @@
 # Treadmill library (draft)
 
-Status: **draft, step 1 of 4 done** (see [Steps](#steps)). This describes how the treadmill control could move out of the app into a library of
-its own with a defined API, so that the app only draws and the control can be released, versioned and tested on its own.
-It comes after the hardware test of the current control (see [HARDWARE-TESTS.md](../HARDWARE-TESTS.md)).
+Status: **steps 1 to 3 of 4 done, waiting for the hardware test** (see [Steps](#steps)). This describes how the treadmill
+control moves out of the app into a library of its own with a defined API, so that the app only draws and the control can be
+released, versioned and tested on its own. Before it is published, the real treadmill has to confirm it
+([HARDWARE-TESTS.md](../HARDWARE-TESTS.md), “Treadmill facade”).
 
 ## Why
 
 - **One place for what moves the belt.** Today the safety rules are pure and tested (`core/safety`), but the order of the
   steps around them (ask for control, set the start speed, start; stop urgently and again; end the ramp when the treadmill
-  refuses a speed) lives in `ui/live/belt.ts`, `live-data.ts`, `speed-controls.ts` and `connection.ts`. In a library this
-  order is behind an API that the UI cannot get around.
+  refuses a speed) lived in the app's `ui/live/belt.ts`, `live-data.ts`, `speed-controls.ts` and `connection.ts`. Now it is
+  behind an API that the UI cannot get around.
 - **A stable version to work against.** The app pins a version of the library that was checked on a real treadmill. A UI
   change cannot change how the belt is driven.
 - **Usable by others.** An FTMS treadmill control with a speed limit, a ramp and a reliable stop, for any page or Node program.
@@ -19,13 +20,13 @@ It comes after the hardware test of the current control (see [HARDWARE-TESTS.md]
 | In the library | Stays in the app |
 | --- | --- |
 | FTMS parsers and commands (`core/protocol/ftms.ts`) | Texts and languages (`i18n`), units |
-| Bluetooth client, write queue, timeout (`device/ble.ts`) | Storage of limit, step, presets, disclaimer (the storage keys) |
+| The facade (`device/treadmill.ts`); Bluetooth client, write queue, timeout (`device/ble.ts`) | Storage of limit, step, presets, disclaimer (the storage keys) |
 | Simulator (`device/sim.ts`) | Workouts, routes, the program runner, history, export |
 | Speed limit, ramp, governor, standstill (`core/safety/safety.ts`) | The disclaimer and the confirmation above 6 km/h |
 | Incline range and clamping (`core/safety/incline.ts`) | Banner, buttons, figures, chart (drawn from the library's state); the banner's fading and timings |
-| Belt phase (starting, running, stopping, standing) and which buttons may be used (`controlAvailability`) | Speed presets (they end in `setSpeed`) |
-| Start, stop, pause and their order (`ui/live/belt.ts`) | Experiment console screen |
-| Reading what the treadmill reports (`ui/live/live-data.ts`, without recording) | Wake lock, background, desktop shell |
+| Belt phase (`core/safety/belt-phase.ts`) and which buttons may be used (`controlAvailability`) | Speed presets (they end in `setSpeed`) |
+| Start, stop, pause and their order (`device/belt-commands.ts`) | Experiment console screen |
+| Reading what the treadmill reports (`device/reports.ts`; recording stays in the app) | Wake lock, background, desktop shell |
 | The check of raw console commands (`checkConsoleCommand`) | |
 
 The library has **no DOM, no storage, no texts and no network** besides Bluetooth. It knows nothing about workouts or routes:
@@ -33,26 +34,25 @@ a program drives it through the same API as a button.
 
 ## API
 
-Names are a proposal. Speeds are in km/h, incline in percent, distances in meters, times in milliseconds.
+Built in `src/device/treadmill.ts` (`createTreadmill`); the app uses nothing else to drive the belt. Speeds are in km/h,
+incline in percent, distances in meters, times in milliseconds.
 
 ```ts
 import { createTreadmill } from 'ftms-treadmill';
-import { webBluetooth } from 'ftms-treadmill/web-bluetooth';
-import { simulator } from 'ftms-treadmill/sim';
+import { WebBluetoothAdapter } from 'ftms-treadmill/web-bluetooth';
+import { SimulatorAdapter } from 'ftms-treadmill/sim';
 
 const tm = createTreadmill({
-  adapter: webBluetooth(),        // or simulator()
   speedLimit: 6,                  // km/h, never commanded above (the app stores and confirms it)
   limitConfirmed: false,          // needed for a limit above 6 km/h, see "Speed limit above 6 km/h"
   maxStep: 0.5,                   // km/h per command while ramping
 });
 
-const info = await tm.connect();  // name, features, speed and incline range, heart rate yes or no
-tm.on('data', m => draw(m));      // speed, distance, incline, energy, time, heart rate
-tm.on('state', s => drawBanner(s));
+tm.on('data', d => draw(d));          // speed, distance, incline, energy, time, heart rate
 tm.on('notice', n => log(text(n)));   // the app turns codes into its own texts
 tm.on('ended', e => runner.abort(e.reason));
 
+const info = await tm.connect(new WebBluetoothAdapter());  // or a SimulatorAdapter; reads the treadmill, asks for control
 await tm.start();
 tm.setSpeed(3.5);                 // ramps there, held until the belt moves, capped at the limit
 tm.setIncline(2);
@@ -60,12 +60,14 @@ await tm.stop();                  // always urgent, sent again if it did not go 
 tm.disconnect();
 ```
 
+The adapter is given to `connect`, not to `createTreadmill`: one Treadmill keeps its limits across connections, to a real
+treadmill or the demo.
+
 ### `createTreadmill(options): Treadmill`
 
 ```ts
 interface TreadmillOptions {
-  adapter: BleAdapter;
-  speedLimit: number;             // LIMIT_MIN..LIMIT_MAX
+  speedLimit?: number;            // LIMIT_MIN..LIMIT_MAX, default DEFAULT_SPEED_LIMIT; nonsense is the default
   limitConfirmed?: boolean;       // a person confirmed a limit above LIMIT_CONFIRM_ABOVE; default false
   maxStep?: number;               // MAX_STEP_MIN..MAX_STEP_MAX, default DEFAULT_MAX_STEP
   clock?: Clock;                  // now() and wait(ms); for tests, default real time
@@ -76,65 +78,80 @@ interface TreadmillOptions {
 
 ```ts
 interface Treadmill {
-  connect(): Promise<DeviceInfo>;          // throws if the person cancels or the device has no FTMS
+  connect(adapter: BleAdapter): Promise<ConnectResult>;  // throws if the person cancels or the device has no FTMS
   disconnect(): void;
 
   start(): Promise<boolean>;               // control, start speed, Start; false if refused or overtaken by a stop
-  stop(): Promise<boolean>;                // urgent; ends the ramp; false and 'stop-failed' if every attempt failed
+  stop(): Promise<boolean>;                // urgent; ends the ramp; false and stopFailed if every attempt failed
   pause(): Promise<boolean>;               // like stop
 
-  setSpeed(kmh: number, opts?: { source?: CommandSource }): number | null;  // the target it will ramp to, null if none allowed
+  setSpeed(kmh: number, opts?: { source?: CommandSource }): number | null;  // the target it will ramp to; null if none allowed or not connected
   changeSpeed(deltaKmh: number, opts?: { source?: CommandSource }): number | null;
-  setIncline(pct: number): Promise<boolean>;   // clamped to the device range
+  setIncline(pct: number): Promise<boolean>;   // clamped to the device range; false if the treadmill cannot set it
 
   setLimits(l: { speedLimit?: number; limitConfirmed?: boolean; maxStep?: number }): void;  // lowering takes effect at once
-  setProgramActive(active: boolean): void;  // a workout or route runs: Start stays locked
+  setProgramActive(active: boolean): void;  // a workout or route runs: Start stays locked; false ends the standstill watch
 
-  readonly state: TreadmillState;
+  /** Experiment console: raw bytes, checked against limit, step and interval first; a raw Start needs confirmed */
+  sendRaw(bytes: number[], opts?: { confirmed?: boolean }): Promise<RawResult>;
+
+  readonly state: TreadmillState;          // a fresh snapshot each time it is read
   on<E extends keyof TreadmillEventMap>(event: E, cb: (e: TreadmillEventMap[E]) => void): () => void;
-
-  /** Experiment console: raw bytes, checked against limit, step and interval first; urgent if it is a stop */
-  sendRaw(bytes: number[]): RawResult;
 }
 
 interface TreadmillState {
-  connection: 'disconnected' | 'connecting' | 'connected';
+  connected: boolean;
   belt: BeltPhase;                         // the banner draws from this
   controls: { start: boolean; pause: boolean; stop: boolean };   // which buttons may be used now
   maybeRunning: boolean;                   // when in doubt true (beltMaybeRunning)
+  lastMeasured: number | undefined;
   target: number | null;                   // where the ramp is going
   lastCommand: { kmh: number; at: number } | null;
   ramping: boolean;
-  speedRange: { min: number; max: number } | null;   // device range, already capped at the limit
+  speedLimit: number;
+  limitConfirmed: boolean;
+  maxStep: number;
+  deviceRange: { min: number; max: number };   // what the treadmill reported (1–12 before it did)
+  effectiveMax: number;                    // the device maximum, capped by the limit: never sent above
   inclineRange: Range | null;
   controlLost: boolean;
   stopFailed: boolean;                     // the person has to stop the belt on the treadmill
+  programActive: boolean;
 }
 
 interface TreadmillEventMap {
-  data: Measurement;
+  data: TreadmillData;
   heartRate: number;
-  state: TreadmillState;
+  machineStatus: { event: MachineEvent | null; hex: string };
+  trainingStatus: { hex: string; status: number | null; text: string | null };
+  controlResponse: ControlPointResponse;   // every answer of the treadmill, also an OK
   notice: Notice;
-  ended: { reason: EndReason };            // the belt stopped or paused: a running program ends
-  disconnected: void;
-  log: string;                             // protocol lines (hex, opcodes), for the console; not for people
+  log: string;                             // protocol lines (bytes sent, an answer that could not be read); not for people
+  ended: { reason: EndReason };            // the belt was stopped or stopped by itself: a running program ends
+  stopFailed: boolean;
+  phase: BeltPhase;                        // after a start or stop request and after connecting; state.belt also moves with time
+  target: undefined;                       // target, last command or ramp changed
+  disconnected: { wasRunning: boolean };
 }
 
-type EndReason = 'stop' | 'pause' | 'machine-stopped' | 'machine-paused' | 'safety-key' | 'standstill';
-
+type EndReason = 'stop' | 'pause' | 'console' | 'machine-stopped' | 'machine-paused' | 'safety-key' | 'standstill';
 type BeltPhase = 'unknown' | 'standing' | 'starting' | 'running' | 'stopping';
-
 /** Who asked for a speed: a running workout or route, or the person (buttons, keys, presets). Default 'manual'. */
 type CommandSource = 'program' | 'manual';
+type RawResult =
+  | { action: 'not-connected' } | { action: 'blocked'; reason: ConsoleBlock }
+  | { action: 'needs-confirmation' } | { action: 'sent'; ok: boolean };
 ```
+
+A listener that throws is reported (as an uncaught error, a moment later) but never gets in the way: a Stop goes out
+whatever the display does with its events.
 
 ### Belt phase and controls
 
-The library says **what the belt does**, the app decides **how that looks**. Today `core/safety/belt-banner.ts` does both:
-it knows that a start was sent and the treadmill still counts down, and it also computes how strong the green or red is.
-The first part is control (the Start button stays locked during the countdown, so nobody starts twice), the second is design.
-They are split:
+The library says **what the belt does**, the app decides **how that looks**. `belt-banner.ts` used to do both: it knew that a
+start was sent and the treadmill still counts down, and it also computed how strong the green or red is. The first part is
+control (the Start button stays locked during the countdown, so nobody starts twice), the second is design. They are split:
+`core/safety/belt-phase.ts` in the library, `ui/live/belt-banner.ts` in the app.
 
 | `state.belt` | Means |
 | --- | --- |
@@ -181,9 +198,9 @@ Today's codes are in `src/core/protocol/notice.ts`:
 | Governor | `no-allowed-speed`, `speed-held-until-moving`, `ramp-aborted` |
 | Limit (returned by `decideLimitChange`, `loadLimit`) | `limit-not-a-number`, `limit-out-of-range`, `limit-stored-unconfirmed`, `limit-legacy-not-adopted` |
 | Console (returned by `checkConsoleCommand`) | `console-set-speed-length`, `console-over-limit`, `console-jump`, `console-too-soon`, `console-heart-rate` |
+| Start, stop and limits (the facade) | `start-speed-failed`, `speed-refused`, `limit-lowered`, `limit-unconfirmed` (see below) |
 
-The facade adds what is told by the app's live parts today: `speed-refused`, `start-speed-failed`, `limit-lowered`,
-`limit-unconfirmed` (see below), `control-lost`, `standstill`.
+Control lost and a standstill are not notices: the first is a Machine Status (`machineStatus` event), the second an `ended` reason.
 
 An error the library throws (only `connect` does) is a `TreadmillError` with one of the codes above. Machine Status and
 Control Point answers stay what the protocol says (`MachineEvent`, `ControlPointResponse`); the app describes them in its
@@ -238,12 +255,13 @@ Each step is one PR and leaves the app working.
 
 1. **Codes instead of texts.** *Done.* `ftms.ts`, `ble.ts` and `safety.ts` no longer import `i18n`; the app turns notices
    into texts. No change in behaviour: the log reads as before, in every language.
-2. **The `Treadmill` facade, test first.** Built in `src/device/` from `belt.ts`, `live-data.ts` (without recording and
+2. **The `Treadmill` facade, test first.** *Done* (`src/device/treadmill.ts`, `belt-commands.ts`, `reports.ts`,
+   `core/safety/belt-phase.ts`). Built in `src/device/` from `belt.ts`, `live-data.ts` (without recording and
    drawing), the governor and standstill wiring of `speed-controls.ts` and `connection.ts`, the belt phase and
    `controlAvailability`. The tests of `belt.ts`, `live-data.ts` and the control parts of `belt-banner.ts` move to it, plus
    one test per promise above. What is left of `BeltBanner` (fading, timings) moves to `ui/live/` and draws from `state.belt`.
-3. **The UI uses only the facade.** `ui/live/*` and `main.ts` call the API and draw `state`; `Session` and the hosts with
-   governor and banner go away. Checked in the demo, then on the real treadmill (HARDWARE-TESTS.md).
+3. **The UI uses only the facade.** *Done, checked in the demo; the real treadmill is next* (HARDWARE-TESTS.md, “Treadmill
+   facade”). `ui/live/*` and `main.ts` call the API and draw `state`; `Session` and the hosts with governor and banner are gone.
 4. **Move into `packages/ftms-treadmill`.** Workspace, entry points, build, release-please, architecture rule. What stays in
    the app leaves `core/safety` on the way: the storage keys and the stored limit format, the disclaimer, quiet and
    developer mode, speed presets. Publish 0.1.0.

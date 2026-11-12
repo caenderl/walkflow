@@ -1,27 +1,30 @@
-// What the treadmill reports while connected: the live figures, the heart rate, Machine Status and Training Status.
-// It keeps the session state up to date, hands the speed to the governor and the standstill detection, ends a program when the
-// treadmill stops (by its own button, or when the belt stands still), and records one sample a second for the chart and the history.
-// It also reads the treadmill's answers to commands (a refused Stop, a refused speed). It sends nothing to the treadmill. Drawing goes through the host.
+// What the treadmill reports, as the app uses it: the live figures, one sample a second for the chart and the history, the
+// log lines, the banner, and a running program that ends when the belt ends. The treadmill itself (device/treadmill.ts)
+// has already acted on it for the belt: the governor, the standstill detection, the belt phase. Nothing here sends anything.
 
 import type { Sample } from '../../core/history/export';
 import type { RunRecorder, RunSource } from '../../core/history/runs';
-import { hex, OP, parseMachineStatus, parseTrainingStatus, type ControlPointResponse, type TreadmillData } from '../../core/protocol/ftms';
-import type { BeltBanner } from '../../core/safety/belt-banner';
-import type { SpeedGovernor, StandstillDetector } from '../../core/safety/safety';
 import type { ProgramRunner } from '../../core/training/program';
-import type { TreadmillEvents } from '../../device/ble';
-import { t } from '../../i18n/i18n';
+import type { EndReason, Treadmill } from '../../device/treadmill';
+import { t, type Text } from '../../i18n/i18n';
+import type { BeltBanner } from './belt-banner';
 import { describeControlPointResponse, describeMachineStatus, noticeText } from './treadmill-text';
-import type { Session } from './session';
 
 /** Samples kept for the chart and the export (about 5½ hours at 1 Hz) */
 const MAX_SAMPLES = 20000;
 
+/** The latest figures and the recording since the page was opened (1 Hz), for the chart and the export */
+export interface Figures {
+  readonly cur: Omit<Sample, 'ts'>;
+  readonly samples: Sample[];
+}
+
+export const newFigures = (): Figures => ({ cur: {}, samples: [] });
+
 export interface LiveDataHost {
-  session: Session;
-  banner: BeltBanner;
-  governor: SpeedGovernor;
-  standstill: StandstillDetector;
+  tm: Pick<Treadmill, 'on'>;
+  figures: Figures;
+  banner: Pick<BeltBanner, 'startRequested' | 'stopRequested' | 'speed'>;
   runner: Pick<ProgramRunner, 'active' | 'abort' | 'tick'>;
   recorder: Pick<RunRecorder, 'feed'>;
   now(): number;
@@ -32,39 +35,36 @@ export interface LiveDataHost {
   renderStats(): void;
   /** The chart is drawn again */
   redrawChart(): void;
-  /** true: the treadmill refused a Stop or Pause while the belt moves, so the person has to stop it on the treadmill */
+  /** true: a Stop or Pause did not get through, so the person has to stop the belt on the treadmill */
   stopFailed(failed: boolean): void;
 }
 
-/** Control Point result code "Success" */
-const RESULT_OK = 1;
+/** What a program shows as its end when the belt ended for this reason */
+function endText(reason: Exclude<EndReason, 'standstill'>): Text {
+  switch (reason) {
+    case 'stop': return () => t.stop.stopped;
+    case 'pause': return () => t.stop.paused;
+    case 'console': return () => t.console.stopped;
+    case 'machine-stopped': return () => t.program.endedBy(describeMachineStatus({ kind: 'stopped' }));
+    case 'machine-paused': return () => t.program.endedBy(describeMachineStatus({ kind: 'paused' }));
+    case 'safety-key': return () => t.program.endedBy(describeMachineStatus({ kind: 'safety-key' }));
+  }
+}
 
 export function setupLiveData(host: LiveDataHost) {
-  const { session, banner, governor, standstill, runner } = host;
-  const { cur, samples } = session;
+  const { tm, figures, banner, runner } = host;
+  const { cur, samples } = figures;
   let lastSample = 0;
   let source: RunSource = 'ble';
 
-  function onData(r: TreadmillData) {
-    if (r.speed !== undefined) cur.speed = r.speed;
+  tm.on('data', r => {
+    if (r.speed !== undefined) { cur.speed = r.speed; banner.speed(r.speed, host.now()); }
     if (r.dist !== undefined) { cur.dist = r.dist; host.distance(cur.dist); }
     if (r.incl !== undefined) cur.incl = r.incl;
     if (r.kcal !== undefined) cur.kcal = r.kcal;
     if (r.time !== undefined) cur.time = r.time;
     if (r.hr !== undefined && r.hr > 0) cur.hr = r.hr;
     host.renderStats();
-
-    if (r.speed !== undefined) {
-      banner.speed(r.speed, host.now());
-      session.lastMeasured = r.speed;
-      session.lastMeasuredAt = host.now();
-      governor.noteMeasured(r.speed);
-      if (standstill.feed(r.speed, host.now()) && runner.active) {
-        host.log(t.program.standstillLog);
-        runner.abort(() => t.program.standstill, true);
-        governor.reset();
-      }
-    }
     // Notifications also arrive in throttled background tabs
     runner.tick();
 
@@ -77,73 +77,34 @@ export function setupLiveData(host: LiveDataHost) {
       host.redrawChart();
       host.recorder.feed(sample, source);
     }
-  }
+  });
 
-  function onMachineStatus(dv: DataView) {
-    const e = parseMachineStatus(dv);
-    host.log(t.machine.status(hex(dv), e ? describeMachineStatus(e) : null));
-    if (!e) return;
-    switch (e.kind) {
-      case 'stopped':
-      case 'paused':
-      case 'safety-key':
-        banner.stopRequested(host.now());
-        session.beltStarted = false;
-        if (runner.active) runner.abort(() => t.program.endedBy(describeMachineStatus(e)));
-        governor.reset();
-        standstill.disarm();
-        break;
-      case 'started':
-        session.beltStarted = true;
-        break;
-      case 'control-lost':
-        session.controlLost = true;
-        host.log(t.machine.controlLostLog);
-        break;
-      default:
-        break;
+  tm.on('heartRate', bpm => { if (bpm > 0) { cur.hr = bpm; host.renderStats(); } });
+
+  tm.on('ended', ({ reason }) => {
+    if (reason === 'standstill') {
+      if (!runner.active) return;
+      host.log(t.program.standstillLog);
+      runner.abort(() => t.program.standstill, true);
+      return;
     }
-  }
+    runner.abort(endText(reason));
+  });
 
-  /**
-   * A write that went through is not yet a command the treadmill accepted. What it refused must not count as done: a refused
-   * Stop on a moving belt is told to the person, a refused speed ends the ramp, refused control is asked for again at the next stop.
-   */
-  function onControlResponse(r: ControlPointResponse) {
-    host.log(`← ${describeControlPointResponse(r)}`);
-    if (r.result === RESULT_OK) return;
-    switch (r.requestOp) {
-      case OP.STOP_PAUSE:
-        // A belt that stands has nothing to stop: some treadmills answer "failed" then
-        if ((session.lastMeasured ?? 0) > 0) host.stopFailed(true);
-        break;
-      case OP.SET_SPEED:
-        governor.commandRefused();
-        host.log(t.limit.speedRefused);
-        break;
-      case OP.REQUEST_CONTROL:
-        session.controlLost = true;
-        break;
-      default:
-        break;
-    }
-  }
+  // The banner shows what the belt does: a start under way, a stop under way
+  tm.on('phase', p => { if (p === 'starting') banner.startRequested(host.now()); else banner.stopRequested(host.now()); });
+  tm.on('stopFailed', host.stopFailed);
 
-  const events: Omit<TreadmillEvents, 'disconnected'> = {
-    log: host.log,
-    notice: n => host.log(noticeText(n)),
-    data: onData,
-    heartRate: bpm => { if (bpm > 0) { cur.hr = bpm; host.renderStats(); } },
-    machineStatus: onMachineStatus,
-    controlResponse: onControlResponse,
-    trainingStatus: dv => {
-      host.log(t.machine.training(hex(dv), parseTrainingStatus(dv)?.text ?? null));
-    },
-  };
+  tm.on('machineStatus', ({ event, hex }) => {
+    host.log(t.machine.status(hex, event ? describeMachineStatus(event) : null));
+    if (event?.kind === 'control-lost') host.log(t.machine.controlLostLog);
+  });
+  tm.on('trainingStatus', ({ hex, text }) => host.log(t.machine.training(hex, text)));
+  tm.on('controlResponse', r => host.log(`← ${describeControlPointResponse(r)}`));
+  tm.on('notice', n => host.log(noticeText(n)));
+  tm.on('log', host.log);
 
   return {
-    /** What the treadmill client calls (everything but the disconnect) */
-    events,
     /** Where the samples come from; the history keeps demo runs apart */
     setSource(s: RunSource) { source = s; },
   };

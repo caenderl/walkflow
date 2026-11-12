@@ -25,7 +25,7 @@ npm test
   becomes the commit message that the release notes and the version are made from. Types: `feat`, `fix`, `perf`, `revert`, and
   **`safety`** for anything that changes the speed limit, the ramp, stopping, or the warnings; `docs`, `refactor`, `test`, `build`,
   `ci`, `style`, `chore` do not appear in the release notes. Example: `fix(routes): keep the progress when a route is updated`.
-- **Safety first.** Code that decides what is sent to the treadmill (`src/core/safety/`, `src/ui/live/belt.ts`, the speed governor)
+- **Safety first.** Code that decides what is sent to the treadmill (`src/core/safety/`, `src/device/`, above all `treadmill.ts` and `belt-commands.ts`)
   gets its test first, and the change must not weaken a limit, a delay or a warning. If you are not sure, say so in the pull request.
 - **Small and focused.** One change per pull request, with the tests that show it works.
 - **No new dependency without asking first** (open an issue). What the app runs is bundled at build time and kept small on purpose:
