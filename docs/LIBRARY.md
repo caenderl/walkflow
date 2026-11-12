@@ -262,6 +262,11 @@ one of them is a `safety` commit and at least a minor version.
   Publishing that draft by hand starts `.github/workflows/npm-publish.yml`: tests, a check that the tag matches the
   version, the build, `npm publish` with provenance. No token: npm trusts that workflow (Trusted Publishing, set
   in the package settings on npmjs.com), so there is no secret to expire or leak.
+- **Before the next library release:** the Trusted Publisher was set up on 2026-11-12 after 0.1.0 (published with the
+  `NPM_TOKEN` secret) and must be used once by 2026-11-14 to be validated; no release was planned for that. If npmjs.com
+  (ftms-treadmill → Settings → Trusted Publisher) no longer lists it, add it again first: GitHub Actions,
+  `walkflow-app/walkflow`, `npm-publish.yml`, no environment, “Allow npm publish”. Delete `NPM_TOKEN` once a publish
+  without it worked.
 - **The first version:** release-please treats a package without a release as new and would start it at 1.0.0; the
   library's `initial-version` in `release-please-config.json` makes the first release 0.1.0.
 - **Version 0.x** until the API has been used for a while; then 1.0.
