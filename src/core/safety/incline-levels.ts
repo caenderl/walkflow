@@ -58,3 +58,14 @@ export function followReportedIncline(reported: number, choice: InclineChoice | 
   if (choice && Math.abs(reported - choice.pct) >= 0.05 && now - choice.at < INCLINE_SETTLE_MS) return { shown: choice.pct, choice };
   return { shown: round1(reported), choice: null };
 }
+
+/**
+ * The level the treadmill is on: the one whose incline is nearest to the one it reports (its motor may stop a little off).
+ * null without levels or without a reading.
+ */
+export function levelOf(reported: number, levels: readonly number[]): number | null {
+  if (!levels.length || !Number.isFinite(reported)) return null;
+  let best = 0;
+  for (let i = 1; i < levels.length; i++) if (Math.abs(levels[i]! - reported) < Math.abs(levels[best]! - reported)) best = i;
+  return best;
+}

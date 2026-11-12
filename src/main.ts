@@ -156,6 +156,8 @@ const readout = setupReadout({
   tm, figures, banner, now,
   inclineReported: () => incline.supportReported(),
   inclineWanted: () => incline.wanted(),
+  inclineShowsLevels: () => incline.showsLevels(),
+  inclineLevel: pct => incline.levelOf(pct),
 });
 
 // The tab goes to the background, the page is closed: keep the screen on while connected, warn or pause, save the run

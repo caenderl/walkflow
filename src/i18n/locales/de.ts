@@ -96,6 +96,7 @@ export const de: Messages = {
     get dist() { return u.distUnit(); },
     time: 'Zeit',
     incline: 'Steigung %',
+    inclineLevel: 'Steigungsstufe',
     heartRate: 'Puls (bpm)',
     kcal: 'kcal',
   },

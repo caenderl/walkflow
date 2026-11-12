@@ -98,6 +98,7 @@ export const fr: Messages = {
     get dist() { return u.distUnit(); },
     time: 'Durée',
     incline: 'Inclinaison %',
+    inclineLevel: 'Niveau d’inclinaison',
     heartRate: 'Pouls (bpm)',
     kcal: 'kcal',
   },

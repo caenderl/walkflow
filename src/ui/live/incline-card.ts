@@ -5,7 +5,7 @@
 // reports, so that a change on the treadmill's own buttons shows here too.
 
 import { clampIncline, inclineSupport, type Features, type InclineSupport, type Range } from 'ftms-treadmill';
-import { followReportedIncline, type InclineChoice, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount } from '../../core/safety/incline-levels';
+import { followReportedIncline, type InclineChoice, levelCountFromSlider, levelOf, levelsFromCount, parseLevelCount, sliderFromLevelCount } from '../../core/safety/incline-levels';
 import { t } from '../../i18n/i18n';
 import { $, $input, log } from '../ui';
 import { store } from '../store';
@@ -145,6 +145,10 @@ export function setupInclineCard(host: InclineCardHost) {
     },
     /** The treadmill reports the incline in its data (the figure is shown) */
     supportReported: () => support.reported,
+    /** The level of an incline the treadmill reported; null while there are no level buttons (no levels, no range) */
+    levelOf: (pct: number | undefined): number | null => (pct === undefined ? null : levelOf(pct, levelsFromCount(levelCount, range ?? undefined))),
+    /** The card shows level buttons (levels set and a range reported): the incline is talked about in levels, not percent */
+    showsLevels: () => levelsFromCount(levelCount, range ?? undefined).length > 0,
     /** Incline levels are set ("none" hides the incline in the training view) */
     wanted: () => levelCount > 0,
   };
