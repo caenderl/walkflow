@@ -132,7 +132,7 @@ export const en = {
     aboveLimit: 'Above your speed limit: the button is disabled until you lower this value or raise the limit.',
   },
   incline: {
-    title: 'Incline (experimental)',
+    title: 'Incline',
     sliderLabel: 'Target incline',
     value: (pct: number) => `${n(pct, 1)} %`,
     unknown: 'Range: unknown. The log tells you whether the treadmill accepts incline via FTMS (Set Inclination: OK or not supported).',

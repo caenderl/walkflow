@@ -131,7 +131,7 @@ export const de: Messages = {
     aboveLimit: 'Über deinem Speed-Limit: Die Taste ist gesperrt, bis du den Wert senkst oder das Limit erhöhst.',
   },
   incline: {
-    title: 'Steigung (Test)',
+    title: 'Steigung',
     sliderLabel: 'Zielsteigung',
     value: (pct: number) => `${n(pct, 1)} %`,
     unknown: 'Range: unbekannt. Ob das Band die Steigung per FTMS annimmt, sagt dir das Log (Set Inclination: OK oder nicht unterstützt).',

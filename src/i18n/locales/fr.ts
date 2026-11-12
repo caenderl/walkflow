@@ -133,7 +133,7 @@ export const fr: Messages = {
     aboveLimit: 'Au-dessus de votre limite de vitesse : le bouton est désactivé jusqu’à ce que vous baissiez cette valeur ou releviez la limite.',
   },
   incline: {
-    title: 'Inclinaison (expérimental)',
+    title: 'Inclinaison',
     sliderLabel: 'Inclinaison cible',
     value: (pct: number) => `${n(pct, 1)} %`,
     unknown: 'Plage : inconnue. Le journal indique si le tapis accepte l’inclinaison via FTMS (Set Inclination: OK ou non pris en charge).',
