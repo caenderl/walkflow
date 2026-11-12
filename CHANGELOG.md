@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/walkflow-app/walkflow/compare/v0.6.0...v0.7.0) (2026-11-12)
+
+
+### Features
+
+* **incline:** show the incline figure as a level ([#21](https://github.com/walkflow-app/walkflow/issues/21)) ([d8046bd](https://github.com/walkflow-app/walkflow/commit/d8046bd0e91ba7e3d203ebd25d8d2b934d389012))
+
+
+### Fixes
+
+* **ftms-treadmill:** link the npm homepage to the package README ([#23](https://github.com/walkflow-app/walkflow/issues/23)) ([cb86df7](https://github.com/walkflow-app/walkflow/commit/cb86df7a16edc19d8b340fdeb2f818b20dda0a0d))
+
 ## [0.6.0](https://github.com/walkflow-app/walkflow/compare/v0.5.0...v0.6.0) (2026-11-12)
 
 
