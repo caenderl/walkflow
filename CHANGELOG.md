@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0](https://github.com/walkflow-app/walkflow/compare/v0.4.0...v0.5.0) (2026-11-12)
+
+
+### Features
+
+* **incline:** hide the incline card for no levels, offer levels from 2 ([#10](https://github.com/walkflow-app/walkflow/issues/10)) ([43654ec](https://github.com/walkflow-app/walkflow/commit/43654eccabc42b47c1a584c9d17abf4213bc58c3))
+* **info:** show the version at the top of the Info tab ([#14](https://github.com/walkflow-app/walkflow/issues/14)) ([812d657](https://github.com/walkflow-app/walkflow/commit/812d657fd2b395e868dd4768255bb680c98c28f9))
+
+
+### Fixes
+
+* **info:** call the support section "Support this project" ([#13](https://github.com/walkflow-app/walkflow/issues/13)) ([2ee737b](https://github.com/walkflow-app/walkflow/commit/2ee737b85729538f072d19e1a3617349706f4474))
+* **training:** drop the unclear note from the keyboard hint ([#12](https://github.com/walkflow-app/walkflow/issues/12)) ([419454c](https://github.com/walkflow-app/walkflow/commit/419454ce5614fd5e4b181e3bb17c86ba77fb2a38))
+
 ## [0.4.0](https://github.com/walkflow-app/walkflow/compare/v0.3.0...v0.4.0) (2026-11-11)
 
 
