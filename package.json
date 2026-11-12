@@ -52,9 +52,7 @@
       "minimatch": "^11.0.6"
     },
     "workbox-build": {
-      "glob": {
-        "minimatch": "^11.0.6"
-      }
+      "glob": "^14.0.6"
     }
   }
 }
