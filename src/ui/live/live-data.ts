@@ -5,12 +5,13 @@
 
 import type { Sample } from '../../core/history/export';
 import type { RunRecorder, RunSource } from '../../core/history/runs';
-import { describeMachineStatus, hex, OP, parseMachineStatus, parseTrainingStatus, type ControlPointResponse, type TreadmillData } from '../../core/protocol/ftms';
+import { hex, OP, parseMachineStatus, parseTrainingStatus, type ControlPointResponse, type TreadmillData } from '../../core/protocol/ftms';
 import type { BeltBanner } from '../../core/safety/belt-banner';
 import type { SpeedGovernor, StandstillDetector } from '../../core/safety/safety';
 import type { ProgramRunner } from '../../core/training/program';
 import type { TreadmillEvents } from '../../device/ble';
 import { t } from '../../i18n/i18n';
+import { describeControlPointResponse, describeMachineStatus, noticeText } from './treadmill-text';
 import type { Session } from './session';
 
 /** Samples kept for the chart and the export (about 5½ hours at 1 Hz) */
@@ -109,6 +110,7 @@ export function setupLiveData(host: LiveDataHost) {
    * Stop on a moving belt is told to the person, a refused speed ends the ramp, refused control is asked for again at the next stop.
    */
   function onControlResponse(r: ControlPointResponse) {
+    host.log(`← ${describeControlPointResponse(r)}`);
     if (r.result === RESULT_OK) return;
     switch (r.requestOp) {
       case OP.STOP_PAUSE:
@@ -129,6 +131,7 @@ export function setupLiveData(host: LiveDataHost) {
 
   const events: Omit<TreadmillEvents, 'disconnected'> = {
     log: host.log,
+    notice: n => host.log(noticeText(n)),
     data: onData,
     heartRate: bpm => { if (bpm > 0) { cur.hr = bpm; host.renderStats(); } },
     machineStatus: onMachineStatus,

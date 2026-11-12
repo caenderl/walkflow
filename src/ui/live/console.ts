@@ -6,6 +6,7 @@ import { checkConsoleCommand, parseHexBytes, type SpeedGovernor } from '../../co
 import { t, type Text } from '../../i18n/i18n';
 import { $button, $input, log } from '../ui';
 import type { Session } from './session';
+import { noticeText } from './treadmill-text';
 
 export interface ConsoleHost {
   session: Session;
@@ -34,7 +35,7 @@ export function setupConsole(host: ConsoleHost) {
       baseKmh: governor.base(),
       msSinceLastSpeedCommand: governor.msSinceLastCommand(),
     });
-    if (check.action === 'block') { log(`❌ ${check.reason}`); return; }
+    if (check.action === 'block') { log(`❌ ${noticeText(check.reason)}`); return; }
     const data = new Uint8Array(bytes);
     if (check.action === 'confirm-start') {
       if (!(await host.confirmStart(undefined, { always: true }))) return;

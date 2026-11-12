@@ -2,7 +2,7 @@
 // Pure logic without DOM/BLE, fully tested (safety.test.ts). Do not weaken.
 
 import { decodeSetSpeed, OP } from '../protocol/ftms';
-import { t } from '../../i18n/i18n';
+import type { ConsoleBlock, LimitNote, LimitProblem, Notice } from '../protocol/notice';
 
 const EPS = 1e-9;
 
@@ -35,14 +35,14 @@ export function parseLimit(raw: string): number {
 
 export type LimitDecision =
   | { ok: true; value: number; needsConfirmation: boolean }
-  | { ok: false; reason: string };
+  | { ok: false; reason: LimitProblem };
 
 export function decideLimitChange(raw: string, current: number): LimitDecision {
   const v = parseFloat(raw.replace(',', '.'));
-  if (!Number.isFinite(v)) return { ok: false, reason: t.limit.notANumber };
+  if (!Number.isFinite(v)) return { ok: false, reason: { code: 'limit-not-a-number' } };
   const value = Math.round(v * 10) / 10;
   if (value < LIMIT_MIN || value > LIMIT_MAX) {
-    return { ok: false, reason: t.limit.outOfRange(LIMIT_MIN, LIMIT_MAX) };
+    return { ok: false, reason: { code: 'limit-out-of-range', min: LIMIT_MIN, max: LIMIT_MAX } };
   }
   return { ok: true, value, needsConfirmation: value > LIMIT_CONFIRM_ABOVE && value > current };
 }
@@ -59,20 +59,20 @@ function validStoredLimit(v: unknown): v is number {
  * Loads the stored limit. Values above 6 km/h only count if they were stored as confirmed.
  * The prototype value ("cap") was never confirmed and is therefore only adopted up to 6 km/h.
  */
-export function loadLimit(stored: string | null, legacyCap: string | null): { value: number; note?: string } {
+export function loadLimit(stored: string | null, legacyCap: string | null): { value: number; note?: LimitNote } {
   if (stored !== null) {
     try {
       const o = JSON.parse(stored) as { value?: unknown; confirmedAbove6?: unknown };
       if (validStoredLimit(o.value)) {
         if (o.value <= LIMIT_CONFIRM_ABOVE || o.confirmedAbove6 === true) return { value: o.value };
-        return { value: DEFAULT_SPEED_LIMIT, note: t.limit.storedUnconfirmed(o.value, DEFAULT_SPEED_LIMIT) };
+        return { value: DEFAULT_SPEED_LIMIT, note: { code: 'limit-stored-unconfirmed', value: o.value, applied: DEFAULT_SPEED_LIMIT } };
       }
     } catch { /* broken → fall through */ }
   } else if (legacyCap !== null) {
     const v = parseFloat(legacyCap);
     if (validStoredLimit(v)) {
       if (v <= LIMIT_CONFIRM_ABOVE) return { value: v };
-      return { value: DEFAULT_SPEED_LIMIT, note: t.limit.legacyNotAdopted(v, LIMIT_CONFIRM_ABOVE) };
+      return { value: DEFAULT_SPEED_LIMIT, note: { code: 'limit-legacy-not-adopted', value: v, above: LIMIT_CONFIRM_ABOVE } };
     }
   }
   return { value: DEFAULT_SPEED_LIMIT };
@@ -139,7 +139,8 @@ export interface GovernorDeps {
   /** Sends Set Speed. false = write error. */
   send(kmh: number): Promise<boolean>;
   now(): number;
-  log?(msg: string): void;
+  /** What the governor did not do, or does later, as a code */
+  notice?(n: Notice): void;
   /** Target, last command or ramp state changed. */
   onChange?(): void;
 }
@@ -231,13 +232,13 @@ export class SpeedGovernor {
   request(kmh: number): number | null {
     const clamped = clampSpeed(kmh, this.range);
     if (clamped === null) {
-      this.deps.log?.(t.limit.noAllowedSpeed(this.range.max, this.range.min));
+      this.deps.notice?.({ code: 'no-allowed-speed', min: this.range.min, max: this.range.max });
       return null;
     }
     this._target = clamped;
     if (this.moving === false && this.loggedHeld !== clamped) {
       this.loggedHeld = clamped;
-      this.deps.log?.(t.limit.heldUntilMoving(clamped));
+      this.deps.notice?.({ code: 'speed-held-until-moving', kmh: clamped });
     }
     this.pump();
     this.deps.onChange?.();
@@ -252,7 +253,7 @@ export class SpeedGovernor {
   async startSpeed(): Promise<boolean> {
     const kmh = clampSpeed(this.range.min, this.range);
     if (kmh === null) {
-      this.deps.log?.(t.limit.noAllowedSpeed(this.range.max, this.range.min));
+      this.deps.notice?.({ code: 'no-allowed-speed', min: this.range.min, max: this.range.max });
       return false;
     }
     this.cancel();
@@ -317,7 +318,7 @@ export class SpeedGovernor {
       if (!ok && this.last === mine) this.last = before;
       if (gen === this.gen && !ok) {
         this._target = null;
-        this.deps.log?.(t.limit.rampAborted);
+        this.deps.notice?.({ code: 'ramp-aborted' });
         this.deps.onChange?.();
         return;
       }
@@ -346,7 +347,7 @@ export interface ConsoleContext {
 
 export type ConsoleCheck =
   | { action: 'send'; setSpeed?: number }
-  | { action: 'block'; reason: string }
+  | { action: 'block'; reason: ConsoleBlock }
   | { action: 'confirm-start' };
 
 const OP_SET_TARGET_HEART_RATE = 0x06;
@@ -355,19 +356,19 @@ export function checkConsoleCommand(bytes: number[], ctx: ConsoleContext): Conso
   const op = bytes[0];
   if (op === OP.SET_SPEED) {
     const kmh = decodeSetSpeed(bytes);
-    if (kmh === null || bytes.length !== 3) return { action: 'block', reason: t.console.setSpeedLength };
-    if (kmh > ctx.maxKmh + EPS) return { action: 'block', reason: t.console.overLimit(kmh, ctx.maxKmh) };
+    if (kmh === null || bytes.length !== 3) return { action: 'block', reason: { code: 'console-set-speed-length' } };
+    if (kmh > ctx.maxKmh + EPS) return { action: 'block', reason: { code: 'console-over-limit', kmh, max: ctx.maxKmh } };
     if (Math.abs(kmh - ctx.baseKmh) > ctx.maxStep + EPS) {
-      return { action: 'block', reason: t.console.jump(ctx.baseKmh, kmh, ctx.maxStep) };
+      return { action: 'block', reason: { code: 'console-jump', from: ctx.baseKmh, to: kmh, maxStep: ctx.maxStep } };
     }
     if (ctx.msSinceLastSpeedCommand < RAMP_INTERVAL_MS) {
-      return { action: 'block', reason: t.console.tooSoon(RAMP_INTERVAL_MS) };
+      return { action: 'block', reason: { code: 'console-too-soon', intervalMs: RAMP_INTERVAL_MS } };
     }
     return { action: 'send', setSpeed: kmh };
   }
   if (op === OP.START) return { action: 'confirm-start' };
   if (op === OP_SET_TARGET_HEART_RATE) {
-    return { action: 'block', reason: t.console.heartRateBlocked };
+    return { action: 'block', reason: { code: 'console-heart-rate' } };
   }
   return { action: 'send' };
 }

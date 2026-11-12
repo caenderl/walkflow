@@ -3,11 +3,11 @@
 
 import {
   CH, DEVINFO_CH, DEVINFO_SERVICE, FTMS_SERVICE, HR_SERVICE,
-  describeControlPointResponse, hex, parseControlPointResponse, parseFeatures,
+  hex, parseControlPointResponse, parseFeatures,
   parseHeartRate, parseInclinationRange, parseSpeedRange, parseTreadmillData,
   type ControlPointResponse, type Features, type Range, type TreadmillData,
 } from '../core/protocol/ftms';
-import { t } from '../i18n/i18n';
+import { TreadmillError, type Notice } from '../core/protocol/notice';
 
 export type Uuid = number;
 
@@ -118,7 +118,7 @@ class WebBluetoothDevice implements BleDevice {
   get connected() { return !!this.dev.gatt?.connected; }
 
   async connect() {
-    if (!this.dev.gatt) throw new Error(t.ble.noGatt);
+    if (!this.dev.gatt) throw new TreadmillError('no-gatt');
     this.dev.addEventListener('gattserverdisconnected', this.handleDisconnect);
     this.server = await this.dev.gatt.connect();
   }
@@ -134,7 +134,7 @@ class WebBluetoothDevice implements BleDevice {
   private service(uuid: Uuid) {
     let s = this.services.get(uuid);
     if (!s) {
-      if (!this.server) return Promise.reject(new Error(t.ble.notConnected));
+      if (!this.server) return Promise.reject(new TreadmillError('not-connected'));
       s = this.server.getPrimaryService(uuid);
       s.catch(() => this.services.delete(uuid));
       this.services.set(uuid, s);
@@ -201,7 +201,10 @@ export class WebBluetoothAdapter implements BleAdapter {
 // ---------- FTMS client ----------
 
 export interface TreadmillEvents {
+  /** Protocol lines (bytes sent, a response that could not be read), for the console; not for people */
   log(msg: string): void;
+  /** What was found or went wrong, as a code; the app says it in its language */
+  notice(n: Notice): void;
   data(d: TreadmillData): void;
   heartRate(bpm: number): void;
   machineStatus(dv: DataView): void;
@@ -228,7 +231,7 @@ export const WRITE_TIMEOUT_MS = 5000;
 /** The write, or an error if it has not finished in time. The timer never outlives the write. */
 function withTimeout(write: Promise<void>): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(t.ble.writeTimeout)), WRITE_TIMEOUT_MS); });
+  const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new TreadmillError('write-timeout')), WRITE_TIMEOUT_MS); });
   return Promise.race([write, timeout]).finally(() => clearTimeout(timer));
 }
 
@@ -245,7 +248,7 @@ export class TreadmillClient {
   async connect(): Promise<ConnectResult> {
     const { ev } = this;
     const device = await this.adapter.requestDevice([FTMS_SERVICE, HR_SERVICE, DEVINFO_SERVICE]);
-    ev.log(t.ble.device(device.name));
+    ev.notice({ code: 'device', name: device.name });
     device.onDisconnected(() => {
       if (this.device === device) this.device = null;
       ev.disconnected();
@@ -256,8 +259,8 @@ export class TreadmillClient {
 
       await device.subscribe(FTMS_SERVICE, CH.control, dv => {
         const r = parseControlPointResponse(dv);
-        ev.log(r ? `← ${describeControlPointResponse(r)}` : `← CP ${hex(dv)}`);
         if (r) ev.controlResponse(r);
+        else ev.log(`← CP ${hex(dv)}`);
       });
       await device.subscribe(FTMS_SERVICE, CH.treadmillData, dv => ev.data(parseTreadmillData(dv)));
 
@@ -267,14 +270,12 @@ export class TreadmillClient {
       ];
       for (const [uuid, cb] of statusChars) {
         try { await device.subscribe(FTMS_SERVICE, uuid, cb); }
-        catch { ev.log(t.ble.notSubscribable(uuid.toString(16))); }
+        catch { ev.notice({ code: 'not-subscribable', uuid }); }
       }
 
-      const infoChars: [(v: string) => string, Uuid][] = [
-        [t.ble.manufacturer, DEVINFO_CH.manufacturer], [t.ble.model, DEVINFO_CH.model], [t.ble.firmware, DEVINFO_CH.firmware],
-      ];
-      for (const [line, uuid] of infoChars) {
-        try { ev.log(line(new TextDecoder().decode(await device.read(DEVINFO_SERVICE, uuid)))); }
+      const infoChars = ['manufacturer', 'model', 'firmware'] as const;
+      for (const field of infoChars) {
+        try { ev.notice({ code: 'device-info', field, value: new TextDecoder().decode(await device.read(DEVINFO_SERVICE, DEVINFO_CH[field])) }); }
         catch { /* optional */ }
       }
 
@@ -282,27 +283,27 @@ export class TreadmillClient {
 
       try {
         result.features = parseFeatures(await device.read(FTMS_SERVICE, CH.feature));
-        ev.log(t.ble.features(result.features.machineNames.join(', ') || '–'));
-        ev.log(t.ble.controllable(result.features.targetNames.join(', ') || '–'));
-      } catch { ev.log(t.ble.featuresUnreadable); }
+        ev.notice({ code: 'features', names: result.features.machineNames });
+        ev.notice({ code: 'controllable', names: result.features.targetNames });
+      } catch { ev.notice({ code: 'features-unreadable' }); }
 
       try {
         const r = parseSpeedRange(await device.read(FTMS_SERVICE, CH.speedRange));
         result.speedRange = r;
-        ev.log(t.ble.speedRange(r.min, r.max, r.step));
-      } catch { ev.log(t.ble.speedRangeUnreadable); }
+        ev.notice({ code: 'speed-range', range: r });
+      } catch { ev.notice({ code: 'speed-range-unreadable' }); }
 
       try {
         const r = parseInclinationRange(await device.read(FTMS_SERVICE, CH.inclRange));
         result.inclRange = r;
-        ev.log(t.ble.inclRange(r.min, r.max, r.step));
-      } catch { ev.log(t.ble.inclRangeUnreadable); }
+        ev.notice({ code: 'incline-range', range: r });
+      } catch { ev.notice({ code: 'incline-range-unreadable' }); }
 
       try {
         await device.subscribe(HR_SERVICE, CH.hr, dv => ev.heartRate(parseHeartRate(dv)));
         result.hasHeartRate = true;
-        ev.log(t.ble.hrSubscribed);
-      } catch { ev.log(t.ble.noHr); }
+        ev.notice({ code: 'heart-rate', available: true });
+      } catch { ev.notice({ code: 'heart-rate', available: false }); }
 
       return result;
     } catch (e) {
@@ -324,14 +325,14 @@ export class TreadmillClient {
     const task = async () => {
       this.ev.log(`→ ${hex(bytes)}`);
       const d = this.device;
-      if (!d?.connected) throw new Error(t.ble.notConnected);
+      if (!d?.connected) throw new TreadmillError('not-connected');
       await withTimeout(d.write(FTMS_SERVICE, CH.control, bytes));
     };
     return (opts.urgent ? this.queue.runUrgent(task) : this.queue.run(task)).then(
       () => true,
       (e: unknown) => {
-        if (e instanceof DroppedError) this.ev.log(t.ble.dropped(hex(bytes)));
-        else this.ev.log(t.ble.writeError(e instanceof Error ? e.message : String(e)));
+        if (e instanceof DroppedError) this.ev.notice({ code: 'write-dropped', bytes: hex(bytes) });
+        else this.ev.notice({ code: 'write-failed', error: e instanceof TreadmillError ? e.code : { message: e instanceof Error ? e.message : String(e) } });
         return false;
       },
     );

@@ -18,6 +18,7 @@ import { bindText } from '../i18n-dom';
 import { $, $button, log } from '../ui';
 import { stopPlacement, type View } from '../views';
 import type { Session } from './session';
+import { errorText } from './treadmill-text';
 
 export interface ConnectionHost {
   session: Session;
@@ -94,7 +95,7 @@ export function setupConnection(host: ConnectionHost) {
       desktop?.connectionChanged(true);
       await c.send(cmdRequestControl());
     } catch (e) {
-      log(`❌ ${e instanceof Error ? e.message : String(e)}`);
+      log(`❌ ${errorText(e)}`);
       if (!connected()) {
         session.client = null;
         setStatus(() => t.connection.notConnected);

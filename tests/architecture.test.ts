@@ -15,7 +15,7 @@ const MAY_IMPORT: Record<string, readonly string[]> = {
   i18n: [],
   platform: [],
   core: ['i18n'],
-  device: ['core', 'i18n'],
+  device: ['core'],
   data: ['core'],
   /** The connection to other people's devices (sharing). Never the treadmill: no device, no ui. */
   net: ['core', 'i18n', 'platform'],
@@ -29,6 +29,8 @@ const ROOT_FILES = ['main.ts', 'env.d.ts', 'style.css'];
 /** What reaches other people's devices must never be able to drive the belt: no FTMS commands, no treadmill connection */
 const SHARING = ['src/net/', 'src/core/share/'];
 const BELT = ['src/core/protocol/', 'src/device/'];
+/** What becomes the treadmill library (docs/LIBRARY.md): it speaks in codes, the app turns them into text */
+const TREADMILL_LIB = ['src/core/protocol/', 'src/core/safety/', 'src/device/'];
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
@@ -100,6 +102,17 @@ describe('project structure', () => {
           seen.add(target);
           queue.push({ file: target, via: [...cur.via, target] });
         }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it('keeps texts out of the treadmill library: no import from i18n, also not a type', () => {
+    const bad: string[] = [];
+    for (const file of sources.filter(f => TREADMILL_LIB.some(l => rel(f).startsWith(l)))) {
+      for (const { spec } of importsOf(readFileSync(file, 'utf8'))) {
+        const target = resolveTs(file, spec);
+        if (target && layerOf(target) === 'i18n') bad.push(`${rel(file)} → ${rel(target)}`);
       }
     }
     expect(bad).toEqual([]);

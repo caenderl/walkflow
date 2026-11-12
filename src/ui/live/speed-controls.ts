@@ -10,6 +10,7 @@ import {
   serializeLimit, SpeedGovernor,
 } from '../../core/safety/safety';
 import { t } from '../../i18n/i18n';
+import { noticeText } from './treadmill-text';
 import {
   loadSpeedPresets, PRESET_KEYS, presetCommand, type PresetKey, serializeSpeedPresets, SPEED_PRESETS_STORAGE_KEY,
   type SpeedPresets,
@@ -39,7 +40,7 @@ export function setupSpeedControls(host: SpeedControlsHost) {
   const governor = new SpeedGovernor({
     send: kmh => host.send(cmdSetSpeed(kmh)),
     now: host.now,
-    log,
+    notice: n => log(noticeText(n)),
     onChange: renderSpeed,
   });
 
@@ -127,7 +128,7 @@ export function setupSpeedControls(host: SpeedControlsHost) {
   async function limitChanged() {
     const input = $input('cap');
     const d = decideLimitChange(speedFromInput(input.value), limit);
-    if (!d.ok) { log(`❌ ${d.reason}`); renderLimitFields(); return; }
+    if (!d.ok) { log(`❌ ${noticeText(d.reason)}`); renderLimitFields(); return; }
     if (d.needsConfirmation) {
       const ok = await confirmDialog(t.limit.confirmTitle(d.value), [
         t.limit.risk(LIMIT_CONFIRM_ABOVE),
@@ -193,7 +194,7 @@ export function setupSpeedControls(host: SpeedControlsHost) {
     load() {
       const l = loadLimit(store.get(LIMIT_STORAGE_KEY), store.get(LEGACY_LIMIT_KEY));
       limit = l.value;
-      if (l.note) log(l.note);
+      if (l.note) log(noticeText(l.note));
       const ms = parseMaxStep(store.get(MAX_STEP_STORAGE_KEY) ?? '');
       if (ms !== null) governor.maxStep = ms;
       presets = loadSpeedPresets(store.get(SPEED_PRESETS_STORAGE_KEY));

@@ -43,7 +43,7 @@ tests/                tests about the project itself
 | --- | --- |
 | `i18n`, `platform` | itself |
 | `core` | `i18n` |
-| `device` | `core`, `i18n` |
+| `device` | `core` |
 | `net` | `core`, `i18n`, `platform` (never `device`, `ui`, or the FTMS commands) |
 | `data` | `core` |
 | `ui` | `core`, `i18n`, `device`, `data`, `platform`, `net` |
@@ -61,6 +61,9 @@ tests/                tests about the project itself
 4. **Every source file lives in a layer folder**; at the top of `src/` only `main.ts`, `env.d.ts` and `style.css` stay.
 5. **A test sits next to the code it tests** (`foo.ts`, `foo.test.ts`).
 6. **The desktop main process uses only pure code** of `src/`.
+7. **The treadmill parts (`core/protocol`, `core/safety`, `device`) have no texts**: no import from `i18n`. They speak in
+   codes (`core/protocol/notice.ts`), and `ui/live/treadmill-text.ts` turns them into text. They become a library of their
+   own ([LIBRARY.md](LIBRARY.md)).
 
 ## Principles
 
@@ -102,4 +105,4 @@ tests/                tests about the project itself
   profile, the import, the library upkeep, the route details and the route editor are their own modules. What is left in
   both files is mostly the list and its state, which is what they are for.
 - The treadmill control (protocol, Bluetooth client, safety rules and the order of start and stop) is meant to become a
-  library of its own with a defined API, so that the app only draws. The draft is in [LIBRARY.md](LIBRARY.md); nothing is built yet.
+  library of its own with a defined API, so that the app only draws. The draft and how far it is are in [LIBRARY.md](LIBRARY.md).

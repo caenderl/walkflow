@@ -1,6 +1,6 @@
 # Treadmill library (draft)
 
-Status: **draft, nothing built yet.** This describes how the treadmill control could move out of the app into a library of
+Status: **draft, step 1 of 4 done** (see [Steps](#steps)). This describes how the treadmill control could move out of the app into a library of
 its own with a defined API, so that the app only draws and the control can be released, versioned and tested on its own.
 It comes after the hardware test of the current control (see [HARDWARE-TESTS.md](../HARDWARE-TESTS.md)).
 
@@ -168,29 +168,26 @@ tested on a real treadmill; the app does not have to change for it.
 
 ### Notices instead of texts
 
-Today `ftms.ts`, `ble.ts` and `safety.ts` build sentences with `t`. The library sends codes with their values, and the app
-has one function that turns each code into text in every language. TypeScript checks that every code has a text.
+The library knows no language. What it finds or what goes wrong it sends as a code with its values, and the app has one
+function that turns each code into text in every language (`ui/live/treadmill-text.ts`, `noticeText`). TypeScript checks
+that every code has a text, and `tests/architecture.test.ts` checks that no part of the library imports `i18n`.
 
-```ts
-type Notice =
-  | { code: 'write-timeout' }
-  | { code: 'write-dropped'; bytes: string }
-  | { code: 'write-error'; message: string }
-  | { code: 'not-connected' }
-  | { code: 'speed-held-until-moving'; kmh: number }
-  | { code: 'no-allowed-speed'; min: number; max: number }
-  | { code: 'speed-refused' }
-  | { code: 'ramp-aborted' }
-  | { code: 'start-speed-failed' }
-  | { code: 'limit-lowered'; kmh: number }
-  | { code: 'limit-unconfirmed'; requested: number; applied: number }
-  | { code: 'control-lost' }
-  | { code: 'standstill' }
-  | { code: 'not-subscribable'; uuid: string }
-  | { code: 'device-info'; field: 'manufacturer' | 'model' | 'firmware'; value: string };
-```
+Today's codes are in `src/core/protocol/notice.ts`:
 
-The limit checks that speak to the person (`decideLimitChange`, `loadLimit`) return codes the same way.
+| Group | Codes |
+| --- | --- |
+| Connecting | `device`, `device-info`, `not-subscribable`, `features`, `controllable`, `features-unreadable`, `speed-range`, `speed-range-unreadable`, `incline-range`, `incline-range-unreadable`, `heart-rate` |
+| Writing | `write-dropped`, `write-failed` (with `no-gatt`, `not-connected`, `write-timeout` or the message of another error) |
+| Governor | `no-allowed-speed`, `speed-held-until-moving`, `ramp-aborted` |
+| Limit (returned by `decideLimitChange`, `loadLimit`) | `limit-not-a-number`, `limit-out-of-range`, `limit-stored-unconfirmed`, `limit-legacy-not-adopted` |
+| Console (returned by `checkConsoleCommand`) | `console-set-speed-length`, `console-over-limit`, `console-jump`, `console-too-soon`, `console-heart-rate` |
+
+The facade adds what is told by the app's live parts today: `speed-refused`, `start-speed-failed`, `limit-lowered`,
+`limit-unconfirmed` (see below), `control-lost`, `standstill`.
+
+An error the library throws (only `connect` does) is a `TreadmillError` with one of the codes above. Machine Status and
+Control Point answers stay what the protocol says (`MachineEvent`, `ControlPointResponse`); the app describes them in its
+language. The `log` event carries protocol lines only (bytes sent, an answer that could not be read).
 
 ### Speed limit above 6 km/h
 
@@ -239,12 +236,14 @@ one of them is a `safety` commit and at least a minor version.
 
 Each step is one PR and leaves the app working.
 
-1. **Codes instead of texts.** `ftms.ts`, `ble.ts`, `safety.ts` and `incline.ts` stop importing `i18n`; the app turns notices
-   into texts. Storage keys move to the app. No change in behaviour.
+1. **Codes instead of texts.** *Done.* `ftms.ts`, `ble.ts` and `safety.ts` no longer import `i18n`; the app turns notices
+   into texts. No change in behaviour: the log reads as before, in every language.
 2. **The `Treadmill` facade, test first.** Built in `src/device/` from `belt.ts`, `live-data.ts` (without recording and
    drawing), the governor and standstill wiring of `speed-controls.ts` and `connection.ts`, the belt phase and
    `controlAvailability`. The tests of `belt.ts`, `live-data.ts` and the control parts of `belt-banner.ts` move to it, plus
    one test per promise above. What is left of `BeltBanner` (fading, timings) moves to `ui/live/` and draws from `state.belt`.
 3. **The UI uses only the facade.** `ui/live/*` and `main.ts` call the API and draw `state`; `Session` and the hosts with
    governor and banner go away. Checked in the demo, then on the real treadmill (HARDWARE-TESTS.md).
-4. **Move into `packages/ftms-treadmill`.** Workspace, entry points, build, release-please, architecture rule. Publish 0.1.0.
+4. **Move into `packages/ftms-treadmill`.** Workspace, entry points, build, release-please, architecture rule. What stays in
+   the app leaves `core/safety` on the way: the storage keys and the stored limit format, the disclaimer, quiet and
+   developer mode, speed presets. Publish 0.1.0.

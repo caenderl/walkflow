@@ -4,7 +4,7 @@ import {
   DISCLAIMER_VERSION, effectiveMax, isDisclaimerAccepted, loadLimit, parseHexBytes, parseLimit, parseMaxStep,
   planRamp, RAMP_INTERVAL_MS, serializeLimit, SpeedGovernor, StandstillDetector, type ConsoleContext,
 } from './safety';
-import { setLanguage } from '../../i18n/i18n';
+import type { Notice } from '../protocol/notice';
 
 describe('speed limit (existing behaviour)', () => {
   it('default limit is 6 km/h', () => {
@@ -71,6 +71,8 @@ describe('changing the limit', () => {
     expect(decideLimitChange('abc', 6).ok).toBe(false);
     expect(decideLimitChange('0.5', 6).ok).toBe(false);
     expect(decideLimitChange('25', 6).ok).toBe(false);
+    expect(decideLimitChange('abc', 6)).toEqual({ ok: false, reason: { code: 'limit-not-a-number' } });
+    expect(decideLimitChange('25', 6)).toEqual({ ok: false, reason: { code: 'limit-out-of-range', min: 1, max: 20 } });
   });
 
   it('rounds to 0.1 km/h', () => {
@@ -88,7 +90,7 @@ describe('stored limit', () => {
   });
 
   it('unconfirmed values above 6 are not adopted', () => {
-    expect(loadLimit(serializeLimit(8, false), null).value).toBe(6);
+    expect(loadLimit(serializeLimit(8, false), null)).toEqual({ value: 6, note: { code: 'limit-stored-unconfirmed', value: 8, applied: 6 } });
     expect(loadLimit('{"value":9}', null).value).toBe(6);
   });
 
@@ -96,7 +98,7 @@ describe('stored limit', () => {
     expect(loadLimit(null, '5')).toEqual({ value: 5 });
     const r = loadLimit(null, '9');
     expect(r.value).toBe(6);
-    expect(r.note).toMatch(/not adopted/);
+    expect(r.note).toEqual({ code: 'limit-legacy-not-adopted', value: 9, above: 6 });
   });
 
   it('broken or nonsensical values → 6 km/h', () => {
@@ -187,11 +189,11 @@ describe('SpeedGovernor', () => {
 
   function make(opts: { fail?: (kmh: number) => boolean } = {}) {
     const sent: [number, number][] = [];
-    const logs: string[] = [];
+    const logs: Notice[] = [];
     const gov = new SpeedGovernor({
       send: async kmh => { sent.push([Date.now(), kmh]); return !opts.fail?.(kmh); },
       now: () => Date.now(),
-      log: m => logs.push(m),
+      notice: n => logs.push(n),
     });
     gov.setRange({ min: 1, max: 6 });
     return { gov, sent, logs };
@@ -254,7 +256,7 @@ describe('SpeedGovernor', () => {
     expect(gov.request(3)).toBeNull();
     await vi.advanceTimersByTimeAsync(5000);
     expect(sent).toEqual([]);
-    expect(logs.join()).toMatch(/No allowed speed/);
+    expect(logs).toEqual([{ code: 'no-allowed-speed', min: 2, max: 1 }]);
   });
 
   it('cancel stops the ramp immediately', async () => {
@@ -276,7 +278,7 @@ describe('SpeedGovernor', () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(sent).toEqual([[0, 2.5], [1500, 3]]);
     expect(gov.target).toBeNull();
-    expect(logs.join()).toMatch(/Stepwise speed change aborted/);
+    expect(logs).toEqual([{ code: 'ramp-aborted' }]);
   });
 
   it('a command that was not written is not what the next ramp starts from', async () => {
@@ -593,14 +595,10 @@ describe('experiment console', () => {
     expect(checkConsoleCommand([0x00], ctx)).toEqual({ action: 'send' });
   });
 
-  it('the language changes only the reason text, not the decision', () => {
-    const cmd = [0x02, ...le16(601)];
-    const en = checkConsoleCommand(cmd, { ...ctx, baseKmh: 5.8 });
-    setLanguage('fr');
-    const fr = checkConsoleCommand(cmd, { ...ctx, baseKmh: 5.8 });
-    setLanguage('en');
-    expect(en).toEqual({ action: 'block', reason: '6.01 km/h is above the limit (6), blocked' });
-    expect(fr).toEqual({ action: 'block', reason: '6,01 km/h dépasse la limite (6), bloqué' });
+  it('names the reason of a block as a code with its values', () => {
+    expect(checkConsoleCommand([0x02, ...le16(601)], { ...ctx, baseKmh: 5.8 })).toEqual({ action: 'block', reason: { code: 'console-over-limit', kmh: 6.01, max: 6 } });
+    expect(checkConsoleCommand([0x02, 0x2c], ctx)).toEqual({ action: 'block', reason: { code: 'console-set-speed-length' } });
+    expect(checkConsoleCommand([0x06, 120], ctx)).toEqual({ action: 'block', reason: { code: 'console-heart-rate' } });
   });
 });
 

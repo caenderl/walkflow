@@ -110,7 +110,21 @@ describe('Control Point responses', () => {
     const r = rig();
     r.live.events.controlResponse({ requestOp: 0x02, result: 3 });
     expect(r.governor.commandRefused).toHaveBeenCalledTimes(1);
+    expect(r.log).toHaveBeenCalledWith('← Set Speed: invalid parameter');
+    expect(r.log).toHaveBeenCalledTimes(2);
+  });
+
+  it('logs every answer of the treadmill readably, also one it accepted', () => {
+    const r = rig();
+    r.live.events.controlResponse({ requestOp: 0x08, result: 1 });
+    expect(r.log).toHaveBeenCalledWith('← Stop/Pause: OK');
     expect(r.log).toHaveBeenCalledTimes(1);
+  });
+
+  it('says what the treadmill side reports in the language of the app', () => {
+    const r = rig();
+    r.live.events.notice({ code: 'write-dropped', bytes: '02 5e 01' });
+    expect(r.log).toHaveBeenCalledWith('dropped: 02 5e 01 (stop/pause takes priority)');
   });
 
   it('control that was refused counts as lost, so the next stop asks for it first', () => {
