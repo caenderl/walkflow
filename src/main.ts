@@ -143,6 +143,7 @@ const stage = setupStage({
 const incline = setupInclineCard({
   send: bytes => session.send(bytes),
   uiConnected: () => connection.uiConnected(),
+  levelsChanged: () => readout.renderStats(),
 });
 
 // The figures, the banner, the buttons and the chart (display only)
@@ -150,6 +151,7 @@ const readout = setupReadout({
   session, banner, now,
   programActive: () => runner.active,
   inclineReported: () => incline.supportReported(),
+  inclineWanted: () => incline.wanted(),
   effectiveMax,
   target: () => governor.target,
 });

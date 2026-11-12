@@ -17,6 +17,8 @@ export interface InclineCardHost {
   send(bytes: Uint8Array): Promise<boolean>;
   /** The page shows a connection (the buttons can be pressed) */
   uiConnected(): boolean;
+  /** The incline levels setting changed: the figures redraw (the incline figure follows it) */
+  levelsChanged(): void;
 }
 
 export function setupInclineCard(host: InclineCardHost) {
@@ -74,6 +76,7 @@ export function setupInclineCard(host: InclineCardHost) {
     store.set(INCLINE_LEVELS_KEY, String(levelCount));
     renderLevelCountField();
     render();
+    host.levelsChanged();
   };
   $input('inclSlider').oninput = e => { $('inclTarget').textContent = t.incline.value(parseFloat((e.target as HTMLInputElement).value)); };
   $input('inclSlider').onchange = e => void set(parseFloat((e.target as HTMLInputElement).value));
@@ -113,5 +116,7 @@ export function setupInclineCard(host: InclineCardHost) {
     },
     /** The treadmill reports the incline in its data (the figure is shown) */
     supportReported: () => support.reported,
+    /** Incline levels are set ("none" hides the incline in the training view) */
+    wanted: () => levelCount > 0,
   };
 }
