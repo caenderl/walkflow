@@ -3,8 +3,9 @@ name: Publish ftms-treadmill
 # Publishes the treadmill library (packages/ftms-treadmill) to npm when its release is published. release-please makes the
 # release as a draft (tag ftms-treadmill-v<version>, marked as a pre-release so that it never counts as the app's latest
 # release); publishing that draft by hand, after the hardware checks, starts this workflow.
-# Needs the repository secret NPM_TOKEN (an npm automation token that may publish ftms-treadmill). The package is
-# published with provenance, so npm shows which commit and workflow built it.
+# No token: npm trusts this workflow (Trusted Publishing, set on npmjs.com for ftms-treadmill: repository
+# walkflow-app/walkflow, workflow npm-publish.yml) and checks the OIDC token GitHub gives the job (id-token: write).
+# npm adds provenance by itself, so npm shows which commit and workflow built the package.
 on:
   release:
     types: [published]
@@ -43,6 +44,6 @@ jobs:
           fi
 
       - run: npm run build -w ftms-treadmill
-      - run: npm publish -w ftms-treadmill --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Trusted Publishing needs npm 11.5.1 or later
+      - run: npm install -g npm@^11.5.1
+      - run: npm publish -w ftms-treadmill --access public

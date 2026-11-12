@@ -260,7 +260,8 @@ one of them is a `safety` commit and at least a minor version.
   `packages/ftms-treadmill/`. Its GitHub release is a draft and marked as a pre-release, so it never counts as the app's
   latest release (the desktop app's update check and the download links on the site look at the latest release).
   Publishing that draft by hand starts `.github/workflows/npm-publish.yml`: tests, a check that the tag matches the
-  version, the build, `npm publish` with provenance. It needs the repository secret `NPM_TOKEN`.
+  version, the build, `npm publish` with provenance. No token: npm trusts that workflow (Trusted Publishing, set
+  in the package settings on npmjs.com), so there is no secret to expire or leak.
 - **The first version:** release-please treats a package without a release as new and would start it at 1.0.0; the
   library's `initial-version` in `release-please-config.json` makes the first release 0.1.0.
 - **Version 0.x** until the API has been used for a while; then 1.0.
