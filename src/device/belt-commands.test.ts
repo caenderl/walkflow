@@ -6,7 +6,7 @@ import { setupBelt, STOP_ATTEMPTS, type BeltHost } from './belt-commands';
 import { BeltState } from './belt-state';
 
 /** Everything the belt touches, in the order it happens */
-function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean | Promise<boolean>); client?: boolean; startSpeedOk?: boolean; target?: number } = {}) {
+function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean | Promise<boolean>); client?: boolean; startSpeedOk?: boolean; target?: number; wanted?: number } = {}) {
   const calls: string[] = [];
   const session = new BeltState();
   if (opts.client !== false) {
@@ -34,7 +34,7 @@ function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean | Promise<boo
   const log = vi.fn(() => calls.push('notice'));
   const wait = vi.fn(async (_ms: number) => {});
   const stopFailed = vi.fn((_failed: boolean) => {});
-  const belt = setupBelt({ session, phase: banner, governor, standstill, now: () => 1234, ended: abortRun, notice: log, wait, stopFailed });
+  const belt = setupBelt({ session, phase: banner, governor, standstill, now: () => 1234, wanted: () => opts.wanted ?? null, ended: abortRun, notice: log, wait, stopFailed });
   const sends = () => calls.filter(c => c.startsWith('send'));
   return { belt, session, calls, sends, banner, abortRun, governor, log, wait, stopFailed };
 }
@@ -189,6 +189,18 @@ describe('start', () => {
     const r = rig({ target: 5 });
     expect(await r.belt.start()).toBe(true);
     expect(r.calls).toEqual(['governor reset', 'standstill disarm', 'send 00', 'governor startSpeed', 'send 07', 'banner start', 'governor request 5']);
+  });
+
+  it('without a target, asks again for the speed asked for before the stop', async () => {
+    const r = rig({ wanted: 3.5 });
+    await r.belt.start();
+    expect(r.calls.at(-1)).toBe('governor request 3.5');
+  });
+
+  it('a target chosen while standing wins over the speed before the stop', async () => {
+    const r = rig({ target: 2, wanted: 3.5 });
+    await r.belt.start();
+    expect(r.calls.at(-1)).toBe('governor request 2');
   });
 
   it('asks for nothing when no speed was chosen', async () => {

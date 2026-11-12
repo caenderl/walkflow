@@ -114,6 +114,8 @@ export function createTreadmill(opts: TreadmillOptions = {}) {
   let limitConfirmed = false;
   let stopFailed = false;
   let programActive = false;
+  /** The last speed asked for; a stop forgets the target, the next Start ramps up to this again (what the app still shows) */
+  let wanted: number | null = null;
 
   /** A listener is the app's display: whatever it does, it never gets in the way of the control path */
   function emit<E extends keyof TreadmillEventMap>(event: E, payload: TreadmillEventMap[E]) {
@@ -128,7 +130,10 @@ export function createTreadmill(opts: TreadmillOptions = {}) {
     send: kmh => session.send(cmdSetSpeed(kmh)),
     now,
     notice,
-    onChange: () => emit('target', undefined),
+    onChange: () => {
+      if (governor.target !== null) wanted = governor.target;
+      emit('target', undefined);
+    },
   });
   governor.maxStep = DEFAULT_MAX_STEP;
 
@@ -145,6 +150,7 @@ export function createTreadmill(opts: TreadmillOptions = {}) {
 
   const belt = setupBelt({
     session, phase, governor, standstill, now,
+    wanted: () => wanted,
     ended: reason => emit('ended', { reason }),
     notice,
     wait: ms => clock.wait(ms),

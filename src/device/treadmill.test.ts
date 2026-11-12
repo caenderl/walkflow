@@ -140,6 +140,36 @@ describe('start (promise 3) and stop (promise 4)', () => {
     expect(tm.state.belt).toBe('starting');
   });
 
+  it.each(['stop', 'pause'] as const)('after %s, Start ramps up again to the speed the belt had, from the lowest speed', async how => {
+    const { tm, dev } = await rig();
+    dev.speed(3.5);
+    tm.setSpeed(3.5);
+    clock = 10_000;
+    await tm[how]();
+    expect(tm.state.target).toBe(null);
+    dev.speed(0);
+    clock = 20_000;
+    dev.writes = [];
+    expect(await tm.start()).toBe(true);
+    expect(dev.writes).toEqual(['00', '02 64 00', '07']);
+    expect(tm.state.target).toBe(3.5);
+    // Nothing more until the belt moves; then the ramp, step by step
+    clock = 22_000;
+    dev.speed(1);
+    await vi.waitFor(() => expect(dev.writes.at(-1)).toBe('02 96 00'));
+  });
+
+  it('a speed chosen after the stop counts, not the one before', async () => {
+    const { tm, dev } = await rig();
+    dev.speed(3.5);
+    tm.setSpeed(3.5);
+    await tm.stop();
+    dev.speed(0);
+    tm.setSpeed(2);
+    await tm.start();
+    expect(tm.state.target).toBe(2);
+  });
+
   it('stop goes out and the program is told', async () => {
     const { tm, dev } = await rig();
     const ended = vi.fn();

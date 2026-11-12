@@ -20,6 +20,8 @@ export interface BeltHost {
   governor: SpeedGovernor;
   standstill: StandstillDetector;
   now(): number;
+  /** The last speed asked for, also before a stop or pause: Start ramps up to it again (null: none yet) */
+  wanted(): number | null;
   /** The belt is stopped or paused on purpose: a running workout or route ends */
   ended(reason: 'stop' | 'pause'): void;
   notice(n: Notice): void;
@@ -85,8 +87,9 @@ export function setupBelt(host: BeltHost) {
     const c = session.client;
     if (!c) return false;
     const mine = ++epoch;
-    // A speed chosen while the belt stood is asked for again once Start went out; the governor holds it until the belt moves
-    const chosen = governor.target;
+    // The speed asked for last (before the stop, or chosen while the belt stood) is asked for again once Start went out; the
+    // governor holds it until the belt moves and then ramps up from the start speed
+    const chosen = governor.target ?? host.wanted();
     governor.reset();
     standstill.disarm();
     const a = await c.send(cmdRequestControl());
