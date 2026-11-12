@@ -27,7 +27,7 @@ Other FTMS treadmills may work but are not tested.
 ## Features
 
 - Connect/disconnect, start/pause/stop (Start waits while the belt moves or a program runs, Pause is there while the belt may be running, Stop is always available while connected), speed via slider, presets and ±0.5, incline
-- Incline: the treadmill is asked whether it accepts an incline (FTMS features and its supported range). If it does not, the incline card, the incline figure and the incline fields of the workout editor are not shown (the editor hides them once a real treadmill has said so). If it does, the incline is set from buttons for as many levels as you set in Settings → Treadmill → Incline levels (none, or 2 to 10, spread evenly from the lowest to the highest incline the treadmill reports; the percent of each level will be configurable later). With “none” the training view shows nothing about the incline: no card, no figure. The value sent is always held inside the range the treadmill reported.
+- Incline: the treadmill is asked whether it accepts an incline (FTMS features and its supported range). If it does not, the incline card, the incline figure and the incline fields of the workout editor are not shown (the editor hides them once a real treadmill has said so). If it does, the card shows only the level buttons (no percent, no texts: a level’s real slope is not known) and the incline is set from buttons for level 0 up to the highest level you set in Settings → Treadmill → Incline levels (none, or 2 to 10; 5 gives the buttons 0 to 5, spread evenly from the lowest to the highest incline the treadmill reports; the percent of each level will be configurable later). With “none” the training view shows nothing about the incline: no card, no figure. The value sent is always held inside the range the treadmill reported. The buttons can only be pressed while the belt is running (a treadmill ignores the incline while standing), and the card follows the incline the treadmill reports, also a change made on the treadmill itself.
 - Connecting, language and theme live in small menus in the header: click the connection status, or the settings button at the top right
 - Workouts: a saved list of steps, each ending after a time or after a distance (the treadmill’s own distance counter), with a speed. Editor with examples, library, import/export as text (`5 min 4.0`, `400 m 3.5`), and a week plan (minutes per weekday) that is ticked off from the history. A step can carry an optional incline (`incl 2`), which is saved and shown but not sent to the treadmill yet (untested on the target hardware). Each weekday of the plan can suggest a workout or route; the training view offers today’s suggestion, and the day is still done by minutes.
 - Units: metric (km, km/h, m) or imperial (mi, mph, ft), chosen in the settings and kept in the browser. It only changes what is shown and typed (also in the workout editor and its text format, where `mi` and `ft` work next to `m` and `km`). Everything stored, sent to the treadmill and checked stays km/h and metres: the limit of 6 km/h, the step of 0.5 km/h per command, saved runs and the exports (CSV, TCX, GPX). In mph the limit field takes mph and rounds it to 0.1 km/h; the default limit is 3.73 mph, and a limit above 6 km/h (3.8 mph and up) asks for the same confirmation as before. The experiment console and the Bluetooth log stay in km/h on purpose, so they can be compared with the protocol.
@@ -123,18 +123,18 @@ The source is split into layers, each in its own folder; a layer only uses the o
 | Folder | Contents |
 | --- | --- |
 | `src/i18n/` | Language selection, texts per language (`locales/`), units (km/h or mph) |
-| `src/core/` | Pure logic without browser: FTMS protocol, safety rules, workouts and programs, routes and route packages, runs and statistics |
+| `src/core/` | Pure logic without browser: the stored safety settings, workouts and programs, routes and route packages, runs and statistics |
 | `src/platform/` | Pure helpers around the app's shell: build settings, version, security policy, file types, desktop file opening |
-| `src/device/` | The treadmill: Bluetooth adapter and the simulator |
 | `src/data/` | Storage in the browser (IndexedDB) |
 | `src/ui/` | Everything that draws or listens: views per feature, components, theme, desktop integration; vanilla TS |
 | `src/main.ts` | Wires it all together |
 | `electron/` | Main process and preload of the desktop app (uses only pure code of `src/`) |
+| `packages/ftms-treadmill/` | The treadmill library, published to npm as [`ftms-treadmill`](packages/ftms-treadmill/README.md): FTMS protocol, Bluetooth, speed limit, ramp, start and stop ([docs/LIBRARY.md](docs/LIBRARY.md)) |
 | `tests/` | Tests about the project itself (structure rules); unit tests sit next to their code |
 | `public/legal/<lang>/` | Legal notice and privacy pages per language |
 | `site/` | The product page for GitHub Pages (English and German, plain HTML and CSS, screenshots in `site/img/`); `npm run build:pages` puts it at the root and the web app under `app/` |
 
-A second BLE path (e.g. native) only implements `BleAdapter`/`BleDevice` from `src/device/ble.ts`.
+A second BLE path (e.g. native) only implements `BleAdapter`/`BleDevice` of `ftms-treadmill` (`packages/ftms-treadmill/src/device/ble.ts`).
 
 ### Translations
 

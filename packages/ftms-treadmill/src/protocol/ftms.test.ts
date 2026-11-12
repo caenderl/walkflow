@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildTreadmillData, cmdPause, cmdRequestControl, describeMachineStatus, parseMachineStatus, parseTrainingStatus, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, dataView,
-  decodeSetSpeed, describeControlPointResponse, hex, parseControlPointResponse, parseFeatures,
+  buildTreadmillData, cmdPause, cmdRequestControl, parseMachineStatus, parseTrainingStatus, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, dataView,
+  decodeSetSpeed, hex, parseControlPointResponse, parseFeatures,
   parseHeartRate, parseInclinationRange, parseSpeedRange, parseTreadmillData, toBytes,
-} from './ftms';
-import { setLanguage } from '../../i18n/i18n';
+} from './ftms.ts';
 
 const le16 = (v: number) => [v & 0xff, (v >> 8) & 0xff];
 
@@ -130,18 +129,6 @@ describe('Control Point responses', () => {
   it('80 <op> <result>', () => {
     const r = parseControlPointResponse(dataView([0x80, 0x02, 0x01]));
     expect(r).toEqual({ requestOp: 2, result: 1 });
-    expect(describeControlPointResponse(r!)).toBe('Set Speed: OK');
-  });
-
-  it('unknown opcode and result', () => {
-    expect(describeControlPointResponse({ requestOp: 0x11, result: 9 })).toBe('0x11: 9');
-    expect(describeControlPointResponse({ requestOp: 0x03, result: 2 })).toBe('Set Inclination: not supported');
-  });
-
-  it('result in the current language, op name stays the FTMS term', () => {
-    setLanguage('de');
-    expect(describeControlPointResponse({ requestOp: 0x02, result: 5 })).toBe('Set Speed: keine Berechtigung');
-    setLanguage('en');
   });
 
   it('no response packet → null', () => {
@@ -170,14 +157,6 @@ describe('Machine Status (0x2ADA)', () => {
     expect(parseMachineStatus(dataView([0x05, 0x2c]))).toEqual({ kind: 'other', op: 0x05 });
     expect(parseMachineStatus(dataView([0x02]))).toEqual({ kind: 'stopped' }); // without a parameter: stopped, to be safe
     expect(parseMachineStatus(dataView([]))).toBeNull();
-  });
-
-  it('readable description', () => {
-    expect(describeMachineStatus({ kind: 'safety-key' })).toBe('Belt stopped by the safety key');
-    expect(describeMachineStatus({ kind: 'target-speed', kmh: 3.5 })).toBe('Target speed on the treadmill: 3.5 km/h');
-    setLanguage('de');
-    expect(describeMachineStatus({ kind: 'target-speed', kmh: 3.5 })).toBe('Ziel-Speed am Band: 3,5 km/h');
-    setLanguage('en');
   });
 });
 

@@ -1,8 +1,6 @@
 // FTMS protocol (Fitness Machine Service, 0x1826) as pure functions.
 // No DOM and no BLE dependency, so everything can be tested without hardware.
 
-import { t } from '../../i18n/i18n';
-
 export const FTMS_SERVICE = 0x1826;
 export const HR_SERVICE = 0x180d;
 export const DEVINFO_SERVICE = 0x180a;
@@ -40,20 +38,6 @@ export const OP_NAMES: Record<number, string> = {
   0x07: 'Start/Resume',
   0x08: 'Stop/Pause',
 };
-
-/** Result codes of Control Point responses → key in the locale files */
-const RESULT_KEYS: Record<number, keyof typeof t.ftmsResult> = {
-  1: 'ok',
-  2: 'notSupported',
-  3: 'invalidParameter',
-  4: 'failed',
-  5: 'notPermitted',
-};
-
-export function resultText(code: number): string | undefined {
-  const k = RESULT_KEYS[code];
-  return k ? t.ftmsResult[k] : undefined;
-}
 
 export const FEAT_MACHINE = ['Avg Speed', 'Cadence', 'Total Distance', 'Inclination', 'Elevation Gain', 'Pace', 'Step Count', 'Resistance', 'Stride Count', 'Expended Energy', 'Heart Rate', 'MET', 'Elapsed Time', 'Remaining Time', 'Power', 'Force on Belt', 'User Data'];
 export const FEAT_TARGET = ['Speed', 'Inclination', 'Resistance', 'Power', 'Heart Rate', 'Energy', 'Steps', 'Strides', 'Distance', 'Training Time', 'Time 2 HR zones', 'Time 3 HR zones', 'Time 5 HR zones', 'Bike Sim', 'Wheel Circ.', 'Spin Down', 'Cadence'];
@@ -241,11 +225,6 @@ export function parseControlPointResponse(dv: DataView): ControlPointResponse | 
   return { requestOp: dv.getUint8(1), result: dv.getUint8(2) };
 }
 
-export function describeControlPointResponse(r: ControlPointResponse): string {
-  // Op names stay English in every language: they are the FTMS terms
-  return `${OP_NAMES[r.requestOp] ?? '0x' + r.requestOp.toString(16)}: ${resultText(r.result) ?? r.result}`;
-}
-
 // ---------- Machine Status (0x2ADA) ----------
 
 export type MachineEvent =
@@ -272,20 +251,6 @@ export function parseMachineStatus(dv: DataView): MachineEvent | null {
     case 0x06: return dv.byteLength >= 3 ? { kind: 'target-incline', pct: dv.getInt16(1, true) / 10 } : { kind: 'other', op };
     case 0xff: return { kind: 'control-lost' };
     default: return { kind: 'other', op };
-  }
-}
-
-export function describeMachineStatus(e: MachineEvent): string {
-  switch (e.kind) {
-    case 'reset': return t.machine.reset;
-    case 'stopped': return t.machine.stopped;
-    case 'paused': return t.machine.paused;
-    case 'safety-key': return t.machine.safetyKey;
-    case 'started': return t.machine.started;
-    case 'target-speed': return t.machine.targetSpeed(e.kmh);
-    case 'target-incline': return t.machine.targetIncline(e.pct);
-    case 'control-lost': return t.machine.controlLost;
-    case 'other': return `Machine Status 0x${e.op.toString(16).padStart(2, '0')}`;
   }
 }
 

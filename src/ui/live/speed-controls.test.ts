@@ -4,7 +4,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import indexHtml from '../../../index.html?raw';
-import { decideLimitChange, parseMaxStep } from '../../core/safety/safety';
+import { decideLimitChange, parseMaxStep } from '../../core/safety/limit-settings';
 import { LANGS, messagesFor } from '../../i18n/i18n';
 import { setUnits, speedFieldText, speedFromInput } from '../../i18n/units';
 

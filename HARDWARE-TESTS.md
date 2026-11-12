@@ -37,9 +37,9 @@ If the treadmill sends different status bytes or none at all, please note the he
 ## Not yet tested
 
 - [x] **Incline (asks the treadmill).** *sPad 500: works, shows levels (see results above).* After connecting, the log has `Features: …`, `Controllable: …` and, if readable, `Inclination range: …`. Note all three lines. If `Controllable` has no `Inclination`, the card “Incline”, the incline figure and the incline fields of the workout editor must not be shown, and the log says `This treadmill does not report incline control`. If it has `Inclination` and incline levels are set (Settings → Treadmill), the card appears: press a level; `← Set Inclination: OK` or `not supported`? Does the treadmill’s incline really change, and does the figure in the app follow?
-- [ ] **Incline levels.** Settings → Treadmill → Incline levels: set the slider to the number of levels of the treadmill (for the sPad 500: 5). The card then shows one numbered button per level; the levels are spread evenly from the lowest to the highest incline in `Inclination range` (both ends included), the button’s tooltip says the percent. Press each: `→ 03 …` in the log with that value (percent × 10, little endian), and the treadmill goes to that level? Which percent does each level of the treadmill really have? (That decides whether a percent per level has to become configurable.) The slider offers none, then 2 to 10 (no single level). With “none” the card and the incline figure disappear from the training view.
+- [ ] **Incline levels.** Settings → Treadmill → Incline levels: set the slider to the number of levels of the treadmill (for the sPad 500: 5). The card then shows the buttons 0 to 5 (level 0 up to the highest level); the levels are spread evenly from the lowest to the highest incline in `Inclination range` (both ends included); the card shows no percent and no texts, only the buttons. Press each: `→ 03 …` in the log with that value (percent × 10, little endian), and the treadmill goes to that level? Which percent does each level of the treadmill really have? (That decides whether a percent per level has to become configurable.) The slider offers none, then 2 to 10 (no single level). With “none” the card and the incline figure disappear from the training view.
 - [ ] **Heart rate.** Does the log say `Heart rate service subscribed`? Do values come in?
-- [x] **Speed chosen while standing.** Connect with the belt standing, choose 3.0 km/h (slider or a button), then press Start. Expected: while standing, no `→ 02 …` in the log, only `Target 3.0 km/h: approached in steps once the belt is running`; after Start `→ 00`, `→ 02 64 00`, `→ 07`; the belt starts at 1.0 km/h, and once the live speed shows it moving the app ramps up in 0.5 km/h steps (`→ 02 96 00`, `→ 02 c8 00`, …) to 3.0 km/h, at least 1.5 s apart. Stop before the ramp ends: the rest of the ramp is not sent, and the next Start begins at 1.0 km/h with no target.
+- [x] **Speed chosen while standing.** Connect with the belt standing, choose 3.0 km/h (slider or a button), then press Start. Expected: while standing, no `→ 02 …` in the log, only `Target 3.0 km/h: approached in steps once the belt is running`; after Start `→ 00`, `→ 02 64 00`, `→ 07`; the belt starts at 1.0 km/h, and once the live speed shows it moving the app ramps up in 0.5 km/h steps (`→ 02 96 00`, `→ 02 c8 00`, …) to 3.0 km/h, at least 1.5 s apart. Stop before the ramp ends: the rest of the ramp is not sent; the next Start begins at 1.0 km/h and ramps up to 3.0 km/h again (changed 2026-11-12, see the facade section).
 - [x] **Countdown.** *sPad 500: about 3 s.* How long does the treadmill count down after start? The program waits 4.5 s before setting the first speed.
 - [ ] **Program transitions.** Program `0.5 2` / `0.5 3` / `0.5 2`. Changes at the right time? Cancel a program with the stop button on the device: does it end (status under the speed or `Belt stopped, program ended`)?
 - [ ] **Reconnecting.** Disconnect, connect again: `← Request Control: OK` and live values again?
@@ -137,9 +137,50 @@ The settings dialog and the training view only change what is shown, plus one se
 - [ ] **macOS update.** The macOS app is not signed, so the banner only opens the release page. Check that it does, and that it does not offer “Download and install”. (Once builds are signed and notarized, this item becomes the same test as above.)
 - [ ] **Community in the desktop app** (not in the first release: only in a build with `WALKFLOW_COMMUNITY=on`). Switch **Community** on in the desktop app and in a browser (or a second computer): do they find each other (the status says “Connected to 1 device”)? Take a workout from one to the other: the question appears, it is saved, and the other side then lists it as offered by one more device. Check that the macOS firewall question (incoming connections) does not block it, and that switching Community off ends the connection (the other side forgets the device).
 
+## Treadmill facade (branch `feat/ftms-treadmill-lib`, confirmed on a treadmill)
+
+Everything that drives the belt now sits behind one object (`packages/ftms-treadmill/src/device/treadmill.ts`, docs/LIBRARY.md); the training view
+only asks it and draws. The commands and their order are meant to be exactly as before, and the log is meant to read
+exactly as before. Checked in the demo, then on a sPad 500 (2026-11-12): the whole list passed, after the fixes noted below. The list was run once, with the log open
+(Settings → General → Developer mode shows the experiment console and its log).
+
+- [x] **Connecting.** Same log as before: `Device: …`, `Manufacturer: …`, `Features: …`, `Controllable: …`, `Speed range: …`,
+  `Inclination range: …`, `→ 00`, `← Request Control: OK`, then live values.
+- [x] **Start.** `→ 00`, `→ 02 64 00`, `→ 07`, each answered with OK; the green banner while the treadmill counts down;
+  Start stays locked until the belt moves or 4.5 s are over.
+- [x] **Ramp.** At 2 km/h press a preset of 3.5: `→ 02 fa 00`, `→ 02 2c 01`, `→ 02 5e 01`, at least 1.5 s apart.
+- [x] **Stop (button, Space, Esc).** `→ 08 01` at once, the red banner (`Belt stopping …`, stronger as the belt slows,
+  then `Belt stopped`), Start free again. Same with **Pause** (`→ 08 02`).
+- [x] **Stop during a ramp.** Space while the ramp runs: `→ 08 01` right after the write in progress, the rest of the ramp
+  is not sent.
+- [x] **Stop during the start.** Press Start, confirm, press Space at once: `→ 08 01` is the last command, no `→ 07` after it.
+- [x] **Device stop during a workout.** Start a workout, stop with the treadmill's button: `ℹ Status 02 01`, the workout
+  ends (`Program ended: …`), no further speed command.
+- [x] **Speed chosen while standing.** Choose 3.0 km/h while the belt stands, then Start: no `→ 02 …` before Start, then
+  the ramp from 1.0 km/h.
+- [x] **Start after Stop or Pause (fixed 2026-11-12).** *First test: after Stop at 3.5 km/h the next Start stayed at 1.0 km/h
+  although the target still showed 3.5; after Pause the treadmill went back to 3.5 by itself.* Now: run at 3.5, Stop, Start:
+  `→ 00`, `→ 02 64 00`, `→ 07`, and once the belt moves the ramp `→ 02 96 00`, `→ 02 c8 00`, … up to 3.5. The same after
+  Pause; note whether the belt first goes back to 3.5 by itself and then down to 1.5, or follows the ramp from the start.
+- [x] **Limit.** Settings → Safety: lower the limit to 4 while connected (belt standing); the slider and the presets follow.
+  Raise it to 7: the question appears; after Yes the slider goes up to 7. Reload the page: the limit is still 7
+  (stored as confirmed), and no `not taken without a confirmation` line in the log.
+- [x] **Incline.** Press a level: `→ 03 …` as before, the treadmill follows. *First test: `→ 03 …` goes out at once while
+  the belt stands, but the treadmill ignores it until the belt runs.*
+- [x] **Incline only while running (changed 2026-11-12).** Belt standing: the level buttons are greyed out (the card shows
+  only its title and the buttons). After Start, once the belt moves, they can be pressed; after Stop
+  they are greyed out again.
+- [x] **Incline changed on the treadmill.** While walking, change the incline with the treadmill's own buttons: the incline
+  figure and the highlighted level in the card follow within a few seconds. Then press a level in the app: the card keeps
+  showing it while the treadmill's motor passes the levels in between, and does not jump back.
+- [x] **Incline levels from 0.** With 5 levels the card shows the buttons 0 to 5; for the sPad 500 (range 0–5) they send
+  `03 00 00`, `03 0a 00`, … `03 32 00`, and the treadmill shows the same level.
+- [x] **Connection loss while running.** The red warning appears as before, the workout ends.
+- [x] **Experiment console.** `02 bc 02` (7 km/h) is blocked with `above the limit`; `07` asks first; `08 01` stops at once.
+
 ## Stop and Start, hardened (partly confirmed on a treadmill)
 
-Covered by tests without hardware (`belt.test.ts`, `ble.test.ts`, `live-data.test.ts`, `safety.test.ts`); what only a treadmill can show:
+Covered by tests without hardware (`belt-commands.test.ts`, `reports.test.ts`, `treadmill.test.ts`, `ble.test.ts`, `safety.test.ts`); what only a treadmill can show:
 
 - [x] **Stop on a running belt (route run, sPad 500, 2026-11-10).** `→ 08 01` was answered with `← Stop/Pause: OK` at the first try, so no repeat was needed. `ℹ Status 02 01` came about 8 s later (a bit more than the 4–7 s seen before). No console error; the only warning was `Image "wood-pattern" could not be loaded` from the map library (harmless). The repeat and the refusal paths below are still not seen on a treadmill.
 - [ ] **Stop during the start.** Press Start, confirm, and press Space at once (while `→ 00` / `→ 02 64 00` are still going out). Expected: `→ 08 01` is the last command in the log, no `→ 07` after it, and the belt does not start. Before this change `→ 07` could follow the stop.

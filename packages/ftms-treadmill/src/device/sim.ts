@@ -3,8 +3,8 @@
 // The behaviour is plausible, not measured. In particular, the simulated belt keeps running when the
 // connection drops (the dangerous assumption from the project brief).
 
-import type { BleAdapter, BleAvailability, BleDevice, Uuid } from './ble';
-import { buildTreadmillData, CH, DEVINFO_CH, DEVINFO_SERVICE, FTMS_SERVICE, HR_SERVICE, OP } from '../core/protocol/ftms';
+import type { BleAdapter, BleAvailability, BleDevice, Uuid } from './ble.ts';
+import { buildTreadmillData, CH, DEVINFO_CH, DEVINFO_SERVICE, FTMS_SERVICE, HR_SERVICE, OP } from '../protocol/ftms.ts';
 
 export interface SimOptions {
   name: string;

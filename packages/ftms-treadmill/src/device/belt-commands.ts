@@ -1,13 +1,13 @@
-// The commands that start, pause and stop the belt, and what has to happen around each of them: the program ends, the
-// governor forgets its ramp, the standstill detection is switched off, the banner and the session state follow.
+// The commands that start, pause and stop the belt, and what has to happen around each of them: a running program is told
+// to end, the governor forgets its ramp, the standstill detection is switched off, the belt phase and state follow.
 // No DOM here on purpose, so the order of these steps can be tested. Stop and Pause go out urgently, ahead of anything queued,
 // they end a start that is still being sent, and they are sent again if the treadmill did not take them.
 
-import { cmdPause, cmdRequestControl, cmdStart, cmdStop } from '../../core/protocol/ftms';
-import type { BeltBanner } from '../../core/safety/belt-banner';
-import type { SpeedGovernor, StandstillDetector } from '../../core/safety/safety';
-import { t, type Text } from '../../i18n/i18n';
-import type { Session } from './session';
+import { cmdPause, cmdRequestControl, cmdStart, cmdStop } from '../protocol/ftms.ts';
+import type { Notice } from '../protocol/notice.ts';
+import type { BeltPhaseTracker } from '../safety/belt-phase.ts';
+import type { SpeedGovernor, StandstillDetector } from '../safety/safety.ts';
+import type { BeltState } from './belt-state.ts';
 
 /** How often a Stop or Pause is sent before the app says that it could not stop the belt */
 export const STOP_ATTEMPTS = 3;
@@ -15,14 +15,16 @@ export const STOP_ATTEMPTS = 3;
 export const STOP_RETRY_MS = 300;
 
 export interface BeltHost {
-  session: Session;
-  banner: BeltBanner;
+  session: BeltState;
+  phase: Pick<BeltPhaseTracker, 'startRequested' | 'stopRequested'>;
   governor: SpeedGovernor;
   standstill: StandstillDetector;
   now(): number;
-  /** A running workout or route ends, with the reason shown as its end */
-  abortRun(reason: Text): void;
-  log(msg: string): void;
+  /** The last speed asked for, also before a stop or pause: Start ramps up to it again (null: none yet) */
+  wanted(): number | null;
+  /** The belt is stopped or paused on purpose: a running workout or route ends */
+  ended(reason: 'stop' | 'pause'): void;
+  notice(n: Notice): void;
   /** Resolves after this many milliseconds (between two attempts to stop) */
   wait(ms: number): Promise<void>;
   /**
@@ -33,15 +35,15 @@ export interface BeltHost {
 }
 
 export function setupBelt(host: BeltHost) {
-  const { session, banner, governor, standstill } = host;
+  const { session, phase, governor, standstill } = host;
   /** Counts every start, stop and pause: whoever finds a higher number after waiting has been overtaken and gives up */
   let epoch = 0;
 
   /** The belt stops (or pauses) on purpose: nothing may keep it going, and standing still is expected from now on */
-  function leaveRunning(reason: Text) {
+  function leaveRunning(reason: 'stop' | 'pause') {
     epoch++;
-    banner.stopRequested(host.now());
-    host.abortRun(reason);
+    phase.stopRequested(host.now());
+    host.ended(reason);
     governor.reset();
     standstill.disarm();
   }
@@ -70,13 +72,13 @@ export function setupBelt(host: BeltHost) {
     return false;
   }
 
-  function stop(reason: Text = () => t.stop.stopped): Promise<boolean> {
-    leaveRunning(reason);
+  function stop(): Promise<boolean> {
+    leaveRunning('stop');
     return sendStop(cmdStop());
   }
 
-  function pause(reason: Text = () => t.stop.paused): Promise<boolean> {
-    leaveRunning(reason);
+  function pause(): Promise<boolean> {
+    leaveRunning('pause');
     return sendStop(cmdPause());
   }
 
@@ -85,8 +87,9 @@ export function setupBelt(host: BeltHost) {
     const c = session.client;
     if (!c) return false;
     const mine = ++epoch;
-    // A speed chosen while the belt stood is asked for again once Start went out; the governor holds it until the belt moves
-    const chosen = governor.target;
+    // The speed asked for last (before the stop, or chosen while the belt stood) is asked for again once Start went out; the
+    // governor holds it until the belt moves and then ramps up from the start speed
+    const chosen = governor.target ?? host.wanted();
     governor.reset();
     standstill.disarm();
     const a = await c.send(cmdRequestControl());
@@ -95,13 +98,13 @@ export function setupBelt(host: BeltHost) {
     // A treadmill runs up to the speed it last had after Start, so the ramp would be skipped: take that speed away first
     const speedSet = await governor.startSpeed();
     if (epoch !== mine) return false;
-    if (!speedSet) host.log(t.start.startSpeedFailed);
+    if (!speedSet) host.notice({ code: 'start-speed-failed' });
     const b = await c.send(cmdStart());
     // A stop that came in while Start was on its way was sent after it, and the belt is its business now
     if (epoch !== mine) return false;
     if (b) {
       session.beltStarted = true;
-      banner.startRequested(host.now());
+      phase.startRequested(host.now());
       if (chosen !== null && chosen !== undefined) governor.request(chosen);
     }
     return a && b;

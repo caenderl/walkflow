@@ -1,9 +1,11 @@
 // The incline in the training view: the card with the slider or the level buttons, the figure for the settings ("incline
 // levels") and what the treadmill said about the incline. It asks the treadmill (features and range) and shows only what it
-// supports; the value that is sent is always inside the range the treadmill reported.
+// supports; the value that is sent is always inside the range the treadmill reported. It can only be set while the belt
+// moves (a treadmill ignores Set Inclination while it stands, a sPad 500 does), and it follows the incline the treadmill
+// reports, so that a change on the treadmill's own buttons shows here too.
 
-import { cmdSetInclination, type Features, type Range } from '../../core/protocol/ftms';
-import { clampIncline, inclineSupport, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount, type InclineSupport } from '../../core/safety/incline';
+import { clampIncline, inclineSupport, type Features, type InclineSupport, type Range } from 'ftms-treadmill';
+import { followReportedIncline, type InclineChoice, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount } from '../../core/safety/incline-levels';
 import { t } from '../../i18n/i18n';
 import { $, $input, log } from '../ui';
 import { store } from '../store';
@@ -13,10 +15,11 @@ const INCLINE_LEVELS_KEY = 'walkflow.inclineLevelCount';
 const INCLINE_SEEN_KEY = 'walkflow.inclineSupport';
 
 export interface InclineCardHost {
-  /** Sends a command to the treadmill; false if there is no connection or it failed */
-  send(bytes: Uint8Array): Promise<boolean>;
+  /** Sets the incline on the treadmill (it clamps to its range again); false if not settable, not connected or failed */
+  setIncline(pct: number): Promise<boolean>;
   /** The page shows a connection (the buttons can be pressed) */
   uiConnected(): boolean;
+  now(): number;
   /** The incline levels setting changed: the figures redraw (the incline figure follows it) */
   levelsChanged(): void;
 }
@@ -25,6 +28,10 @@ export function setupInclineCard(host: InclineCardHost) {
   let range: Range | null = null;
   let shown = 0;
   let support: InclineSupport = { settable: false, reported: false };
+  /** The belt moves: only then does the treadmill take an incline */
+  let moving = false;
+  /** Chosen here and not yet reported back by the treadmill */
+  let choice: InclineChoice | null = null;
   /** How many levels the person says the treadmill's incline has; 0 = none: the incline is not shown in the training view */
   let levelCount = parseLevelCount(store.get(INCLINE_LEVELS_KEY));
 
@@ -36,20 +43,23 @@ export function setupInclineCard(host: InclineCardHost) {
 
   function render() {
     $('inclCard').hidden = !support.settable || levelCount === 0;
-    $('inclTarget').textContent = t.incline.value(shown);
+    const usable = host.uiConnected() && moving;
+    $input('inclSlider').disabled = !usable;
     const levels = levelsFromCount(levelCount, range ?? undefined);
     const box = $('inclLevels');
     box.hidden = levels.length === 0;
+    // With levels the card shows only the level buttons: the percent of a level is not known (a sPad 500 shows levels)
     $input('inclSlider').hidden = levels.length > 0;
+    $('inclTarget').hidden = $('inclInfo').hidden = levels.length > 0;
+    $('inclTarget').textContent = t.incline.value(shown);
     box.replaceChildren(...levels.map((l, i) => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'needs-conn';
-      b.disabled = !host.uiConnected();
+      b.disabled = !usable;
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(Math.abs(l - shown) < 0.05));
-      b.textContent = String(i + 1);
-      b.title = b.ariaLabel = t.incline.levelButton(i + 1, l);
+      b.textContent = String(i);
+      b.title = b.ariaLabel = t.incline.levelButton(i);
       b.onclick = () => void set(l);
       return b;
     }));
@@ -58,11 +68,12 @@ export function setupInclineCard(host: InclineCardHost) {
 
   function set(requested: number): Promise<boolean> {
     const pct = clampIncline(requested, range ?? undefined);
-    if (!support.settable || Number.isNaN(pct)) return Promise.resolve(false);
+    if (!support.settable || !moving || Number.isNaN(pct)) return Promise.resolve(false);
     $input('inclSlider').value = String(pct);
     shown = pct;
+    choice = { pct, at: host.now() };
     render();
-    return host.send(cmdSetInclination(pct));
+    return host.setIncline(pct);
   }
 
   /** What the last real treadmill said about the incline: remembered so that the editor can hide it while disconnected. */
@@ -94,6 +105,8 @@ export function setupInclineCard(host: InclineCardHost) {
       sl.min = '0'; sl.max = '15'; sl.step = '1'; sl.value = '0';
       range = null;
       shown = 0;
+      moving = false;
+      choice = null;
       support = { settable: false, reported: false };
       render();
     },
@@ -112,6 +125,22 @@ export function setupInclineCard(host: InclineCardHost) {
         range = info.inclRange;
         shown = parseFloat(sl.value);
       }
+      render();
+    },
+    /** Whether the belt moves; the incline can only be set then */
+    beltMoving(m: boolean) {
+      if (m === moving) return;
+      moving = m;
+      render();
+    },
+    /** The incline the treadmill reports: the card follows it (a choice made here first gets a few seconds to arrive) */
+    reported(pct: number) {
+      if (!Number.isFinite(pct)) return;
+      const next = followReportedIncline(pct, choice, host.now());
+      choice = next.choice;
+      if (Math.abs(next.shown - shown) < 0.05) return;
+      shown = next.shown;
+      if (document.activeElement !== $input('inclSlider')) $input('inclSlider').value = String(shown);
       render();
     },
     /** The treadmill reports the incline in its data (the figure is shown) */

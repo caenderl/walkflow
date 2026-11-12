@@ -1,26 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  beltMaybeRunning, checkConsoleCommand, controlAvailability, clampSpeed, decideLimitChange, DEFAULT_MAX_STEP, DEFAULT_SPEED_LIMIT,
-  DISCLAIMER_VERSION, effectiveMax, isDisclaimerAccepted, loadLimit, parseHexBytes, parseLimit, parseMaxStep,
-  planRamp, RAMP_INTERVAL_MS, serializeLimit, SpeedGovernor, StandstillDetector, type ConsoleContext,
-} from './safety';
-import { setLanguage } from '../../i18n/i18n';
+  beltMaybeRunning, checkConsoleCommand, controlAvailability, clampSpeed, DEFAULT_MAX_STEP, DEFAULT_SPEED_LIMIT,
+  parseHexBytes, planRamp, RAMP_INTERVAL_MS, SpeedGovernor, StandstillDetector, type ConsoleContext,
+} from './safety.ts';
+import type { Notice } from '../protocol/notice.ts';
 
-describe('speed limit (existing behaviour)', () => {
-  it('default limit is 6 km/h', () => {
+describe('defaults', () => {
+  it('default limit is 6 km/h, step 0.5 km/h', () => {
     expect(DEFAULT_SPEED_LIMIT).toBe(6);
-  });
-
-  it('effective maximum is the smaller of device max and personal limit', () => {
-    expect(effectiveMax(12, 6)).toBe(6);
-    expect(effectiveMax(5, 6)).toBe(5);
-  });
-
-  it('parseLimit falls back to 6 on invalid input', () => {
-    expect(parseLimit('4.5')).toBe(4.5);
-    expect(parseLimit('')).toBe(6);
-    expect(parseLimit('abc')).toBe(6);
-    expect(parseLimit('0')).toBe(6);
+    expect(DEFAULT_MAX_STEP).toBe(0.5);
   });
 });
 
@@ -48,72 +36,6 @@ describe('clampSpeed', () => {
   it('NaN and infinity → null', () => {
     expect(clampSpeed(Number.NaN, range)).toBeNull();
     expect(clampSpeed(Number.POSITIVE_INFINITY, range)).toBeNull();
-  });
-});
-
-describe('changing the limit', () => {
-  it('values up to 6 km/h without confirmation', () => {
-    expect(decideLimitChange('5.5', 6)).toEqual({ ok: true, value: 5.5, needsConfirmation: false });
-    expect(decideLimitChange('6', 4)).toEqual({ ok: true, value: 6, needsConfirmation: false });
-  });
-
-  it('values above 6 km/h need a confirmation if they raise the limit', () => {
-    expect(decideLimitChange('6.5', 6)).toEqual({ ok: true, value: 6.5, needsConfirmation: true });
-    expect(decideLimitChange('8', 7)).toEqual({ ok: true, value: 8, needsConfirmation: true });
-  });
-
-  it('lowering never needs a confirmation', () => {
-    expect(decideLimitChange('7', 8)).toEqual({ ok: true, value: 7, needsConfirmation: false });
-  });
-
-  it('invalid or nonsensical values are rejected', () => {
-    expect(decideLimitChange('', 6).ok).toBe(false);
-    expect(decideLimitChange('abc', 6).ok).toBe(false);
-    expect(decideLimitChange('0.5', 6).ok).toBe(false);
-    expect(decideLimitChange('25', 6).ok).toBe(false);
-  });
-
-  it('rounds to 0.1 km/h', () => {
-    expect(decideLimitChange('4.56', 6)).toMatchObject({ value: 4.6 });
-  });
-});
-
-describe('stored limit', () => {
-  it('no stored value: 6 km/h', () => {
-    expect(loadLimit(null, null)).toEqual({ value: 6 });
-  });
-
-  it('confirmed values above 6 are kept', () => {
-    expect(loadLimit(serializeLimit(8, true), null)).toEqual({ value: 8 });
-  });
-
-  it('unconfirmed values above 6 are not adopted', () => {
-    expect(loadLimit(serializeLimit(8, false), null).value).toBe(6);
-    expect(loadLimit('{"value":9}', null).value).toBe(6);
-  });
-
-  it('the prototype value "cap" is adopted up to 6 km/h, not above', () => {
-    expect(loadLimit(null, '5')).toEqual({ value: 5 });
-    const r = loadLimit(null, '9');
-    expect(r.value).toBe(6);
-    expect(r.note).toMatch(/not adopted/);
-  });
-
-  it('broken or nonsensical values → 6 km/h', () => {
-    expect(loadLimit('{broken', null).value).toBe(6);
-    expect(loadLimit(serializeLimit(50, true), null).value).toBe(6);
-    expect(loadLimit(null, 'abc').value).toBe(6);
-  });
-});
-
-describe('maximum change per command', () => {
-  it('default 0.5 km/h, allowed 0.1 to 1.0', () => {
-    expect(DEFAULT_MAX_STEP).toBe(0.5);
-    expect(parseMaxStep('0.3')).toBe(0.3);
-    expect(parseMaxStep('0,2')).toBe(0.2);
-    expect(parseMaxStep('0.05')).toBeNull();
-    expect(parseMaxStep('1.5')).toBeNull();
-    expect(parseMaxStep('x')).toBeNull();
   });
 });
 
@@ -187,11 +109,11 @@ describe('SpeedGovernor', () => {
 
   function make(opts: { fail?: (kmh: number) => boolean } = {}) {
     const sent: [number, number][] = [];
-    const logs: string[] = [];
+    const logs: Notice[] = [];
     const gov = new SpeedGovernor({
       send: async kmh => { sent.push([Date.now(), kmh]); return !opts.fail?.(kmh); },
       now: () => Date.now(),
-      log: m => logs.push(m),
+      notice: n => logs.push(n),
     });
     gov.setRange({ min: 1, max: 6 });
     return { gov, sent, logs };
@@ -254,7 +176,7 @@ describe('SpeedGovernor', () => {
     expect(gov.request(3)).toBeNull();
     await vi.advanceTimersByTimeAsync(5000);
     expect(sent).toEqual([]);
-    expect(logs.join()).toMatch(/No allowed speed/);
+    expect(logs).toEqual([{ code: 'no-allowed-speed', min: 2, max: 1 }]);
   });
 
   it('cancel stops the ramp immediately', async () => {
@@ -276,7 +198,7 @@ describe('SpeedGovernor', () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(sent).toEqual([[0, 2.5], [1500, 3]]);
     expect(gov.target).toBeNull();
-    expect(logs.join()).toMatch(/Stepwise speed change aborted/);
+    expect(logs).toEqual([{ code: 'ramp-aborted' }]);
   });
 
   it('a command that was not written is not what the next ramp starts from', async () => {
@@ -593,14 +515,10 @@ describe('experiment console', () => {
     expect(checkConsoleCommand([0x00], ctx)).toEqual({ action: 'send' });
   });
 
-  it('the language changes only the reason text, not the decision', () => {
-    const cmd = [0x02, ...le16(601)];
-    const en = checkConsoleCommand(cmd, { ...ctx, baseKmh: 5.8 });
-    setLanguage('fr');
-    const fr = checkConsoleCommand(cmd, { ...ctx, baseKmh: 5.8 });
-    setLanguage('en');
-    expect(en).toEqual({ action: 'block', reason: '6.01 km/h is above the limit (6), blocked' });
-    expect(fr).toEqual({ action: 'block', reason: '6,01 km/h dépasse la limite (6), bloqué' });
+  it('names the reason of a block as a code with its values', () => {
+    expect(checkConsoleCommand([0x02, ...le16(601)], { ...ctx, baseKmh: 5.8 })).toEqual({ action: 'block', reason: { code: 'console-over-limit', kmh: 6.01, max: 6 } });
+    expect(checkConsoleCommand([0x02, 0x2c], ctx)).toEqual({ action: 'block', reason: { code: 'console-set-speed-length' } });
+    expect(checkConsoleCommand([0x06, 120], ctx)).toEqual({ action: 'block', reason: { code: 'console-heart-rate' } });
   });
 });
 
@@ -652,16 +570,6 @@ describe('StandstillDetector', () => {
     expect(d.feed(0, 60_000)).toBe(false);
   });
 });
-
-describe('first-run notice', () => {
-  it('only counts for the current version', () => {
-    expect(isDisclaimerAccepted(String(DISCLAIMER_VERSION))).toBe(true);
-    expect(isDisclaimerAccepted(String(DISCLAIMER_VERSION - 1))).toBe(false);
-    expect(isDisclaimerAccepted(null)).toBe(false);
-    expect(isDisclaimerAccepted('yes')).toBe(false);
-  });
-});
-
 
 describe('controlAvailability: which of Start, Pause and Stop can be pressed', () => {
   const idle = { connected: true, measuredKmh: 0, measuredAgeMs: 500, startedByApp: false, startingNow: false, programActive: false };

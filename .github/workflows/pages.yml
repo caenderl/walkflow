@@ -24,6 +24,8 @@ concurrency:
 
 jobs:
   build:
+    # A release of the treadmill library (npm-publish.yml) does not change the site
+    if: github.event_name != 'release' || startsWith(github.event.release.tag_name, 'v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -46,7 +48,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+          # The app's releases only (tags v…); the treadmill library has releases of its own (ftms-treadmill-v…)
+          tag=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq '[.[] | select(.draft | not) | select(.prerelease | not) | select(.tag_name | startswith("v"))][0].tag_name')
           echo "Latest release: $tag"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 

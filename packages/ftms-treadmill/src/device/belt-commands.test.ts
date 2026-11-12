@@ -1,15 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { TreadmillClient } from '../../device/ble';
-import type { BeltBanner } from '../../core/safety/belt-banner';
-import type { SpeedGovernor, StandstillDetector } from '../../core/safety/safety';
-import { hex } from '../../core/protocol/ftms';
-import { setupBelt, STOP_ATTEMPTS } from './belt';
-import { Session } from './session';
+import type { TreadmillClient } from './ble.ts';
+import type { SpeedGovernor, StandstillDetector } from '../safety/safety.ts';
+import { hex } from '../protocol/ftms.ts';
+import { setupBelt, STOP_ATTEMPTS, type BeltHost } from './belt-commands.ts';
+import { BeltState } from './belt-state.ts';
 
 /** Everything the belt touches, in the order it happens */
-function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean | Promise<boolean>); client?: boolean; startSpeedOk?: boolean; target?: number } = {}) {
+function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean | Promise<boolean>); client?: boolean; startSpeedOk?: boolean; target?: number; wanted?: number } = {}) {
   const calls: string[] = [];
-  const session = new Session();
+  const session = new BeltState();
   if (opts.client !== false) {
     session.client = {
       connected: true,
@@ -23,7 +22,7 @@ function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean | Promise<boo
   const banner = {
     stopRequested: vi.fn(() => calls.push('banner stop')),
     startRequested: vi.fn(() => calls.push('banner start')),
-  } as unknown as BeltBanner;
+  } satisfies BeltHost['phase'];
   const governor = {
     target: opts.target ?? null,
     request: vi.fn((kmh: number) => { calls.push(`governor request ${kmh}`); return kmh; }),
@@ -31,11 +30,11 @@ function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean | Promise<boo
     startSpeed: vi.fn(async () => { calls.push('governor startSpeed'); return opts.startSpeedOk ?? true; }),
   } as unknown as SpeedGovernor;
   const standstill = { disarm: vi.fn(() => calls.push('standstill disarm')) } as unknown as StandstillDetector;
-  const abortRun = vi.fn(() => calls.push('abort run'));
-  const log = vi.fn((m: string) => calls.push(`log ${m}`));
+  const abortRun = vi.fn((_reason: 'stop' | 'pause') => calls.push('abort run'));
+  const log = vi.fn(() => calls.push('notice'));
   const wait = vi.fn(async (_ms: number) => {});
   const stopFailed = vi.fn((_failed: boolean) => {});
-  const belt = setupBelt({ session, banner, governor, standstill, now: () => 1234, abortRun, log, wait, stopFailed });
+  const belt = setupBelt({ session, phase: banner, governor, standstill, now: () => 1234, wanted: () => opts.wanted ?? null, ended: abortRun, notice: log, wait, stopFailed });
   const sends = () => calls.filter(c => c.startsWith('send'));
   return { belt, session, calls, sends, banner, abortRun, governor, log, wait, stopFailed };
 }
@@ -49,11 +48,12 @@ describe('stop', () => {
     expect(r.session.beltStarted).toBe(false);
   });
 
-  it('passes the reason on to the program', async () => {
+  it('tells why the belt ends: stop or pause', async () => {
     const r = rig();
-    const reason = () => 'because';
-    await r.belt.stop(reason);
-    expect(r.abortRun).toHaveBeenCalledWith(reason);
+    await r.belt.stop();
+    expect(r.abortRun).toHaveBeenLastCalledWith('stop');
+    await r.belt.pause();
+    expect(r.abortRun).toHaveBeenLastCalledWith('pause');
   });
 
   it('does all of that even without a connection, and says it could not send', async () => {
@@ -145,6 +145,7 @@ describe('start', () => {
     const r = rig({ startSpeedOk: false });
     expect(await r.belt.start()).toBe(true);
     expect(r.calls).toContain('send 07');
+    expect(r.log).toHaveBeenCalledWith({ code: 'start-speed-failed' });
     expect(r.log).toHaveBeenCalledTimes(1);
     expect(r.session.beltStarted).toBe(true);
   });
@@ -188,6 +189,18 @@ describe('start', () => {
     const r = rig({ target: 5 });
     expect(await r.belt.start()).toBe(true);
     expect(r.calls).toEqual(['governor reset', 'standstill disarm', 'send 00', 'governor startSpeed', 'send 07', 'banner start', 'governor request 5']);
+  });
+
+  it('without a target, asks again for the speed asked for before the stop', async () => {
+    const r = rig({ wanted: 3.5 });
+    await r.belt.start();
+    expect(r.calls.at(-1)).toBe('governor request 3.5');
+  });
+
+  it('a target chosen while standing wins over the speed before the stop', async () => {
+    const r = rig({ target: 2, wanted: 3.5 });
+    await r.belt.start();
+    expect(r.calls.at(-1)).toBe('governor request 2');
   });
 
   it('asks for nothing when no speed was chosen', async () => {

@@ -6,13 +6,16 @@
   "license": "MIT",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.electron.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.electron.json && npm run typecheck -w ftms-treadmill",
     "build:pages": "npm run typecheck && node scripts/build-pages.mjs",
     "build:desktop": "node scripts/build-desktop.mjs",
     "electron": "node scripts/build-desktop.mjs && electron .",

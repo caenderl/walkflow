@@ -1,17 +1,13 @@
 // The banner over the live figures: green while the belt gets ready to start (and fading out), red while it stops (and
 // getting stronger), a grey "not connected" overlay without a connection. Display only: nothing here sends anything or
-// holds anything back, it follows what the app does and what the treadmill reports. No DOM.
+// holds anything back, it follows the belt phase of the treadmill (ftms-treadmill: state.belt) and the measured speed. No DOM.
 
-/** The treadmill counts down before it moves: the green fades out over this time (the program waits 4.5 s as well) */
-export const START_MS = 4500;
-/** A measured speed from which the belt counts as moving */
-export const MOVING_KMH = 0.3;
-/** Below this the belt counts as standing */
-export const STANDING_KMH = 0.1;
+import { MOVING_KMH, STANDING_KMH, START_MS, STOP_MAX_MS } from 'ftms-treadmill';
+
+export { START_MS } from 'ftms-treadmill';
+
 /** How long the red stays after the belt stands */
 export const STOP_HOLD_MS = 3000;
-/** A stop that is not confirmed by the speed (nothing reported) is dropped after this */
-export const STOP_MAX_MS = 20_000;
 
 export type BannerKind = 'none' | 'start' | 'stopping' | 'stopped' | 'offline';
 export interface BannerState {

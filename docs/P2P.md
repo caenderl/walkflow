@@ -236,7 +236,7 @@ Anything above ends the exchange with an error (`tooLarge`, `invalid`, `unexpect
 ## Safety
 
 - **No path to the belt.** Sharing code (`src/net/`, `src/core/share/`) may not import the FTMS commands
-  (`core/protocol/`) or the treadmill connection (`device/`). `tests/architecture.test.ts` fails if it does.
+  or the treadmill connection (the `ftms-treadmill` library). `tests/architecture.test.ts` fails if it does.
 - **Data, never code.** An item is text that goes through the same reader as a file. It cannot change speed limits or
   settings, and it starts nothing. A workout from someone else keeps your speed limit: its speeds are held to it.
 - **Nothing on its own.** You pick, then confirm. No automatic import, no "accept all from this person".

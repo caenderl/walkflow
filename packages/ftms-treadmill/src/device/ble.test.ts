@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DroppedError, SerialQueue, TreadmillClient, WRITE_TIMEOUT_MS, type BleAdapter, type BleDevice, type TreadmillEvents, type Uuid } from './ble';
-import { dataView, hex } from '../core/protocol/ftms';
+import { DroppedError, SerialQueue, TreadmillClient, WRITE_TIMEOUT_MS, type BleAdapter, type BleDevice, type TreadmillEvents, type Uuid } from './ble.ts';
+import { dataView, hex } from '../protocol/ftms.ts';
+import type { Notice } from '../protocol/notice.ts';
 
 function deferred() {
   let resolve!: () => void, reject!: (e: Error) => void;
@@ -45,15 +46,16 @@ class FakeDevice implements BleDevice {
 function setup(dev = new FakeDevice()) {
   const adapter: BleAdapter = { kind: 'fake', availability: async () => ({ ok: true }), requestDevice: vi.fn(async () => dev) };
   const logs: string[] = [];
+  const notices: Notice[] = [];
   const ev: TreadmillEvents = {
-    log: m => logs.push(m), data: vi.fn(), heartRate: vi.fn(), machineStatus: vi.fn(), trainingStatus: vi.fn(), controlResponse: vi.fn(), disconnected: vi.fn(),
+    log: m => logs.push(m), notice: n => notices.push(n), data: vi.fn(), heartRate: vi.fn(), machineStatus: vi.fn(), trainingStatus: vi.fn(), controlResponse: vi.fn(), disconnected: vi.fn(),
   };
-  return { dev, adapter, logs, ev, client: new TreadmillClient(adapter, ev) };
+  return { dev, adapter, logs, notices, ev, client: new TreadmillClient(adapter, ev) };
 }
 
 describe('TreadmillClient.connect', () => {
   it('requests the three services and keeps the prototype’s order', async () => {
-    const { dev, adapter, client, logs } = setup();
+    const { dev, adapter, client, notices } = setup();
     dev.subscribable = new Set(['1826/2ad9', '1826/2acd', '1826/2ada', '180d/2a37']);
     dev.readable.set('180a/2a29', [...new TextEncoder().encode('FITHOME')]);
     dev.readable.set('1826/2ad4', [100, 0, 0x58, 0x02, 10, 0]);
@@ -67,9 +69,9 @@ describe('TreadmillClient.connect', () => {
     ]);
     expect(info).toMatchObject({ deviceName: 'FAKE', speedRange: { min: 1, max: 6, step: 0.1 }, hasHeartRate: true });
     expect(info.inclRange).toBeUndefined();
-    expect(logs).toContain('Manufacturer: FITHOME');
-    expect(logs).toContain('(Status 0x2ad3 not subscribable)');
-    expect(logs).toContain('Inclination range not readable (fallback 0–15 %)');
+    expect(notices).toContainEqual({ code: 'device-info', field: 'manufacturer', value: 'FITHOME' });
+    expect(notices).toContainEqual({ code: 'not-subscribable', uuid: 0x2ad3 });
+    expect(notices).toContainEqual({ code: 'incline-range-unreadable' });
   });
 
   it('without Control Point, connect fails and disconnects again', async () => {
@@ -79,7 +81,7 @@ describe('TreadmillClient.connect', () => {
   });
 
   it('hands every Control Point response on, so a command the treadmill refused does not count as done', async () => {
-    const { dev, client, ev } = setup();
+    const { dev, client, ev, logs } = setup();
     dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
     await client.connect();
     dev.subs.get('1826/2ad9')!(dataView([0x80, 0x08, 0x04]));
@@ -87,16 +89,17 @@ describe('TreadmillClient.connect', () => {
     // Not a response: logged, not handed on
     dev.subs.get('1826/2ad9')!(dataView([0x01]));
     expect(ev.controlResponse).toHaveBeenCalledTimes(1);
+    expect(logs).toContain('← CP 01');
   });
 
-  it('forwards parsed notifications and logs CP responses readably', async () => {
-    const { dev, client, ev, logs } = setup();
+  it('forwards parsed notifications and Control Point responses', async () => {
+    const { dev, client, ev } = setup();
     dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
     await client.connect();
     dev.subs.get('1826/2acd')!(dataView([0, 0, 0x2c, 0x01]));
     expect(ev.data).toHaveBeenCalledWith({ speed: 3 });
     dev.subs.get('1826/2ad9')!(dataView([0x80, 0x03, 0x02]));
-    expect(logs).toContain('← Set Inclination: not supported');
+    expect(ev.controlResponse).toHaveBeenCalledWith({ requestOp: 0x03, result: 0x02 });
   });
 
   it('reports the disconnect', async () => {
@@ -131,7 +134,7 @@ describe('TreadmillClient.send', () => {
   });
 
   it('a write error is logged and does not stall the queue', async () => {
-    const { dev, client, logs } = setup();
+    const { dev, client, notices } = setup();
     dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
     await client.connect();
     dev.writeImpl = async d => { if (d[0] === 0x00) throw new Error('GATT busy'); };
@@ -139,13 +142,13 @@ describe('TreadmillClient.send', () => {
     const b = client.send(new Uint8Array([0x07]));
     await expect(a).resolves.toBe(false);
     await expect(b).resolves.toBe(true);
-    expect(logs).toContain('❌ Write error: GATT busy');
+    expect(notices).toContainEqual({ code: 'write-failed', error: { message: 'GATT busy' } });
   });
 
   it('without a connection: error instead of a write', async () => {
-    const { client, logs } = setup();
+    const { client, notices } = setup();
     await expect(client.send(new Uint8Array([0x07]))).resolves.toBe(false);
-    expect(logs).toContain('❌ Write error: not connected');
+    expect(notices).toContainEqual({ code: 'write-failed', error: 'not-connected' });
   });
 });
 
@@ -191,8 +194,8 @@ describe('priority for stop/pause', () => {
     expect(order).toEqual(['a start', 'stop', 'pause']);
   });
 
-  it('TreadmillClient: an urgent write drops waiting writes and logs it', async () => {
-    const { dev, client, logs } = setup();
+  it('TreadmillClient: an urgent write drops waiting writes and says so', async () => {
+    const { dev, client, notices } = setup();
     dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
     await client.connect();
     const gate = deferred();
@@ -202,7 +205,7 @@ describe('priority for stop/pause', () => {
     await Promise.resolve();
     const stop = client.send(new Uint8Array([0x08, 0x01]), { urgent: true });
     await expect(s2).resolves.toBe(false);
-    expect(logs).toContain('dropped: 02 5e 01 (stop/pause takes priority)');
+    expect(notices).toContainEqual({ code: 'write-dropped', bytes: '02 5e 01' });
     gate.resolve();
     await expect(s1).resolves.toBe(true);
     await expect(stop).resolves.toBe(true);
@@ -212,7 +215,7 @@ describe('priority for stop/pause', () => {
   it('a write that never answers does not hold back Stop for ever: it times out and Stop is written', async () => {
     vi.useFakeTimers();
     try {
-      const { dev, client, logs } = setup();
+      const { dev, client, notices } = setup();
       dev.subscribable = new Set(['1826/2ad9', '1826/2acd']);
       await client.connect();
       dev.writeImpl = d => (d[0] === 0x02 ? new Promise<void>(() => {}) : Promise.resolve());
@@ -225,7 +228,7 @@ describe('priority for stop/pause', () => {
       await expect(hung).resolves.toBe(false);
       await expect(stop).resolves.toBe(true);
       expect(dev.writes).toEqual(['start 02 2c 01', 'start 08 01', 'end 08 01']);
-      expect(logs.some(l => l.startsWith('❌ Write error:'))).toBe(true);
+      expect(notices).toContainEqual({ code: 'write-failed', error: 'write-timeout' });
     } finally {
       vi.useRealTimers();
     }

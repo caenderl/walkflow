@@ -4,34 +4,32 @@ import { desktop, setupDesktop } from './ui/desktop';
 import type { TcxSport } from './core/history/export';
 import { setupExportControls } from './ui/history/export-controls';
 import { setupHistory } from './ui/history/history';
-import { onLanguageChange, retranslate, t } from './i18n/i18n';
+import { onLanguageChange, retranslate, t, type Text } from './i18n/i18n';
 import { bindText, clearText, initLanguage } from './ui/i18n-dom';
 import { setupMenu, setupPrefs } from './ui/settings/menus';
 import { setupInterval } from './ui/workouts/interval-ui';
 import { ProgramRunner } from './core/training/program';
 import { setupPwa } from './ui/pwa';
 import { setupInstall } from './ui/install';
-import { StandstillDetector } from './core/safety/safety';
 import { COMMUNITY_ENABLED, STORE_BASE } from './platform/features';
 import { setupBackground } from './ui/background';
 import { setupCommunity } from './ui/community/community';
 import { disclaimerAccepted, ensureDisclaimer } from './ui/disclaimer';
-import { setupBelt } from './ui/live/belt';
 import { setupConnection } from './ui/live/connection';
 import { makeConfirmStart } from './ui/live/confirm-start';
 import { setupControls } from './ui/live/controls';
 import { setupInclineCard } from './ui/live/incline-card';
 import { setupConsole } from './ui/live/console';
-import { setupLiveData } from './ui/live/live-data';
+import { newFigures, setupLiveData } from './ui/live/live-data';
 import { setupReadout } from './ui/live/readout';
-import { Session } from './ui/live/session';
 import { loadChosen, setupStage } from './ui/live/stage';
 import { setupSpeedControls } from './ui/live/speed-controls';
 import { renderInfo } from './ui/settings/info';
 import { setupSettings } from './ui/settings/settings-ui';
 import { setupTreadmillSettings } from './ui/settings/treadmill';
 import { initTheme, onThemeChange } from './ui/theme';
-import { BeltBanner } from './core/safety/belt-banner';
+import { BeltBanner } from './ui/live/belt-banner';
+import { createTreadmill, MOVING_KMH } from 'ftms-treadmill';
 import { $, $button, log } from './ui/ui';
 import { store } from './ui/store';
 import { packageKind } from './core/share/package-kind';
@@ -49,9 +47,13 @@ setUnits(parseUnits(store.get(UNITS_STORAGE_KEY)));
 const now = () => performance.now();
 
 // ---------- State ----------
-/** The connection and what is known about the belt; shared by the modules of the training view */
-const session = new Session();
-const { samples } = session;
+/**
+ * The treadmill: the connection, what is known about the belt, and everything that drives it (limit, ramp, start and stop,
+ * standstill). The training view only asks it and draws what it says (docs/LIBRARY.md).
+ */
+const tm = createTreadmill();
+/** The latest figures and the samples since the page was opened */
+const figures = newFigures();
 /** The banner over the live figures: ready to start, stopping, not connected. Display only. */
 const banner = new BeltBanner();
 /** The stage can only be drawn once everything it reads has been set up */
@@ -67,18 +69,15 @@ const recorder = history.recorder;
 const interval = setupInterval();
 const settings = setupSettings();
 settings.onDevMode(on => desktop?.setDevMode(on));
-// The speed and its limits; it owns the governor, the only sender of speed commands
+// The speed controls and the stored limits; the treadmill caps and ramps every speed
 const speed = setupSpeedControls({
-  send: bytes => session.send(bytes),
-  connected: () => session.connected(),
-  now,
+  tm,
   limitsChanged: () => workouts.refreshLimit(),
   limitSet: () => { readout.redrawChart(); treadmill.render(); },
 });
 // Settings → treadmill: the speeds of the slow/mid/run buttons
 const treadmill = setupTreadmillSettings({ limit: speed.limit, presets: speed.presets, save: p => speed.setPresets(p) });
-const governor = speed.governor;
-const effectiveMax = () => speed.effectiveMax();
+const effectiveMax = () => tm.state.effectiveMax;
 
 /** What the training view is about; the workouts and routes views ask for it while they are set up */
 const chosen = loadChosen();
@@ -106,26 +105,24 @@ const community = COMMUNITY_ENABLED
   : { libraryChanged() { /* no Community in this build */ } };
 if (!COMMUNITY_ENABLED) document.querySelectorAll('[data-view="community"], .community-part').forEach(e => e.remove());
 
-const standstill = new StandstillDetector();
+// Start, pause and stop. A reason is what a running program shows as its end; without one it shows what the treadmill says.
+const belt = {
+  start: () => tm.start(),
+  stop: (reason?: Text) => { if (reason) runner.abort(reason); return tm.stop(); },
+  pause: (reason?: Text) => { if (reason) runner.abort(reason); return tm.pause(); },
+};
 
-// Start, pause and stop: the commands and what has to happen around them
 /** A Stop or Pause that did not get through although the treadmill is connected: the person has to stop the belt on the treadmill */
 const stopFailed = (failed: boolean) => {
   $('stopAlarm').hidden = !failed;
   if (failed) { log(t.alarm.stopTitle); $('stopAlarm').scrollIntoView({ block: 'start' }); }
 };
-const belt = setupBelt({
-  session, banner, governor, standstill, now, log, stopFailed,
-  abortRun: reason => runner.abort(reason),
-  wait: ms => new Promise(resolve => setTimeout(resolve, ms)),
-});
-
 const runner = new ProgramRunner({
   start: belt.start,
   stop: () => belt.stop(),
-  setTarget: kmh => { governor.request(kmh); standstill.arm(); },
-  currentTarget: () => governor.target,
-  distance: () => session.cur.dist,
+  setTarget: kmh => { tm.setSpeed(kmh, { source: 'program' }); },
+  currentTarget: () => tm.state.target,
+  distance: () => figures.cur.dist,
   // Only what the person has to know stays on screen; start, stop and progress are shown by the banner and the workout panel
   status: (text, attention) => { if (text && attention) bindText($('progStatus'), text); else clearText($('progStatus')); stage.render(); },
   log,
@@ -136,30 +133,35 @@ const confirmStart = makeConfirmStart(() => settings.quiet);
 
 // What the training view shows and starts: the chosen workout or route
 const stage = setupStage({
-  chosen, workouts, routes, interval, runner, recorder, governor, standstill,
-  connected: () => session.connected(), effectiveMax, confirmStart, redrawChart: () => readout.redrawChart(),
+  chosen, workouts, routes, interval, runner, recorder, tm,
+  connected: () => tm.state.connected, effectiveMax, confirmStart, redrawChart: () => readout.redrawChart(),
 });
 
 const incline = setupInclineCard({
-  send: bytes => session.send(bytes),
+  setIncline: pct => tm.setIncline(pct),
   uiConnected: () => connection.uiConnected(),
+  now,
   levelsChanged: () => readout.renderStats(),
 });
+// The incline can only be set while the belt moves, and the card follows what the treadmill reports
+tm.on('data', d => {
+  const kmh = tm.state.lastMeasured;
+  incline.beltMoving(kmh !== undefined && kmh >= MOVING_KMH);
+  if (d.incl !== undefined) incline.reported(d.incl);
+});
+tm.on('disconnected', () => incline.beltMoving(false));
 
 // The figures, the banner, the buttons and the chart (display only)
 const readout = setupReadout({
-  session, banner, now,
-  programActive: () => runner.active,
+  tm, figures, banner, now,
   inclineReported: () => incline.supportReported(),
   inclineWanted: () => incline.wanted(),
-  effectiveMax,
-  target: () => governor.target,
 });
 
 // The tab goes to the background, the page is closed: keep the screen on while connected, warn or pause, save the run
 const background = setupBackground({
-  connected: () => session.connected(),
-  maybeRunning: () => session.maybeRunning(),
+  connected: () => tm.state.connected,
+  maybeRunning: () => tm.state.maybeRunning,
   pause: reason => belt.pause(reason),
   tick: () => runner.tick(),
   flush: () => recorder.flush(),
@@ -167,18 +169,17 @@ const background = setupBackground({
 
 // What the treadmill reports while connected
 const live = setupLiveData({
-  session, banner, governor, standstill, runner, recorder, now, log, stopFailed,
+  tm, figures, banner, runner, recorder, now, log, stopFailed,
   distance: meters => routes.update(meters),
   renderStats: readout.renderStats,
   redrawChart: readout.redrawChart,
 });
 
 // The settings are locked while the belt runs (the dialog itself checks this when it opens)
-const renderSettingsLock = () => settings.setLocked(session.connected() && session.maybeRunning());
+const renderSettingsLock = () => settings.setLocked(tm.state.connected && tm.state.maybeRunning);
 
 const connection = setupConnection({
-  session, banner, governor, standstill, runner, speed, incline, background, recorder, live, now,
-  events: live.events,
+  tm, banner, runner, speed, incline, background, recorder, live, now,
   stop: reason => belt.stop(reason),
   renderStats: readout.renderStats,
   renderBanner: readout.renderBanner,
@@ -206,18 +207,11 @@ $button('hiddenAck').onclick = () => { $('hiddenBanner').hidden = true; };
 $button('simLoss').onclick = () => connection.simulator()?.simulateConnectionLoss();
 $button('simKey').onclick = () => connection.simulator()?.pullSafetyKey();
 
-setupControls({ connected: () => session.connected(), runner, stage, belt, speed, confirmStart });
+setupControls({ connected: () => tm.state.connected, runner, stage, belt, speed, confirmStart });
 
-setupExportControls(samples, readout.redrawChart);
+setupExportControls(figures.samples, readout.redrawChart);
 
-setupConsole({
-  session,
-  governor,
-  effectiveMax,
-  confirmStart,
-  abortRun: reason => runner.abort(reason),
-  disarmStandstill: () => standstill.disarm(),
-});
+setupConsole({ tm, confirmStart });
 
 onUnitsChange(u => {
   store.set(UNITS_STORAGE_KEY, u);
@@ -271,11 +265,11 @@ if (bluetoothSupportHint(env)) {
   });
 }
 connection.setUi(false);
-setupPwa(() => session.connected());
+setupPwa(() => tm.state.connected);
 // Settings → Info: install the web app as an app of its own (web build only)
 setupInstall();
 setupDesktop({
-  onGlobalStop: () => { if (session.connected()) { log(t.stop.globalShortcutLog); void belt.stop(() => t.stop.globalShortcut); } },
+  onGlobalStop: () => { if (tm.state.connected) { log(t.stop.globalShortcutLog); void belt.stop(() => t.stop.globalShortcut); } },
   // A file opened from outside goes to the view that fits what is in it; anything else gets the routes' message
   onOpenPackage: f => void (f.text !== undefined && packageKind(f.text) === 'workout' ? workouts.openPackage(f) : routes.openPackage(f)),
   log,
