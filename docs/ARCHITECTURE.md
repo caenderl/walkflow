@@ -101,3 +101,5 @@ tests/                tests about the project itself
   `ui/workouts/workout-ui.ts` (about 270 lines) the library and the editor. The week plan, the step row, the elevation
   profile, the import, the library upkeep, the route details and the route editor are their own modules. What is left in
   both files is mostly the list and its state, which is what they are for.
+- The treadmill control (protocol, Bluetooth client, safety rules and the order of start and stop) is meant to become a
+  library of its own with a defined API, so that the app only draws. The draft is in [LIBRARY.md](LIBRARY.md); nothing is built yet.
