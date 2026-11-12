@@ -140,10 +140,9 @@ export const fr: Messages = {
     range: (min: number, max: number, step: number) => `Plage : ${n(min)} – ${n(max)} % (pas ${n(step)})`,
     levelsLabel: 'Niveaux d’inclinaison',
     levelsHint: 'Le niveau le plus haut de votre tapis : 5 signifie niveau 0 à 5. Les niveaux sont répartis régulièrement de l’inclinaison la plus basse à la plus haute indiquée par le tapis.',
-    whenRunning: 'L’inclinaison ne se règle que lorsque le tapis tourne.',
     levelsAria: 'Niveaux d’inclinaison',
     levelsNone: 'aucun',
-    levelButton: (num: number, pct: number) => `Niveau ${num} : ${n(pct, 1)} %`,
+    levelButton: (num: number) => `Niveau ${num}`,
     unsupportedLog: 'Ce tapis n’indique pas de réglage de l’inclinaison : les commandes d’inclinaison sont masquées.',
   },
   program: {

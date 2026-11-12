@@ -138,10 +138,9 @@ export const de: Messages = {
     range: (min: number, max: number, step: number) => `Range: ${n(min)} – ${n(max)} % (Step ${n(step)})`,
     levelsLabel: 'Steigungsstufen',
     levelsHint: 'Die höchste Stufe deines Laufbands: 5 heißt Stufe 0 bis 5. Die Stufen verteilen sich gleichmäßig von der niedrigsten bis zur höchsten Steigung, die das Band meldet.',
-    whenRunning: 'Die Steigung lässt sich nur bei laufendem Band einstellen.',
     levelsAria: 'Steigungsstufen',
     levelsNone: 'keine',
-    levelButton: (num: number, pct: number) => `Stufe ${num}: ${n(pct, 1)} %`,
+    levelButton: (num: number) => `Stufe ${num}`,
     unsupportedLog: 'Dieses Laufband meldet keine Steigungssteuerung: Die Steigung wird nicht angezeigt.',
   },
   program: {

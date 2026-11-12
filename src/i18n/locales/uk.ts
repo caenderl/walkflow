@@ -146,10 +146,9 @@ export const uk = {
     range: (min: number, max: number, step: number) => `Діапазон: ${n(min)} – ${n(max)} % (крок ${n(step)})`,
     levelsLabel: 'Рівні нахилу',
     levelsHint: 'Найвищий рівень вашої доріжки: 5 означає рівні від 0 до 5. Рівні рівномірно розподілено від найнижчого до найвищого нахилу, про який повідомляє доріжка.',
-    whenRunning: 'Нахил можна змінити лише під час руху полотна.',
     levelsAria: 'Рівні нахилу',
     levelsNone: 'жодного',
-    levelButton: (num: number, pct: number) => `Рівень ${num}: ${n(pct, 1)} %`,
+    levelButton: (num: number) => `Рівень ${num}`,
     unsupportedLog: 'Ця доріжка не повідомляє про керування нахилом: елементи керування нахилом приховано.',
   },
   program: {

@@ -139,10 +139,9 @@ export const en = {
     range: (min: number, max: number, step: number) => `Range: ${n(min)} – ${n(max)} % (step ${n(step)})`,
     levelsLabel: 'Incline levels',
     levelsHint: 'The highest level of your treadmill: 5 means level 0 to 5. The levels are spread evenly from the lowest to the highest incline the treadmill reports.',
-    whenRunning: 'The incline can only be set while the belt is running.',
     levelsAria: 'Incline levels',
     levelsNone: 'none',
-    levelButton: (num: number, pct: number) => `Level ${num}: ${n(pct, 1)} %`,
+    levelButton: (num: number) => `Level ${num}`,
     unsupportedLog: 'This treadmill does not report incline control: the incline controls are hidden.',
   },
   program: {

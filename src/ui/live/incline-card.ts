@@ -43,13 +43,15 @@ export function setupInclineCard(host: InclineCardHost) {
 
   function render() {
     $('inclCard').hidden = !support.settable || levelCount === 0;
-    $('inclTarget').textContent = t.incline.value(shown);
     const usable = host.uiConnected() && moving;
     $input('inclSlider').disabled = !usable;
     const levels = levelsFromCount(levelCount, range ?? undefined);
     const box = $('inclLevels');
     box.hidden = levels.length === 0;
+    // With levels the card shows only the level buttons: the percent of a level is not known (a sPad 500 shows levels)
     $input('inclSlider').hidden = levels.length > 0;
+    $('inclTarget').hidden = $('inclInfo').hidden = levels.length > 0;
+    $('inclTarget').textContent = t.incline.value(shown);
     box.replaceChildren(...levels.map((l, i) => {
       const b = document.createElement('button');
       b.type = 'button';
@@ -57,12 +59,11 @@ export function setupInclineCard(host: InclineCardHost) {
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(Math.abs(l - shown) < 0.05));
       b.textContent = String(i);
-      b.title = b.ariaLabel = t.incline.levelButton(i, l);
+      b.title = b.ariaLabel = t.incline.levelButton(i);
       b.onclick = () => void set(l);
       return b;
     }));
-    const info = range ? t.incline.range(range.min, range.max, range.step) : t.incline.unknown;
-    $('inclInfo').textContent = !moving ? `${t.incline.whenRunning} ${info}` : info;
+    $('inclInfo').textContent = range ? t.incline.range(range.min, range.max, range.step) : t.incline.unknown;
   }
 
   function set(requested: number): Promise<boolean> {
