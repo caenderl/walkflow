@@ -74,3 +74,19 @@ export function clampIncline(pct: number, range: Range | undefined): number {
   if (!range || Number.isNaN(v)) return v;
   return Math.min(range.max, Math.max(range.min, v));
 }
+
+/** How long a chosen incline is shown although the treadmill still reports another (its motor takes a few seconds) */
+export const INCLINE_SETTLE_MS = 15000;
+
+/** The incline the person chose last, and when; null once the treadmill reported it (or gave up on it) */
+export interface InclineChoice { pct: number; at: number }
+
+/**
+ * Which incline the card shows when the treadmill reports one: the reported one, so that a change on the treadmill itself
+ * (its own buttons) shows in the app. Only a choice made in the app wins for a while, until the treadmill reports it
+ * (its motor passes the levels in between) or INCLINE_SETTLE_MS are over.
+ */
+export function followReportedIncline(reported: number, choice: InclineChoice | null, now: number): { shown: number; choice: InclineChoice | null } {
+  if (choice && Math.abs(reported - choice.pct) >= 0.05 && now - choice.at < INCLINE_SETTLE_MS) return { shown: choice.pct, choice };
+  return { shown: round1(reported), choice: null };
+}

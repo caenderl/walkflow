@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseFeatures, type Features, type Range } from '../protocol/ftms';
-import { clampIncline, inclineSupport, INCLINE_LEVELS_MAX, INCLINE_LEVELS_MIN, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount } from './incline';
+import { clampIncline, followReportedIncline, INCLINE_SETTLE_MS, inclineSupport, INCLINE_LEVELS_MAX, INCLINE_LEVELS_MIN, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount } from './incline';
 
 const feat = (machine: number, target: number): Features => parseFeatures(new DataView(new Uint8Array([
   machine & 0xff, (machine >> 8) & 0xff, 0, 0, target & 0xff, (target >> 8) & 0xff, 0, 0,
@@ -108,5 +108,26 @@ describe('clampIncline', () => {
 
   it('does not let a value that is not a number through', () => {
     expect(Number.isNaN(clampIncline(NaN, range(0, 10)))).toBe(true);
+  });
+});
+
+describe('followReportedIncline', () => {
+  it('shows what the treadmill reports, also a change made on the treadmill itself', () => {
+    expect(followReportedIncline(3, null, 0)).toEqual({ shown: 3, choice: null });
+    expect(followReportedIncline(2.04, null, 0).shown).toBe(2);
+  });
+
+  it('a choice in the app stays shown while the treadmill is still on its way there', () => {
+    const choice = { pct: 4, at: 1000 };
+    expect(followReportedIncline(1, choice, 2000)).toEqual({ shown: 4, choice });
+    expect(followReportedIncline(3, choice, 6000)).toEqual({ shown: 4, choice });
+  });
+
+  it('once the treadmill reports the choice, it follows the treadmill again', () => {
+    expect(followReportedIncline(4, { pct: 4, at: 1000 }, 6000)).toEqual({ shown: 4, choice: null });
+  });
+
+  it('a choice the treadmill never reaches gives way after a while', () => {
+    expect(followReportedIncline(0, { pct: 4, at: 1000 }, 1000 + INCLINE_SETTLE_MS)).toEqual({ shown: 0, choice: null });
   });
 });

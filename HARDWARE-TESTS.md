@@ -165,9 +165,14 @@ exactly as before. Checked in the demo; on the real treadmill, please go through
 - [ ] **Limit.** Settings → Safety: lower the limit to 4 while connected (belt standing); the slider and the presets follow.
   Raise it to 7: the question appears; after Yes the slider goes up to 7. Reload the page: the limit is still 7
   (stored as confirmed), and no `not taken without a confirmation` line in the log.
-- [x] **Incline.** Press a level: `→ 03 …` as before, the treadmill follows. *First test: while the belt stands the incline
-  changed only after Start.* Open: does `→ 03 …` with `← Set Inclination: OK` appear at once while standing (then the
-  treadmill waits by itself), or only after Start?
+- [x] **Incline.** Press a level: `→ 03 …` as before, the treadmill follows. *First test: `→ 03 …` goes out at once while
+  the belt stands, but the treadmill ignores it until the belt runs.*
+- [ ] **Incline only while running (changed 2026-11-12).** Belt standing: the level buttons are greyed out and the card says
+  the incline can only be set while the belt is running. After Start, once the belt moves, they can be pressed; after Stop
+  they are greyed out again.
+- [ ] **Incline changed on the treadmill.** While walking, change the incline with the treadmill's own buttons: the incline
+  figure and the highlighted level in the card follow within a few seconds. Then press a level in the app: the card keeps
+  showing it while the treadmill's motor passes the levels in between, and does not jump back.
 - [ ] **Incline levels from 0.** With 5 levels the card shows the buttons 0 to 5; for the sPad 500 (range 0–5) they send
   `03 00 00`, `03 0a 00`, … `03 32 00`, and the treadmill shows the same level.
 - [ ] **Connection loss while running.** The red warning appears as before, the workout ends.

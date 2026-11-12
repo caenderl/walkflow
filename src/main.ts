@@ -29,6 +29,7 @@ import { setupSettings } from './ui/settings/settings-ui';
 import { setupTreadmillSettings } from './ui/settings/treadmill';
 import { initTheme, onThemeChange } from './ui/theme';
 import { BeltBanner } from './ui/live/belt-banner';
+import { MOVING_KMH } from './core/safety/belt-phase';
 import { createTreadmill } from './device/treadmill';
 import { $, $button, log } from './ui/ui';
 import { store } from './ui/store';
@@ -140,8 +141,16 @@ const stage = setupStage({
 const incline = setupInclineCard({
   setIncline: pct => tm.setIncline(pct),
   uiConnected: () => connection.uiConnected(),
+  now,
   levelsChanged: () => readout.renderStats(),
 });
+// The incline can only be set while the belt moves, and the card follows what the treadmill reports
+tm.on('data', d => {
+  const kmh = tm.state.lastMeasured;
+  incline.beltMoving(kmh !== undefined && kmh >= MOVING_KMH);
+  if (d.incl !== undefined) incline.reported(d.incl);
+});
+tm.on('disconnected', () => incline.beltMoving(false));
 
 // The figures, the banner, the buttons and the chart (display only)
 const readout = setupReadout({
