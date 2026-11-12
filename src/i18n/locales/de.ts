@@ -104,7 +104,7 @@ export const de: Messages = {
     start: 'Start',
     pause: 'Pause',
     stop: 'Stop',
-    keys: 'Tastatur: **Leertaste** oder **Esc** = Stop, **↑ / ↓** = Speed ±0,5 (nicht im Slider/Textfeld).',
+    keys: 'Tastatur: **Leertaste** oder **Esc** = Stop, **↑ / ↓** = Speed ±0,5.',
     target: 'Ziel',
     sliderLabel: 'Zielgeschwindigkeit',
     /** The value under − and +: one step, in the shown unit */

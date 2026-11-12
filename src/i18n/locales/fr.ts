@@ -106,7 +106,7 @@ export const fr: Messages = {
     start: 'Démarrer',
     pause: 'Pause',
     stop: 'Arrêt',
-    keys: 'Clavier : **Espace** ou **Échap** = arrêt, **↑ / ↓** = vitesse ±0,5 (pas dans le curseur ni dans un champ de texte).',
+    keys: 'Clavier : **Espace** ou **Échap** = arrêt, **↑ / ↓** = vitesse ±0,5.',
     target: 'Cible',
     sliderLabel: 'Vitesse cible',
     /** The value under − and +: one step, in the shown unit */

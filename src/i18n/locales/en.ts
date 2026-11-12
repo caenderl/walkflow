@@ -105,7 +105,7 @@ export const en = {
     start: 'Start',
     pause: 'Pause',
     stop: 'Stop',
-    keys: 'Keyboard: **Space** or **Esc** = stop, **↑ / ↓** = speed ±0.5 (not in the slider or a text field).',
+    keys: 'Keyboard: **Space** or **Esc** = stop, **↑ / ↓** = speed ±0.5.',
     target: 'Target',
     sliderLabel: 'Target speed',
     /** The value under − and +: one step, in the shown unit */
