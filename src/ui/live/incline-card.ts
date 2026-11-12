@@ -3,7 +3,7 @@
 // supports; the value that is sent is always inside the range the treadmill reported.
 
 import { cmdSetInclination, type Features, type Range } from '../../core/protocol/ftms';
-import { clampIncline, inclineSupport, levelsFromCount, parseLevelCount, type InclineSupport } from '../../core/safety/incline';
+import { clampIncline, inclineSupport, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount, type InclineSupport } from '../../core/safety/incline';
 import { t } from '../../i18n/i18n';
 import { $, $input, log } from '../ui';
 import { store } from '../store';
@@ -23,17 +23,17 @@ export function setupInclineCard(host: InclineCardHost) {
   let range: Range | null = null;
   let shown = 0;
   let support: InclineSupport = { settable: false, reported: false };
-  /** How many levels the person says the treadmill's incline has; 0 = the slider over the range the treadmill reports */
+  /** How many levels the person says the treadmill's incline has; 0 = none: the incline is not shown in the training view */
   let levelCount = parseLevelCount(store.get(INCLINE_LEVELS_KEY));
 
   /** The setting "incline levels": the slider and the number beside it */
   function renderLevelCountField() {
-    $input('inclLevelsInput').value = String(levelCount);
+    $input('inclLevelsInput').value = sliderFromLevelCount(levelCount);
     $('inclLevelsValue').textContent = levelCount === 0 ? t.incline.levelsNone : String(levelCount);
   }
 
   function render() {
-    $('inclCard').hidden = !support.settable;
+    $('inclCard').hidden = !support.settable || levelCount === 0;
     $('inclTarget').textContent = t.incline.value(shown);
     const levels = levelsFromCount(levelCount, range ?? undefined);
     const box = $('inclLevels');
@@ -70,7 +70,7 @@ export function setupInclineCard(host: InclineCardHost) {
   }
 
   $input('inclLevelsInput').oninput = e => {
-    levelCount = parseLevelCount((e.target as HTMLInputElement).value);
+    levelCount = levelCountFromSlider((e.target as HTMLInputElement).value);
     store.set(INCLINE_LEVELS_KEY, String(levelCount));
     renderLevelCountField();
     render();

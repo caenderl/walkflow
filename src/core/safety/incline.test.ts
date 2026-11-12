@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseFeatures, type Features, type Range } from '../protocol/ftms';
-import { clampIncline, inclineSupport, INCLINE_LEVELS_MAX, levelsFromCount, parseLevelCount } from './incline';
+import { clampIncline, inclineSupport, INCLINE_LEVELS_MAX, INCLINE_LEVELS_MIN, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount } from './incline';
 
 const feat = (machine: number, target: number): Features => parseFeatures(new DataView(new Uint8Array([
   machine & 0xff, (machine >> 8) & 0xff, 0, 0, target & 0xff, (target >> 8) & 0xff, 0, 0,
@@ -35,14 +35,15 @@ describe('inclineSupport', () => {
 });
 
 describe('parseLevelCount', () => {
-  it('reads a whole number of levels from 0 (none) to the most the settings offer', () => {
+  it('reads none or a whole number of levels from 2 to the most the settings offer', () => {
     expect(parseLevelCount('0')).toBe(0);
+    expect(parseLevelCount(String(INCLINE_LEVELS_MIN))).toBe(INCLINE_LEVELS_MIN);
     expect(parseLevelCount('5')).toBe(5);
     expect(parseLevelCount(String(INCLINE_LEVELS_MAX))).toBe(INCLINE_LEVELS_MAX);
   });
 
-  it('takes anything else for none: missing, damaged, out of range, not whole', () => {
-    for (const raw of [null, undefined, '', 'x', '-1', '11', '2.5', '1e1', ' 3 ']) expect(parseLevelCount(raw), String(raw)).toBe(0);
+  it('takes anything else for none: missing, damaged, out of range, not whole, a single level', () => {
+    for (const raw of [null, undefined, '', 'x', '-1', '1', '11', '2.5', '1e1', ' 3 ']) expect(parseLevelCount(raw), String(raw)).toBe(0);
   });
 });
 
@@ -60,13 +61,9 @@ describe('levelsFromCount', () => {
   });
 
   it('stays inside the range, always', () => {
-    for (const count of [1, 2, 3, 7, 10]) {
+    for (const count of [2, 3, 7, 10]) {
       for (const l of levelsFromCount(count, range(0.3, 9.7))) expect(l >= 0.3 && l <= 9.7, `${count}: ${l}`).toBe(true);
     }
-  });
-
-  it('has a single level at the top of the range', () => {
-    expect(levelsFromCount(1, range(0, 10))).toEqual([10]);
   });
 
   it('has no levels for none, without a range, or for a range without room', () => {
@@ -76,8 +73,23 @@ describe('levelsFromCount', () => {
     expect(levelsFromCount(5, range(4, 2))).toEqual([]);
   });
 
-  it('has no levels for a count that is not a whole number from 1 to the most', () => {
-    for (const count of [-1, 2.5, NaN, INCLINE_LEVELS_MAX + 1]) expect(levelsFromCount(count, range(0, 10)), String(count)).toEqual([]);
+  it('has no levels for a count that is not a whole number from 2 to the most', () => {
+    for (const count of [-1, 1, 2.5, NaN, INCLINE_LEVELS_MAX + 1]) expect(levelsFromCount(count, range(0, 10)), String(count)).toEqual([]);
+  });
+});
+
+describe('the levels slider in the settings', () => {
+  it('starts with none and goes on with 2: one level is no choice', () => {
+    expect(levelCountFromSlider('1')).toBe(0);
+    expect(levelCountFromSlider('2')).toBe(2);
+    expect(levelCountFromSlider(String(INCLINE_LEVELS_MAX))).toBe(INCLINE_LEVELS_MAX);
+    expect(sliderFromLevelCount(0)).toBe('1');
+    expect(sliderFromLevelCount(2)).toBe('2');
+    expect(sliderFromLevelCount(INCLINE_LEVELS_MAX)).toBe(String(INCLINE_LEVELS_MAX));
+  });
+
+  it('takes anything it cannot read for none', () => {
+    for (const raw of ['', 'x', '0', '11', '2.5']) expect(levelCountFromSlider(raw), raw).toBe(0);
   });
 });
 

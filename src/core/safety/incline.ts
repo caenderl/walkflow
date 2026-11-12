@@ -8,6 +8,8 @@ const MACHINE_INCLINATION = 0x0008;
 /** Target Setting Feature bit 1: the treadmill accepts a target incline. */
 const TARGET_INCLINATION = 0x0002;
 
+/** The fewest levels the settings offer: a single level is no choice */
+export const INCLINE_LEVELS_MIN = 2;
 /** The most levels the settings offer */
 export const INCLINE_LEVELS_MAX = 10;
 
@@ -34,20 +36,34 @@ export function inclineSupport(features: Features | undefined, range: Range | un
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
 
-/** The number of levels from the settings (a whole number from 0 to INCLINE_LEVELS_MAX); anything else counts as none */
+const validCount = (n: number) => Number.isInteger(n) && n >= INCLINE_LEVELS_MIN && n <= INCLINE_LEVELS_MAX;
+
+/** The number of levels from the settings (0 for none, or INCLINE_LEVELS_MIN to INCLINE_LEVELS_MAX); anything else counts as none */
 export function parseLevelCount(raw: string | null | undefined): number {
   if (typeof raw !== 'string' || !/^\d{1,2}$/.test(raw)) return 0;
   const n = Number(raw);
-  return n <= INCLINE_LEVELS_MAX ? n : 0;
+  return validCount(n) ? n : 0;
+}
+
+/**
+ * The levels slider in the settings runs from INCLINE_LEVELS_MIN - 1 to INCLINE_LEVELS_MAX: its first position is none,
+ * then come the counts. Anything it cannot read counts as none.
+ */
+export function levelCountFromSlider(raw: string): number {
+  return parseLevelCount(raw);
+}
+
+/** The slider position for a number of levels (none: the first position) */
+export function sliderFromLevelCount(count: number): string {
+  return String(validCount(count) ? count : INCLINE_LEVELS_MIN - 1);
 }
 
 /**
  * The levels of a treadmill with `count` of them: spread evenly over the range the treadmill reported, both ends
- * included (a single level is the top of the range). Always inside that range; none without a count or a range.
+ * included. Always inside that range; none without a valid count or a range.
  */
 export function levelsFromCount(count: number, range: Range | undefined): number[] {
-  if (!Number.isInteger(count) || count < 1 || count > INCLINE_LEVELS_MAX || !range || !(range.max > range.min)) return [];
-  if (count === 1) return [round1(range.max)];
+  if (!validCount(count) || !range || !(range.max > range.min)) return [];
   return Array.from({ length: count }, (_, i) => round1(Math.min(range.max, Math.max(range.min, range.min + ((range.max - range.min) * i) / (count - 1)))));
 }
 
