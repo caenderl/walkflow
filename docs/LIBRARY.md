@@ -261,7 +261,8 @@ one of them is a `safety` commit and at least a minor version.
   latest release (the desktop app's update check and the download links on the site look at the latest release).
   Publishing that draft by hand starts `.github/workflows/npm-publish.yml`: tests, a check that the tag matches the
   version, the build, `npm publish` with provenance. It needs the repository secret `NPM_TOKEN`.
-- **The first version:** the manifest starts the library at 0.0.0, so the first `feat` commit in it makes 0.1.0.
+- **The first version:** release-please treats a package without a release as new and would start it at 1.0.0; the
+  library's `initial-version` in `release-please-config.json` makes the first release 0.1.0.
 - **Version 0.x** until the API has been used for a while; then 1.0.
 - A repo of its own only when others use the library and the release flow of two packages in one repo gets in the way.
 
