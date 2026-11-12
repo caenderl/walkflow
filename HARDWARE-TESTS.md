@@ -137,46 +137,46 @@ The settings dialog and the training view only change what is shown, plus one se
 - [ ] **macOS update.** The macOS app is not signed, so the banner only opens the release page. Check that it does, and that it does not offer “Download and install”. (Once builds are signed and notarized, this item becomes the same test as above.)
 - [ ] **Community in the desktop app** (not in the first release: only in a build with `WALKFLOW_COMMUNITY=on`). Switch **Community** on in the desktop app and in a browser (or a second computer): do they find each other (the status says “Connected to 1 device”)? Take a workout from one to the other: the question appears, it is saved, and the other side then lists it as offered by one more device. Check that the macOS firewall question (incoming connections) does not block it, and that switching Community off ends the connection (the other side forgets the device).
 
-## Treadmill facade (branch `feat/ftms-treadmill-lib`, not yet on a treadmill)
+## Treadmill facade (branch `feat/ftms-treadmill-lib`, confirmed on a treadmill)
 
 Everything that drives the belt now sits behind one object (`src/device/treadmill.ts`, docs/LIBRARY.md); the training view
 only asks it and draws. The commands and their order are meant to be exactly as before, and the log is meant to read
-exactly as before. Checked in the demo; on the real treadmill, please go through this list once, with the log open
+exactly as before. Checked in the demo, then on a sPad 500 (2026-11-12): the whole list passed, after the fixes noted below. The list was run once, with the log open
 (Settings → General → Developer mode shows the experiment console and its log).
 
-- [ ] **Connecting.** Same log as before: `Device: …`, `Manufacturer: …`, `Features: …`, `Controllable: …`, `Speed range: …`,
+- [x] **Connecting.** Same log as before: `Device: …`, `Manufacturer: …`, `Features: …`, `Controllable: …`, `Speed range: …`,
   `Inclination range: …`, `→ 00`, `← Request Control: OK`, then live values.
-- [ ] **Start.** `→ 00`, `→ 02 64 00`, `→ 07`, each answered with OK; the green banner while the treadmill counts down;
+- [x] **Start.** `→ 00`, `→ 02 64 00`, `→ 07`, each answered with OK; the green banner while the treadmill counts down;
   Start stays locked until the belt moves or 4.5 s are over.
-- [ ] **Ramp.** At 2 km/h press a preset of 3.5: `→ 02 fa 00`, `→ 02 2c 01`, `→ 02 5e 01`, at least 1.5 s apart.
-- [ ] **Stop (button, Space, Esc).** `→ 08 01` at once, the red banner (`Belt stopping …`, stronger as the belt slows,
+- [x] **Ramp.** At 2 km/h press a preset of 3.5: `→ 02 fa 00`, `→ 02 2c 01`, `→ 02 5e 01`, at least 1.5 s apart.
+- [x] **Stop (button, Space, Esc).** `→ 08 01` at once, the red banner (`Belt stopping …`, stronger as the belt slows,
   then `Belt stopped`), Start free again. Same with **Pause** (`→ 08 02`).
-- [ ] **Stop during a ramp.** Space while the ramp runs: `→ 08 01` right after the write in progress, the rest of the ramp
+- [x] **Stop during a ramp.** Space while the ramp runs: `→ 08 01` right after the write in progress, the rest of the ramp
   is not sent.
-- [ ] **Stop during the start.** Press Start, confirm, press Space at once: `→ 08 01` is the last command, no `→ 07` after it.
-- [ ] **Device stop during a workout.** Start a workout, stop with the treadmill's button: `ℹ Status 02 01`, the workout
+- [x] **Stop during the start.** Press Start, confirm, press Space at once: `→ 08 01` is the last command, no `→ 07` after it.
+- [x] **Device stop during a workout.** Start a workout, stop with the treadmill's button: `ℹ Status 02 01`, the workout
   ends (`Program ended: …`), no further speed command.
-- [ ] **Speed chosen while standing.** Choose 3.0 km/h while the belt stands, then Start: no `→ 02 …` before Start, then
+- [x] **Speed chosen while standing.** Choose 3.0 km/h while the belt stands, then Start: no `→ 02 …` before Start, then
   the ramp from 1.0 km/h.
-- [ ] **Start after Stop or Pause (fixed 2026-11-12).** *First test: after Stop at 3.5 km/h the next Start stayed at 1.0 km/h
+- [x] **Start after Stop or Pause (fixed 2026-11-12).** *First test: after Stop at 3.5 km/h the next Start stayed at 1.0 km/h
   although the target still showed 3.5; after Pause the treadmill went back to 3.5 by itself.* Now: run at 3.5, Stop, Start:
   `→ 00`, `→ 02 64 00`, `→ 07`, and once the belt moves the ramp `→ 02 96 00`, `→ 02 c8 00`, … up to 3.5. The same after
   Pause; note whether the belt first goes back to 3.5 by itself and then down to 1.5, or follows the ramp from the start.
-- [ ] **Limit.** Settings → Safety: lower the limit to 4 while connected (belt standing); the slider and the presets follow.
+- [x] **Limit.** Settings → Safety: lower the limit to 4 while connected (belt standing); the slider and the presets follow.
   Raise it to 7: the question appears; after Yes the slider goes up to 7. Reload the page: the limit is still 7
   (stored as confirmed), and no `not taken without a confirmation` line in the log.
 - [x] **Incline.** Press a level: `→ 03 …` as before, the treadmill follows. *First test: `→ 03 …` goes out at once while
   the belt stands, but the treadmill ignores it until the belt runs.*
-- [ ] **Incline only while running (changed 2026-11-12).** Belt standing: the level buttons are greyed out (the card shows
+- [x] **Incline only while running (changed 2026-11-12).** Belt standing: the level buttons are greyed out (the card shows
   only its title and the buttons). After Start, once the belt moves, they can be pressed; after Stop
   they are greyed out again.
-- [ ] **Incline changed on the treadmill.** While walking, change the incline with the treadmill's own buttons: the incline
+- [x] **Incline changed on the treadmill.** While walking, change the incline with the treadmill's own buttons: the incline
   figure and the highlighted level in the card follow within a few seconds. Then press a level in the app: the card keeps
   showing it while the treadmill's motor passes the levels in between, and does not jump back.
-- [ ] **Incline levels from 0.** With 5 levels the card shows the buttons 0 to 5; for the sPad 500 (range 0–5) they send
+- [x] **Incline levels from 0.** With 5 levels the card shows the buttons 0 to 5; for the sPad 500 (range 0–5) they send
   `03 00 00`, `03 0a 00`, … `03 32 00`, and the treadmill shows the same level.
-- [ ] **Connection loss while running.** The red warning appears as before, the workout ends.
-- [ ] **Experiment console.** `02 bc 02` (7 km/h) is blocked with `above the limit`; `07` asks first; `08 01` stops at once.
+- [x] **Connection loss while running.** The red warning appears as before, the workout ends.
+- [x] **Experiment console.** `02 bc 02` (7 km/h) is blocked with `above the limit`; `07` asks first; `08 01` stops at once.
 
 ## Stop and Start, hardened (partly confirmed on a treadmill)
 

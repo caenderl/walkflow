@@ -1,6 +1,6 @@
 # Treadmill library (draft)
 
-Status: **steps 1 to 3 of 4 done, waiting for the hardware test** (see [Steps](#steps)). This describes how the treadmill
+Status: **steps 1 to 3 of 4 done, hardware test passed (sPad 500, 2026-11-12); step 4 is next** (see [Steps](#steps)). This describes how the treadmill
 control moves out of the app into a library of its own with a defined API, so that the app only draws and the control can be
 released, versioned and tested on its own. Before it is published, the real treadmill has to confirm it
 ([HARDWARE-TESTS.md](../HARDWARE-TESTS.md), “Treadmill facade”).
@@ -262,8 +262,8 @@ Each step is one PR and leaves the app working.
    drawing), the governor and standstill wiring of `speed-controls.ts` and `connection.ts`, the belt phase and
    `controlAvailability`. The tests of `belt.ts`, `live-data.ts` and the control parts of `belt-banner.ts` move to it, plus
    one test per promise above. What is left of `BeltBanner` (fading, timings) moves to `ui/live/` and draws from `state.belt`.
-3. **The UI uses only the facade.** *Done, checked in the demo; the real treadmill is next* (HARDWARE-TESTS.md, “Treadmill
-   facade”). `ui/live/*` and `main.ts` call the API and draw `state`; `Session` and the hosts with governor and banner are gone.
+3. **The UI uses only the facade.** *Done, checked in the demo and on a sPad 500* (HARDWARE-TESTS.md, “Treadmill
+   facade”; the test led to two fixes: Start after Stop ramps up to the last speed again, incline only while running). `ui/live/*` and `main.ts` call the API and draw `state`; `Session` and the hosts with governor and banner are gone.
 4. **Move into `packages/ftms-treadmill`.** Workspace, entry points, build, release-please, architecture rule. What stays in
    the app leaves `core/safety` on the way: the storage keys and the stored limit format, the disclaimer, quiet and
    developer mode, speed presets. Publish 0.1.0.
