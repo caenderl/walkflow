@@ -770,7 +770,7 @@ export const fr: Messages = {
     imprint: 'Mentions légales',
     privacyLink: 'Confidentialité',
     sourceLink: 'Code source',
-    donation: 'Soutien volontaire (sans contrepartie)',
+    donation: 'Soutenez ce projet',
     supportTitle: 'Soutenir Walkflow',
     supportText: 'Walkflow est gratuit et le restera. Si l’app vous plaît, vous pouvez la soutenir librement.',
     supportButton: 'Soutenir sur Ko-fi',

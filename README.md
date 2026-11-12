@@ -197,7 +197,7 @@ Prepared in `electron-builder.config.cjs`: once the secrets `CSC_LINK`, `CSC_KEY
 ## Support
 
 <!-- Placeholder: only add a link once provider and terms are settled. -->
-Voluntary support, nothing in return: *(link to follow)*
+Support this project: *(link to follow)*
 
 There is no entitlement to support and no feature depends on support.
 

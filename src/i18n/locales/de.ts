@@ -767,7 +767,7 @@ export const de: Messages = {
     imprint: 'Impressum',
     privacyLink: 'Datenschutz',
     sourceLink: 'Quellcode',
-    donation: 'Freiwillige Unterstützung (keine Gegenleistung)',
+    donation: 'Unterstütze dieses Projekt',
     supportTitle: 'Walkflow unterstützen',
     supportText: 'Walkflow ist kostenlos und bleibt es. Wenn dir die App gefällt, kannst du sie freiwillig unterstützen.',
     supportButton: 'Auf Ko-fi unterstützen',
