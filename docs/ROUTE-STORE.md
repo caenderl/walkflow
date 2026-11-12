@@ -127,3 +127,19 @@ pieces on a made-up lake, without the network, and checks that what the script w
 - Raw files on GitHub are cached for a few minutes, so a new route can take a moment to appear.
 - GitHub is the only place it reads from. If the repository moves or the branch is renamed, the app has to be updated (the branch
   is `STORE_BRANCH` in `src/platform/store-url.ts`).
+
+## Later, maybe
+
+- **Pictures at waypoints.** A waypoint could show a photo (a view, a bridge) in the route's details and in the training view.
+  Not part of the format yet; today a waypoint has only `at`, `name` and `text` ([format](ROUTE-PACKAGE.md)), and a field the
+  format does not know is ignored. The idea, so that the Content-Security-Policy stays as narrow as it is:
+  - The pictures live in the route-store repository (for instance `images/`), next to the route files, and are served from the
+    store's own host. A waypoint names one by a path relative to the store, never by a free URL. The policy then needs that one
+    host in `img-src` and no wildcard, and no other server learns who is looking at which route.
+  - Each picture has a `license`/credit and a text for screen readers, in several languages like `name` and `text`.
+  - Limits like those of the other fields: size and dimensions per picture (the CI shrinks or refuses), and a number per route.
+    The CI of the store checks that every named picture exists, is used, and is an image of a plain type (no SVG).
+  - The app loads a picture only when it is looked at, and a route works without it: offline, or when the picture is missing, the
+    waypoint shows its name and text as before. A route shared from device to device ([P2P](P2P.md)) carries no pictures; there,
+    and for a route someone wrote, a picture is simply not shown.
+  - Not planned: pictures embedded in a package (`data:`) and free URLs, which would load from servers nobody vetted.
