@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.6.0](https://github.com/walkflow-app/walkflow/compare/v0.5.0...v0.6.0) (2026-11-12)
+
+
+### Safety
+
+* **treadmill:** Start after a stop or pause ramps up to the last speed again ([b7e688f](https://github.com/walkflow-app/walkflow/commit/b7e688f62ac427fd3f511e01a61a8e97ab7075a3))
+
+
+### Features
+
+* **incline:** incline levels start at 0 and the card shows only the level buttons ([b7e688f](https://github.com/walkflow-app/walkflow/commit/b7e688f62ac427fd3f511e01a61a8e97ab7075a3))
+* **incline:** set the incline only while the belt runs and follow the incline the treadmill reports ([b7e688f](https://github.com/walkflow-app/walkflow/commit/b7e688f62ac427fd3f511e01a61a8e97ab7075a3))
+* **incline:** the incline is no longer marked experimental ([b7e688f](https://github.com/walkflow-app/walkflow/commit/b7e688f62ac427fd3f511e01a61a8e97ab7075a3))
+* **treadmill:** move the treadmill control into the ftms-treadmill library ([b7e688f](https://github.com/walkflow-app/walkflow/commit/b7e688f62ac427fd3f511e01a61a8e97ab7075a3))
+
+
+### Fixes
+
+* **pwa:** precache the app again for offline use ([#17](https://github.com/walkflow-app/walkflow/issues/17)) ([4d5ccef](https://github.com/walkflow-app/walkflow/commit/4d5ccefcd8077795f8eec2f4432b11a6073899eb))
+
 ## [0.5.0](https://github.com/walkflow-app/walkflow/compare/v0.4.0...v0.5.0) (2026-11-12)
 
 
