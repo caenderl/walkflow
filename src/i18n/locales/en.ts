@@ -764,6 +764,7 @@ export const en = {
     licenseTitle: 'License',
     license: 'MIT license, without warranty.',
     source: 'Source code: ',
+    version: (version: string) => `Version ${version}`,
     footer: (version: string) => `Walkflow ${version} · MIT license · independent project, not affiliated with the manufacturer`,
     imprint: 'Legal notice',
     privacyLink: 'Privacy',
