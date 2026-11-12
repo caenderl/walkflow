@@ -1,10 +1,11 @@
 name: Pages
 
 on:
-  # Manual for now (Actions → Pages → Run workflow). Once the legal notice and privacy
-  # pages are filled in, uncomment this to deploy on every push:
-  # push:
-  #   branches: [main]
+  # Publishing a release (the draft from release.yml, published by hand) rebuilds and deploys the site, so the download
+  # links and the version on the product page follow it. Release events run the workflow file of the release's tag.
+  release:
+    types: [published]
+  # By hand: Actions → Pages → Run workflow (e.g. after a change to site/ between releases)
   workflow_dispatch:
 
 # The site is served from the repository walkflow-app/walkflow-app.github.io (the organization's own address,

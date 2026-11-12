@@ -160,7 +160,7 @@ The screenshots in `site/img/` show the app with made-up runs and workouts and t
 
 1. Repository settings → *Pages* → Source: **GitHub Actions**. (For a private repository, Pages needs a paid GitHub plan.)
 2. Fill in the pages under `public/legal/` (legal notice and privacy, per language). As long as they contain `TODO`, the Pages workflow fails on purpose. If you only want legal pages in one language, delete the others and point `info.imprintHref`/`info.privacyHref` in the locale files to the remaining ones.
-3. Deploy by hand: *Actions → Pages → Run workflow*. The download links and the version on the product page come from the latest published release, so run the workflow again after publishing a release. To deploy on every push to `main`, re-enable the commented-out `push` trigger in `.github/workflows/pages.yml`.
+3. Publishing a release deploys the site on its own (the Pages workflow runs on `release: published`): the download links and the version on the product page come from the latest published release. Between releases, deploy by hand: *Actions → Pages → Run workflow*.
 
 ### Versions and releases
 
@@ -182,7 +182,7 @@ Releasing ([release-please](https://github.com/googleapis/release-please), confi
 
 1. On every push to `main`, release-please keeps a pull request “chore: release x.y.z” up to date with the next version (in `package.json`) and `CHANGELOG.md`. It is created with the workflow token, so no CI run shows on it; CI runs on `main` after merging.
 2. Merging it creates the tag `vx.y.z` and a **draft release** with the changelog. The desktop app for Windows and Linux is built and attached with checksums. macOS is left out for now (not notarized, see [Desktop app](#desktop-app)).
-3. Check the changed areas on the treadmill (`HARDWARE-TESTS.md`), then publish the draft by hand. Only published releases reach the update notice of the desktop app.
+3. Check the changed areas on the treadmill (`HARDWARE-TESTS.md`), then publish the draft by hand. Only published releases reach the update notice of the desktop app. Publishing also rebuilds and deploys the site (see [GitHub Pages](#github-pages)).
 
 The repository variable `MAC_BUILD` (*Settings → Secrets and variables → Actions → Variables*) decides about macOS. Not set (the default for now): no macOS app. `github`: built on a GitHub macOS runner like the others (do this once the build is signed and notarized). `local`: built on your own Mac, for when GitHub has no macOS runner free: when the draft exists, `git checkout v<version>` and run `scripts/release-mac.sh v<version>`. It runs the checks, builds both macOS apps (arm64, x64), adds them to the draft and updates `SHA256SUMS.txt`; it needs `gh` (logged in with write access) and a clean checkout of the tag.
 
