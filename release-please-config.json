@@ -73,6 +73,7 @@
       "component": "ftms-treadmill",
       "include-component-in-tag": true,
       "bump-minor-pre-major": true,
+      "initial-version": "0.1.0",
       "draft": true,
       "prerelease": true,
       "force-tag-creation": true,
