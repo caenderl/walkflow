@@ -3,7 +3,7 @@ import {
   buildTreadmillData, cmdPause, cmdRequestControl, parseMachineStatus, parseTrainingStatus, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, dataView,
   decodeSetSpeed, hex, parseControlPointResponse, parseFeatures,
   parseHeartRate, parseInclinationRange, parseSpeedRange, parseTreadmillData, toBytes,
-} from './ftms';
+} from './ftms.ts';
 
 const le16 = (v: number) => [v & 0xff, (v >> 8) & 0xff];
 

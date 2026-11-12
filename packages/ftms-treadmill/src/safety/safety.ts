@@ -1,8 +1,8 @@
 // Safety logic: limits, ramps, checking console commands, estimating the belt state.
 // Pure logic without DOM/BLE, fully tested (safety.test.ts). Do not weaken.
 
-import { decodeSetSpeed, OP } from '../protocol/ftms';
-import type { ConsoleBlock, LimitNote, LimitProblem, Notice } from '../protocol/notice';
+import { decodeSetSpeed, OP } from '../protocol/ftms.ts';
+import type { ConsoleBlock, Notice } from '../protocol/notice.ts';
 
 const EPS = 1e-9;
 
@@ -14,69 +14,9 @@ export const LIMIT_MAX = 20;
 /** Limits above this value only with an extra confirmation. */
 export const LIMIT_CONFIRM_ABOVE = 6;
 
-export const LIMIT_STORAGE_KEY = 'walkflow.speedLimit';
-/** Key used by the prototype */
-export const LEGACY_LIMIT_KEY = 'cap';
-
 export interface SpeedRange {
   min: number;
   max: number;
-}
-
-export function effectiveMax(deviceMax: number, userLimit: number): number {
-  return Math.min(deviceMax, userLimit);
-}
-
-/** Input from the limit field. Invalid or ≤ 0 → default limit. */
-export function parseLimit(raw: string): number {
-  const v = parseFloat(raw);
-  return Number.isFinite(v) && v > 0 ? v : DEFAULT_SPEED_LIMIT;
-}
-
-export type LimitDecision =
-  | { ok: true; value: number; needsConfirmation: boolean }
-  | { ok: false; reason: LimitProblem };
-
-export function decideLimitChange(raw: string, current: number): LimitDecision {
-  const v = parseFloat(raw.replace(',', '.'));
-  if (!Number.isFinite(v)) return { ok: false, reason: { code: 'limit-not-a-number' } };
-  const value = Math.round(v * 10) / 10;
-  if (value < LIMIT_MIN || value > LIMIT_MAX) {
-    return { ok: false, reason: { code: 'limit-out-of-range', min: LIMIT_MIN, max: LIMIT_MAX } };
-  }
-  return { ok: true, value, needsConfirmation: value > LIMIT_CONFIRM_ABOVE && value > current };
-}
-
-export function serializeLimit(value: number, confirmedAbove6: boolean): string {
-  return JSON.stringify({ value, confirmedAbove6 });
-}
-
-function validStoredLimit(v: unknown): v is number {
-  return typeof v === 'number' && Number.isFinite(v) && v >= LIMIT_MIN && v <= LIMIT_MAX;
-}
-
-/**
- * Loads the stored limit. Values above 6 km/h only count if they were stored as confirmed, and then say so (`confirmed`).
- * The prototype value ("cap") was never confirmed and is therefore only adopted up to 6 km/h.
- */
-export function loadLimit(stored: string | null, legacyCap: string | null): { value: number; note?: LimitNote; confirmed?: true } {
-  if (stored !== null) {
-    try {
-      const o = JSON.parse(stored) as { value?: unknown; confirmedAbove6?: unknown };
-      if (validStoredLimit(o.value)) {
-        if (o.value <= LIMIT_CONFIRM_ABOVE) return { value: o.value };
-        if (o.confirmedAbove6 === true) return { value: o.value, confirmed: true };
-        return { value: DEFAULT_SPEED_LIMIT, note: { code: 'limit-stored-unconfirmed', value: o.value, applied: DEFAULT_SPEED_LIMIT } };
-      }
-    } catch { /* broken → fall through */ }
-  } else if (legacyCap !== null) {
-    const v = parseFloat(legacyCap);
-    if (validStoredLimit(v)) {
-      if (v <= LIMIT_CONFIRM_ABOVE) return { value: v };
-      return { value: DEFAULT_SPEED_LIMIT, note: { code: 'limit-legacy-not-adopted', value: v, above: LIMIT_CONFIRM_ABOVE } };
-    }
-  }
-  return { value: DEFAULT_SPEED_LIMIT };
 }
 
 // ---------- Clamping ----------
@@ -104,14 +44,6 @@ export const MAX_STEP_MIN = 0.1;
 export const MAX_STEP_MAX = 1;
 /** Minimum interval between two speed commands */
 export const RAMP_INTERVAL_MS = 1500;
-export const MAX_STEP_STORAGE_KEY = 'walkflow.maxStep';
-
-export function parseMaxStep(raw: string): number | null {
-  const v = parseFloat(raw.replace(',', '.'));
-  if (!Number.isFinite(v) || v < MAX_STEP_MIN - EPS || v > MAX_STEP_MAX + EPS) return null;
-  return Math.round(v * 10) / 10;
-}
-
 /**
  * Intermediate targets from `from` to `to`. Each step changes by at most `maxStep`, all values are within the range.
  * Only exception to maxStep: if `from` is outside the range (e.g. 0 = belt stopped, or above a limit that was
@@ -434,13 +366,4 @@ export class StandstillDetector {
     if (now - this.zeroSince >= this.thresholdMs) { this.disarm(); return true; }
     return false;
   }
-}
-
-// ---------- First run ----------
-
-export const DISCLAIMER_VERSION = 1;
-export const DISCLAIMER_STORAGE_KEY = 'walkflow.disclaimerAccepted';
-
-export function isDisclaimerAccepted(stored: string | null): boolean {
-  return stored === String(DISCLAIMER_VERSION);
 }

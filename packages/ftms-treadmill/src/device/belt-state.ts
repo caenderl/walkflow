@@ -1,8 +1,8 @@
 // What is known about the connected treadmill's belt, shared by the parts that send commands (belt-commands.ts) and read what
 // the treadmill reports (reports.ts). Plain state; the Treadmill facade (treadmill.ts) owns it.
 
-import type { TreadmillClient } from './ble';
-import { beltMaybeRunning } from '../core/safety/safety';
+import type { TreadmillClient } from './ble.ts';
+import { beltMaybeRunning } from '../safety/safety.ts';
 
 export class BeltState {
   client: TreadmillClient | null = null;

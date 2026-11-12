@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TreadmillClient, type TreadmillEvents } from './ble';
-import type { Notice } from '../core/protocol/notice';
-import { cmdPause, cmdRequestControl, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, OP, parseMachineStatus, type ControlPointResponse, type TreadmillData } from '../core/protocol/ftms';
-import { inclineSupport } from '../core/safety/incline';
-import { SimulatorAdapter } from './sim';
+import { TreadmillClient, type TreadmillEvents } from './ble.ts';
+import type { Notice } from '../protocol/notice.ts';
+import { cmdPause, cmdRequestControl, cmdSetInclination, cmdSetSpeed, cmdStart, cmdStop, OP, parseMachineStatus, type ControlPointResponse, type TreadmillData } from '../protocol/ftms.ts';
+import { inclineSupport } from '../safety/incline.ts';
+import { SimulatorAdapter } from './sim.ts';
 
 /** Control Point result codes (FTMS) */
 const RESULT_OK = 1, INVALID_PARAMETER = 3, NOT_PERMITTED = 5;

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DroppedError, SerialQueue, TreadmillClient, WRITE_TIMEOUT_MS, type BleAdapter, type BleDevice, type TreadmillEvents, type Uuid } from './ble';
-import { dataView, hex } from '../core/protocol/ftms';
-import type { Notice } from '../core/protocol/notice';
+import { DroppedError, SerialQueue, TreadmillClient, WRITE_TIMEOUT_MS, type BleAdapter, type BleDevice, type TreadmillEvents, type Uuid } from './ble.ts';
+import { dataView, hex } from '../protocol/ftms.ts';
+import type { Notice } from '../protocol/notice.ts';
 
 function deferred() {
   let resolve!: () => void, reject!: (e: Error) => void;

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { TreadmillClient } from './ble';
-import { BeltState } from './belt-state';
+import type { TreadmillClient } from './ble.ts';
+import { BeltState } from './belt-state.ts';
 
 const fakeClient = (connected: boolean, ok = true) => {
   const send = vi.fn(async () => ok);

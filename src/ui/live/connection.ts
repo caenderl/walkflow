@@ -1,10 +1,10 @@
 // The connection to the treadmill as the person sees it: connecting (the real one or the demo), disconnecting, a connection
 // that is lost, the header status, and which buttons need a connection. It owns the two adapters. The treadmill itself
-// (connecting, asking for control, forgetting the belt) is device/treadmill.ts; what it reports is shown by live-data.ts.
+// (connecting, asking for control, forgetting the belt) is the ftms-treadmill library; what it reports is shown by live-data.ts.
 
-import { type BleAdapter, type ConnectResult, WebBluetoothAdapter } from '../../device/ble';
-import { SimulatorAdapter } from '../../device/sim';
-import type { Treadmill } from '../../device/treadmill';
+import type { BleAdapter, ConnectResult, Treadmill } from 'ftms-treadmill';
+import { SimulatorAdapter } from 'ftms-treadmill/sim';
+import { WebBluetoothAdapter } from 'ftms-treadmill/web-bluetooth';
 import type { RunSource } from '../../core/history/runs';
 import type { ProgramRunner } from '../../core/training/program';
 import { t, type Text } from '../../i18n/i18n';

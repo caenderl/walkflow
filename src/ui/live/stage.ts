@@ -6,7 +6,7 @@ import type { RunRecorder, RunTag } from '../../core/history/runs';
 import { routeDescription, routeName } from '../../core/routes/route-text';
 import { fmtDistance, fmtLength, programLength, type ProgramRunner, type ProgramStep } from '../../core/training/program';
 import { ACTIVE_STORAGE_KEY, readActive, type Active } from '../../core/training/selection';
-import type { Treadmill } from '../../device/treadmill';
+import type { Treadmill } from 'ftms-treadmill';
 import { lang, t } from '../../i18n/i18n';
 import { bindText } from '../i18n-dom';
 import type { setupRoutes } from '../routes/route-ui';

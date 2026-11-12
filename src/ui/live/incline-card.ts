@@ -4,8 +4,8 @@
 // moves (a treadmill ignores Set Inclination while it stands, a sPad 500 does), and it follows the incline the treadmill
 // reports, so that a change on the treadmill's own buttons shows here too.
 
-import type { Features, Range } from '../../core/protocol/ftms';
-import { clampIncline, followReportedIncline, inclineSupport, type InclineChoice, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount, type InclineSupport } from '../../core/safety/incline';
+import { clampIncline, inclineSupport, type Features, type InclineSupport, type Range } from 'ftms-treadmill';
+import { followReportedIncline, type InclineChoice, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount } from '../../core/safety/incline-levels';
 import { t } from '../../i18n/i18n';
 import { $, $input, log } from '../ui';
 import { store } from '../store';

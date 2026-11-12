@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BeltPhaseTracker, START_MS, STOP_MAX_MS } from './belt-phase';
+import { BeltPhaseTracker, START_MS, STOP_MAX_MS } from './belt-phase.ts';
 
 const tracker = () => { const p = new BeltPhaseTracker(); p.setConnected(true); return p; };
 

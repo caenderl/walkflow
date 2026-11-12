@@ -4,7 +4,7 @@
 
 import { drawChart } from '../components/chart';
 import { fmtTime } from '../../core/training/program';
-import type { Treadmill } from '../../device/treadmill';
+import type { Treadmill } from 'ftms-treadmill';
 import { t } from '../../i18n/i18n';
 import { toDist, toSpeed } from '../../i18n/units';
 import { $, $button } from '../ui';

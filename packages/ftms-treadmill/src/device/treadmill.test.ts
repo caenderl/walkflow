@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildTreadmillData, dataView, hex } from '../core/protocol/ftms';
-import type { Notice } from '../core/protocol/notice';
-import { DEFAULT_SPEED_LIMIT } from '../core/safety/safety';
-import type { BleAdapter, BleDevice, Uuid } from './ble';
-import { createTreadmill, type TreadmillOptions } from './treadmill';
+import { buildTreadmillData, dataView, hex } from '../protocol/ftms.ts';
+import type { Notice } from '../protocol/notice.ts';
+import { DEFAULT_SPEED_LIMIT } from '../safety/safety.ts';
+import type { BleAdapter, BleDevice, Uuid } from './ble.ts';
+import { createTreadmill, type TreadmillOptions } from './treadmill.ts';
 
 /** A treadmill with Control Point, Treadmill Data, Machine Status, speed range 1–8 km/h and incline 0–10 % */
 class FakeTreadmill implements BleDevice {

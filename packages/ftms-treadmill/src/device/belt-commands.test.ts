@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { TreadmillClient } from './ble';
-import type { SpeedGovernor, StandstillDetector } from '../core/safety/safety';
-import { hex } from '../core/protocol/ftms';
-import { setupBelt, STOP_ATTEMPTS, type BeltHost } from './belt-commands';
-import { BeltState } from './belt-state';
+import type { TreadmillClient } from './ble.ts';
+import type { SpeedGovernor, StandstillDetector } from '../safety/safety.ts';
+import { hex } from '../protocol/ftms.ts';
+import { setupBelt, STOP_ATTEMPTS, type BeltHost } from './belt-commands.ts';
+import { BeltState } from './belt-state.ts';
 
 /** Everything the belt touches, in the order it happens */
 function rig(opts: { ok?: boolean | ((hexBytes: string) => boolean | Promise<boolean>); client?: boolean; startSpeedOk?: boolean; target?: number; wanted?: number } = {}) {

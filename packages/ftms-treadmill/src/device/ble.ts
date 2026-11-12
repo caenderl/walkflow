@@ -1,13 +1,14 @@
-// BLE layer: adapter interface (GATT level), Web Bluetooth adapter, serial write queue
-// and the FTMS connection sequence. A second adapter (e.g. native) only implements BleAdapter/BleDevice.
+// BLE layer: adapter interface (GATT level), serial write queue
+// and the FTMS connection sequence. The Web Bluetooth adapter is in web-bluetooth.ts; another one (e.g. native)
+// only implements BleAdapter/BleDevice.
 
 import {
   CH, DEVINFO_CH, DEVINFO_SERVICE, FTMS_SERVICE, HR_SERVICE,
   hex, parseControlPointResponse, parseFeatures,
   parseHeartRate, parseInclinationRange, parseSpeedRange, parseTreadmillData,
   type ControlPointResponse, type Features, type Range, type TreadmillData,
-} from '../core/protocol/ftms';
-import { TreadmillError, type Notice } from '../core/protocol/notice';
+} from '../protocol/ftms.ts';
+import { TreadmillError, type Notice } from '../protocol/notice.ts';
 
 export type Uuid = number;
 
@@ -90,111 +91,6 @@ export class SerialQueue {
     } finally {
       this.running = false;
     }
-  }
-}
-
-// ---------- Web Bluetooth ----------
-
-class WebBluetoothDevice implements BleDevice {
-  private server: BluetoothRemoteGATTServer | null = null;
-  private services = new Map<Uuid, Promise<BluetoothRemoteGATTService>>();
-  private chars = new Map<string, Promise<BluetoothRemoteGATTCharacteristic>>();
-  private listeners: [BluetoothRemoteGATTCharacteristic, EventListener][] = [];
-  private disconnectCb: (() => void) | null = null;
-  private readonly handleDisconnect = () => {
-    this.dev.removeEventListener('gattserverdisconnected', this.handleDisconnect);
-    for (const [c, l] of this.listeners) c.removeEventListener('characteristicvaluechanged', l);
-    this.listeners = [];
-    this.services.clear();
-    this.chars.clear();
-    const cb = this.disconnectCb;
-    this.disconnectCb = null;
-    cb?.();
-  };
-
-  constructor(private readonly dev: BluetoothDevice) {}
-
-  get name() { return this.dev.name; }
-  get connected() { return !!this.dev.gatt?.connected; }
-
-  async connect() {
-    if (!this.dev.gatt) throw new TreadmillError('no-gatt');
-    this.dev.addEventListener('gattserverdisconnected', this.handleDisconnect);
-    this.server = await this.dev.gatt.connect();
-  }
-
-  disconnect() {
-    this.dev.gatt?.disconnect();
-  }
-
-  onDisconnected(cb: () => void) {
-    this.disconnectCb = cb;
-  }
-
-  private service(uuid: Uuid) {
-    let s = this.services.get(uuid);
-    if (!s) {
-      if (!this.server) return Promise.reject(new TreadmillError('not-connected'));
-      s = this.server.getPrimaryService(uuid);
-      s.catch(() => this.services.delete(uuid));
-      this.services.set(uuid, s);
-    }
-    return s;
-  }
-
-  private characteristic(service: Uuid, characteristic: Uuid) {
-    const key = `${service}/${characteristic}`;
-    let c = this.chars.get(key);
-    if (!c) {
-      c = this.service(service).then(s => s.getCharacteristic(characteristic));
-      c.catch(() => this.chars.delete(key));
-      this.chars.set(key, c);
-    }
-    return c;
-  }
-
-  async read(service: Uuid, characteristic: Uuid) {
-    return (await this.characteristic(service, characteristic)).readValue();
-  }
-
-  async subscribe(service: Uuid, characteristic: Uuid, cb: (dv: DataView) => void) {
-    const c = await this.characteristic(service, characteristic);
-    const l: EventListener = ev => {
-      const v = (ev.target as BluetoothRemoteGATTCharacteristic).value;
-      if (v) cb(v);
-    };
-    c.addEventListener('characteristicvaluechanged', l);
-    this.listeners.push([c, l]);
-    await c.startNotifications();
-  }
-
-  async write(service: Uuid, characteristic: Uuid, data: Uint8Array) {
-    const c = await this.characteristic(service, characteristic);
-    const buf = data.slice().buffer;
-    if (c.writeValueWithResponse) await c.writeValueWithResponse(buf);
-    else await c.writeValue(buf);
-  }
-}
-
-export class WebBluetoothAdapter implements BleAdapter {
-  readonly kind = 'web-bluetooth';
-
-  async availability(): Promise<BleAvailability> {
-    if (typeof navigator === 'undefined' || !navigator.bluetooth) return { ok: false, reason: 'no-api' };
-    try {
-      if (navigator.bluetooth.getAvailability && !(await navigator.bluetooth.getAvailability())) {
-        return { ok: false, reason: 'no-adapter' };
-      }
-    } catch {
-      // getAvailability is optional; when in doubt, carry on
-    }
-    return { ok: true };
-  }
-
-  async requestDevice(optionalServices: Uuid[]): Promise<BleDevice> {
-    // No service filter: unclear whether the treadmill advertises 0x1826.
-    const dev = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices });
-    return new WebBluetoothDevice(dev);
   }
 }
 

@@ -1,7 +1,7 @@
 // The notice on the first run (and again when its text changes): what the app is, that it is used at one's own risk.
 // Nothing connects before it was accepted.
 
-import { DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION, isDisclaimerAccepted } from '../core/safety/safety';
+import { DISCLAIMER_STORAGE_KEY, DISCLAIMER_VERSION, isDisclaimerAccepted } from '../core/safety/disclaimer';
 import { t } from '../i18n/i18n';
 import { choose } from './components/dialogs';
 import { store } from './store';

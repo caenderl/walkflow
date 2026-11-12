@@ -1,11 +1,11 @@
 // What the treadmill reports, as the app uses it: the live figures, one sample a second for the chart and the history, the
-// log lines, the banner, and a running program that ends when the belt ends. The treadmill itself (device/treadmill.ts)
+// log lines, the banner, and a running program that ends when the belt ends. The treadmill itself (ftms-treadmill)
 // has already acted on it for the belt: the governor, the standstill detection, the belt phase. Nothing here sends anything.
 
 import type { Sample } from '../../core/history/export';
 import type { RunRecorder, RunSource } from '../../core/history/runs';
 import type { ProgramRunner } from '../../core/training/program';
-import type { EndReason, Treadmill } from '../../device/treadmill';
+import type { EndReason, Treadmill } from 'ftms-treadmill';
 import { t, type Text } from '../../i18n/i18n';
 import type { BeltBanner } from './belt-banner';
 import { describeControlPointResponse, describeMachineStatus, noticeText } from './treadmill-text';

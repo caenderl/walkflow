@@ -7,7 +7,7 @@
 // same limit would give two buttons the same speed, breaking slow < mid < run. Disabling keeps the enabled buttons in
 // strict order. The governor caps every command to the limit anyway.
 
-import { LIMIT_MAX } from './safety';
+import { LIMIT_MAX } from 'ftms-treadmill';
 
 export type PresetKey = 'slow' | 'mid' | 'run';
 export const PRESET_KEYS: readonly PresetKey[] = ['slow', 'mid', 'run'];

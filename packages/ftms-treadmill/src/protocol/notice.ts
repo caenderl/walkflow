@@ -2,7 +2,7 @@
 // sentences. These parts become a library of their own (docs/LIBRARY.md) and know no language: the app turns each code into
 // text (ui/live/treadmill-text.ts), and TypeScript checks that every code has one.
 
-import type { Range } from './ftms';
+import type { Range } from './ftms.ts';
 
 /** Why talking to the treadmill failed */
 export type TreadmillErrorCode = 'no-gatt' | 'not-connected' | 'write-timeout';
@@ -14,16 +14,6 @@ export class TreadmillError extends Error {
     this.name = 'TreadmillError';
   }
 }
-
-/** Why a new speed limit was not taken (decideLimitChange) */
-export type LimitProblem =
-  | { code: 'limit-not-a-number' }
-  | { code: 'limit-out-of-range'; min: number; max: number };
-
-/** Why a stored limit was not taken as it was (loadLimit) */
-export type LimitNote =
-  | { code: 'limit-stored-unconfirmed'; value: number; applied: number }
-  | { code: 'limit-legacy-not-adopted'; value: number; above: number };
 
 /** Why the experiment console did not send a command (checkConsoleCommand) */
 export type ConsoleBlock =
@@ -58,6 +48,4 @@ export type Notice =
   | { code: 'speed-refused' }
   | { code: 'limit-lowered'; kmh: number }
   | { code: 'limit-unconfirmed'; requested: number; applied: number }
-  | LimitProblem
-  | LimitNote
   | ConsoleBlock;

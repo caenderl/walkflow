@@ -1,9 +1,8 @@
 // The experiment console (developer mode): hex bytes typed by hand go to the treadmill, but through the same checks as
-// everything else (device/treadmill.ts, sendRaw): speed commands count for the governor, a stop always goes out at once and
+// everything else (ftms-treadmill, sendRaw): speed commands count for the governor, a stop always goes out at once and
 // ends a program, a start asks first.
 
-import { parseHexBytes } from '../../core/safety/safety';
-import type { Treadmill } from '../../device/treadmill';
+import { parseHexBytes, type Treadmill } from 'ftms-treadmill';
 import { t } from '../../i18n/i18n';
 import { $button, $input, log } from '../ui';
 import { noticeText } from './treadmill-text';

@@ -1,0 +1,48 @@
+name: Publish ftms-treadmill
+
+# Publishes the treadmill library (packages/ftms-treadmill) to npm when its release is published. release-please makes the
+# release as a draft (tag ftms-treadmill-v<version>, marked as a pre-release so that it never counts as the app's latest
+# release); publishing that draft by hand, after the hardware checks, starts this workflow.
+# Needs the repository secret NPM_TOKEN (an npm automation token that may publish ftms-treadmill). The package is
+# published with provenance, so npm shows which commit and workflow built it.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: startsWith(github.event.release.tag_name, 'ftms-treadmill-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Tag matches the version of the package?
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=$(node -p "require('./packages/ftms-treadmill/package.json').version")
+          if [ "ftms-treadmill-v$version" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match ftms-treadmill $version"
+            exit 1
+          fi
+
+      - run: npm run build -w ftms-treadmill
+      - run: npm publish -w ftms-treadmill --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

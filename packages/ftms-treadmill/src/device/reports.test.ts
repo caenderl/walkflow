@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { SpeedGovernor, StandstillDetector } from '../core/safety/safety';
-import { BeltState } from './belt-state';
-import { setupReports, type ReportsHost } from './reports';
+import type { SpeedGovernor, StandstillDetector } from '../safety/safety.ts';
+import { BeltState } from './belt-state.ts';
+import { setupReports, type ReportsHost } from './reports.ts';
 
 const dv = (...bytes: number[]) => new DataView(new Uint8Array(bytes).buffer);
 

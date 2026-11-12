@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { numberFormat, unitFormat } from './locales/format';
-import { LIMIT_CONFIRM_ABOVE, decideLimitChange, DEFAULT_SPEED_LIMIT, parseMaxStep } from '../core/safety/safety';
+import { DEFAULT_SPEED_LIMIT, LIMIT_CONFIRM_ABOVE } from 'ftms-treadmill';
+import { decideLimitChange, parseMaxStep } from '../core/safety/limit-settings';
 import {
   distUnit, fromShort, fromSpeed, KM_PER_MILE, onUnitsChange, parseUnits, setUnits, shortUnit, speedFromInput, speedStep,
   speedUnit, toDist, toShort, toSpeed,

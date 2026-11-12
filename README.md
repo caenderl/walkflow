@@ -123,18 +123,18 @@ The source is split into layers, each in its own folder; a layer only uses the o
 | Folder | Contents |
 | --- | --- |
 | `src/i18n/` | Language selection, texts per language (`locales/`), units (km/h or mph) |
-| `src/core/` | Pure logic without browser: FTMS protocol, safety rules, workouts and programs, routes and route packages, runs and statistics |
+| `src/core/` | Pure logic without browser: the stored safety settings, workouts and programs, routes and route packages, runs and statistics |
 | `src/platform/` | Pure helpers around the app's shell: build settings, version, security policy, file types, desktop file opening |
-| `src/device/` | The treadmill: Bluetooth adapter and the simulator |
 | `src/data/` | Storage in the browser (IndexedDB) |
 | `src/ui/` | Everything that draws or listens: views per feature, components, theme, desktop integration; vanilla TS |
 | `src/main.ts` | Wires it all together |
 | `electron/` | Main process and preload of the desktop app (uses only pure code of `src/`) |
+| `packages/ftms-treadmill/` | The treadmill library, published to npm as [`ftms-treadmill`](packages/ftms-treadmill/README.md): FTMS protocol, Bluetooth, speed limit, ramp, start and stop ([docs/LIBRARY.md](docs/LIBRARY.md)) |
 | `tests/` | Tests about the project itself (structure rules); unit tests sit next to their code |
 | `public/legal/<lang>/` | Legal notice and privacy pages per language |
 | `site/` | The product page for GitHub Pages (English and German, plain HTML and CSS, screenshots in `site/img/`); `npm run build:pages` puts it at the root and the web app under `app/` |
 
-A second BLE path (e.g. native) only implements `BleAdapter`/`BleDevice` from `src/device/ble.ts`.
+A second BLE path (e.g. native) only implements `BleAdapter`/`BleDevice` of `ftms-treadmill` (`packages/ftms-treadmill/src/device/ble.ts`).
 
 ### Translations
 

@@ -1,14 +1,12 @@
 // The speed in the training view and its limits: the target and the controls (slider, ±, the slow/mid/run presets, keys), the personal speed
-// limit and the maximum change per command (settings → safety), stored here. The treadmill (device/treadmill.ts) owns the
+// limit and the maximum change per command (settings → safety), stored here. The treadmill (ftms-treadmill) owns the
 // speed governor, the only thing that sends speed commands: it caps to the limit and the device range and approaches larger
 // jumps in steps. The values stay km/h inside; the fields and buttons show the units of the settings.
 
+import { LIMIT_CONFIRM_ABOVE, MAX_STEP_MAX, MAX_STEP_MIN, RAMP_INTERVAL_MS, type Treadmill } from 'ftms-treadmill';
 import {
-  decideLimitChange, LEGACY_LIMIT_KEY, LIMIT_CONFIRM_ABOVE,
-  LIMIT_STORAGE_KEY, loadLimit, MAX_STEP_MAX, MAX_STEP_MIN, MAX_STEP_STORAGE_KEY, parseMaxStep, RAMP_INTERVAL_MS,
-  serializeLimit,
-} from '../../core/safety/safety';
-import type { Treadmill } from '../../device/treadmill';
+  decideLimitChange, LEGACY_LIMIT_KEY, LIMIT_STORAGE_KEY, loadLimit, MAX_STEP_STORAGE_KEY, parseMaxStep, serializeLimit,
+} from '../../core/safety/limit-settings';
 import { t } from '../../i18n/i18n';
 import { noticeText } from './treadmill-text';
 import {

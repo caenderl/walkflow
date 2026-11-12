@@ -1,40 +1,15 @@
-// What the connected treadmill can do with the incline, and the number of levels the person has set for it.
-// The treadmill is asked (FTMS features and the supported inclination range); nothing here is assumed.
+// The incline levels in the training view: how many the person says the treadmill has (a setting), the percent each level
+// sends, and which level the card shows when the treadmill reports its incline. The app's part; the library only checks
+// what the treadmill supports and clamps what is sent.
 
-import type { Features, Range } from '../protocol/ftms';
+import type { Range } from 'ftms-treadmill/protocol';
 
-/** Fitness Machine Feature bit 3: the incline is part of the treadmill data. */
-const MACHINE_INCLINATION = 0x0008;
-/** Target Setting Feature bit 1: the treadmill accepts a target incline. */
-const TARGET_INCLINATION = 0x0002;
+const round1 = (v: number) => Math.round(v * 10) / 10;
 
 /** The fewest levels the settings offer: a single level is no choice */
 export const INCLINE_LEVELS_MIN = 2;
 /** The most levels the settings offer */
 export const INCLINE_LEVELS_MAX = 10;
-
-export interface InclineSupport {
-  /** Set Inclination is accepted: the incline can be controlled from the app */
-  settable: boolean;
-  /** The incline comes with the treadmill data: it can be shown */
-  reported: boolean;
-}
-
-/**
- * Features say what the treadmill supports. Without readable features the range characteristic is the only
- * hint, and an empty range (min = max) never counts as controllable.
- */
-export function inclineSupport(features: Features | undefined, range: Range | undefined): InclineSupport {
-  const usableRange = range !== undefined && range.max > range.min;
-  if (!features) return { settable: usableRange, reported: false };
-  const accepted = (features.target & TARGET_INCLINATION) !== 0;
-  return {
-    settable: accepted && (range === undefined || usableRange),
-    reported: (features.machine & MACHINE_INCLINATION) !== 0,
-  };
-}
-
-const round1 = (v: number) => Math.round(v * 10) / 10;
 
 const validCount = (n: number) => Number.isInteger(n) && n >= INCLINE_LEVELS_MIN && n <= INCLINE_LEVELS_MAX;
 
@@ -66,13 +41,6 @@ export function sliderFromLevelCount(count: number): string {
 export function levelsFromCount(count: number, range: Range | undefined): number[] {
   if (!validCount(count) || !range || !(range.max > range.min)) return [];
   return Array.from({ length: count + 1 }, (_, i) => round1(Math.min(range.max, Math.max(range.min, range.min + ((range.max - range.min) * i) / count))));
-}
-
-/** The value that is sent: inside the reported range, with the 0.1 % resolution of the protocol. */
-export function clampIncline(pct: number, range: Range | undefined): number {
-  const v = round1(pct);
-  if (!range || Number.isNaN(v)) return v;
-  return Math.min(range.max, Math.max(range.min, v));
 }
 
 /** How long a chosen incline is shown although the treadmill still reports another (its motor takes a few seconds) */

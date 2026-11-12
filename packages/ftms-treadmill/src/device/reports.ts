@@ -2,11 +2,11 @@
 // the belt phase and the standstill detection), Machine Status (the treadmill stopped by itself, control lost) and the
 // answers to commands (a refused Stop, a refused speed). Everything is handed on to the app as well; this sends nothing.
 
-import { hex, OP, parseMachineStatus, type ControlPointResponse, type MachineEvent, type TreadmillData } from '../core/protocol/ftms';
-import type { Notice } from '../core/protocol/notice';
-import type { BeltPhaseTracker } from '../core/safety/belt-phase';
-import type { SpeedGovernor, StandstillDetector } from '../core/safety/safety';
-import type { BeltState } from './belt-state';
+import { hex, OP, parseMachineStatus, type ControlPointResponse, type MachineEvent, type TreadmillData } from '../protocol/ftms.ts';
+import type { Notice } from '../protocol/notice.ts';
+import type { BeltPhaseTracker } from '../safety/belt-phase.ts';
+import type { SpeedGovernor, StandstillDetector } from '../safety/safety.ts';
+import type { BeltState } from './belt-state.ts';
 
 /** Why the belt stopped without the app asking for it */
 export type ReportedEnd = 'machine-stopped' | 'machine-paused' | 'safety-key' | 'standstill';

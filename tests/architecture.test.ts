@@ -1,4 +1,5 @@
-// The rules of the project structure (docs/ARCHITECTURE.md), checked on the source files (src/ and electron/). A change that breaks one fails
+// The rules of the project structure (docs/ARCHITECTURE.md), checked on the source files (src/, electron/ and the treadmill
+// library in packages/ftms-treadmill/). A change that breaks one fails
 // here, so the structure does not erode: layers only look downwards, the pure layers know nothing about the browser, and
 // there are no cycles at runtime.
 
@@ -15,7 +16,6 @@ const MAY_IMPORT: Record<string, readonly string[]> = {
   i18n: [],
   platform: [],
   core: ['i18n'],
-  device: ['core'],
   data: ['core'],
   /** The connection to other people's devices (sharing). Never the treadmill: no device, no ui. */
   net: ['core', 'i18n', 'platform'],
@@ -28,9 +28,13 @@ const ELECTRON_MAY_IMPORT = ['i18n', 'platform', 'core'];
 const ROOT_FILES = ['main.ts', 'env.d.ts', 'style.css'];
 /** What reaches other people's devices must never be able to drive the belt: no FTMS commands, no treadmill connection */
 const SHARING = ['src/net/', 'src/core/share/'];
-const BELT = ['src/core/protocol/', 'src/device/'];
-/** What becomes the treadmill library (docs/LIBRARY.md): it speaks in codes, the app turns them into text */
-const TREADMILL_LIB = ['src/core/protocol/', 'src/core/safety/', 'src/device/'];
+/** The treadmill library (docs/LIBRARY.md): it drives the belt, speaks in codes and stands on its own */
+const LIB = join(ROOT, 'packages', 'ftms-treadmill', 'src');
+const LIB_NAME = 'ftms-treadmill';
+/** The only ways into the library */
+const LIB_ENTRIES = [LIB_NAME, `${LIB_NAME}/web-bluetooth`, `${LIB_NAME}/sim`, `${LIB_NAME}/protocol`];
+/** The one file of the library that touches the browser */
+const LIB_BROWSER = join(LIB, 'device', 'web-bluetooth.ts');
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
@@ -50,6 +54,16 @@ function importsOf(text: string): Import[] {
   return out;
 }
 
+/** Imports of packages (not relative paths), e.g. 'ftms-treadmill/sim' */
+function packageImportsOf(text: string): Import[] {
+  const out: Import[] = [];
+  const re = /\b(import|export)(\s+type)?\s*(?:[^'";]*?\s+from\s*)?['"]([^'".][^'"?]*)['"]|\bimport\(\s*['"]([^'".][^'"?]*)['"]\s*\)/g;
+  for (const m of code(text).matchAll(re)) out.push({ spec: m[3] ?? m[4]!, typeOnly: m[2] !== undefined });
+  return out;
+}
+
+const isLib = (spec: string) => spec === LIB_NAME || spec.startsWith(`${LIB_NAME}/`);
+
 function resolveTs(from: string, spec: string): string | null {
   const base = normalize(join(dirname(from), spec));
   for (const candidate of [`${base}.ts`, base]) {
@@ -59,6 +73,8 @@ function resolveTs(from: string, spec: string): string | null {
 }
 
 const sources = walk(SRC).filter(p => p.endsWith('.ts') && !p.endsWith('.test.ts') && !p.endsWith('.d.ts'));
+const libSources = walk(LIB).filter(p => p.endsWith('.ts') && !p.endsWith('.test.ts'));
+const libFiles = walk(LIB).filter(p => p.endsWith('.ts'));
 const layerOf = (file: string) => relative(SRC, file).split(sep)[0]!;
 const rel = (file: string) => relative(ROOT, file);
 
@@ -86,18 +102,20 @@ describe('project structure', () => {
 
   it('keeps sharing away from the belt: nothing from other devices can reach the treadmill commands', () => {
     const bad: string[] = [];
-    const isBelt = (f: string) => BELT.some(b => rel(f).startsWith(b));
     // Every file that sharing can run, however far down the imports (a type-only import runs nothing)
     for (const file of sources.filter(f => SHARING.some(s => rel(f).startsWith(s)))) {
       const seen = new Set<string>([file]);
       const queue: { file: string; via: string[] }[] = [{ file, via: [file] }];
       while (queue.length) {
         const cur = queue.shift()!;
-        for (const { spec, typeOnly } of importsOf(readFileSync(cur.file, 'utf8'))) {
+        const text = readFileSync(cur.file, 'utf8');
+        // The treadmill library, directly imported: also a type (the commands' types have no business in sharing either)
+        for (const { spec, typeOnly } of packageImportsOf(text)) {
+          if (isLib(spec) && (cur.file === file || !typeOnly)) bad.push([...cur.via.map(rel), spec].join(' → '));
+        }
+        for (const { spec, typeOnly } of importsOf(text)) {
           const target = resolveTs(cur.file, spec);
           if (!target || !target.startsWith(SRC) || seen.has(target)) continue;
-          // directly imported: also a type (the commands' types have no business in sharing either)
-          if (isBelt(target) && (cur.file === file || !typeOnly)) { bad.push([...cur.via, target].map(rel).join(' → ')); continue; }
           if (typeOnly) continue;
           seen.add(target);
           queue.push({ file: target, via: [...cur.via, target] });
@@ -107,13 +125,46 @@ describe('project structure', () => {
     expect(bad).toEqual([]);
   });
 
-  it('keeps texts out of the treadmill library: no import from i18n, also not a type', () => {
+  it('lets the app use the treadmill library only through its entry points', () => {
     const bad: string[] = [];
-    for (const file of sources.filter(f => TREADMILL_LIB.some(l => rel(f).startsWith(l)))) {
-      for (const { spec } of importsOf(readFileSync(file, 'utf8'))) {
-        const target = resolveTs(file, spec);
-        if (target && layerOf(target) === 'i18n') bad.push(`${rel(file)} → ${rel(target)}`);
+    for (const file of [...walk(SRC), ...walk(join(ROOT, 'electron'))].filter(p => p.endsWith('.ts'))) {
+      const text = readFileSync(file, 'utf8');
+      for (const { spec } of packageImportsOf(text)) if (isLib(spec) && !LIB_ENTRIES.includes(spec)) bad.push(`${rel(file)} → ${spec}`);
+      for (const { spec } of importsOf(text)) {
+        const target = resolveTs(file, spec) ?? normalize(join(dirname(file), spec));
+        if (target.startsWith(join(ROOT, 'packages'))) bad.push(`${rel(file)} → ${rel(target)}`);
       }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it('keeps the treadmill library on its own: nothing from the app, no texts, no other package', () => {
+    const bad: string[] = [];
+    for (const file of libFiles) {
+      const text = readFileSync(file, 'utf8');
+      for (const { spec } of importsOf(text)) {
+        const target = resolveTs(file, spec);
+        if (!target || !target.startsWith(LIB)) bad.push(`${rel(file)} → ${spec}`);
+      }
+      // Tests may use the test runner; the library itself has no dependencies
+      for (const { spec } of packageImportsOf(text)) if (!(file.endsWith('.test.ts') && spec === 'vitest')) bad.push(`${rel(file)} → ${spec}`);
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it('keeps the browser out of the treadmill library, except its Web Bluetooth adapter', () => {
+    const found: string[] = [];
+    for (const file of libSources.filter(f => f !== LIB_BROWSER)) {
+      const hit = code(readFileSync(file, 'utf8')).replace(/'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/g, "''").match(/\b(document\.|window\.|localStorage|sessionStorage|indexedDB|navigator\.|HTMLElement|Bluetooth[A-Z]\w*)/);
+      if (hit) found.push(`${rel(file)}: ${hit[0]}`);
+    }
+    expect(found).toEqual([]);
+  });
+
+  it('lets only the ui choose Web Bluetooth: the pure layers use the core of the library', () => {
+    const bad: string[] = [];
+    for (const file of sources.filter(f => PURE.includes(layerOf(f)))) {
+      for (const { spec } of packageImportsOf(readFileSync(file, 'utf8'))) if (spec === `${LIB_NAME}/web-bluetooth`) bad.push(`${rel(file)} → ${spec}`);
     }
     expect(bad).toEqual([]);
   });
@@ -130,8 +181,8 @@ describe('project structure', () => {
 
   it('has no import cycles at runtime (a type-only import does not count)', () => {
     const graph = new Map<string, string[]>();
-    for (const file of sources) {
-      const deps = importsOf(readFileSync(file, 'utf8')).filter(i => !i.typeOnly).map(i => resolveTs(file, i.spec)).filter((p): p is string => !!p && p.startsWith(SRC));
+    for (const file of [...sources, ...libSources]) {
+      const deps = importsOf(readFileSync(file, 'utf8')).filter(i => !i.typeOnly).map(i => resolveTs(file, i.spec)).filter((p): p is string => !!p && (p.startsWith(SRC) || p.startsWith(LIB)));
       graph.set(file, deps);
     }
     const cycles: string[] = [];
@@ -164,7 +215,7 @@ describe('project structure', () => {
   });
 
   it('keeps a test next to the code it tests', () => {
-    const tests = walk(SRC).filter(p => p.endsWith('.test.ts'));
+    const tests = [...walk(SRC), ...walk(LIB)].filter(p => p.endsWith('.test.ts'));
     const orphans = tests.filter(t => !statSync(t.replace(/\.test\.ts$/, '.ts'), { throwIfNoEntry: false })?.isFile());
     expect(orphans.map(rel)).toEqual([]);
   });

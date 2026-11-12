@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { TreadmillError } from '../../core/protocol/notice';
+import { TreadmillError } from 'ftms-treadmill';
 import { setLanguage } from '../../i18n/i18n';
 import { describeControlPointResponse, describeMachineStatus, errorText, noticeText } from './treadmill-text';
 

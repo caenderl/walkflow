@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SPEED_LIMIT, LIMIT_MIN } from './safety';
+import { DEFAULT_SPEED_LIMIT, LIMIT_MIN } from 'ftms-treadmill';
 import {
   checkPresetChange, DEFAULT_SPEED_PRESETS, loadSpeedPresets, PRESET_KEYS, PRESET_MIN, presetCommand,
   serializeSpeedPresets, type SpeedPresets,

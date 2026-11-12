@@ -1,8 +1,9 @@
-// The treadmill side speaks in codes (core/protocol/notice.ts, Machine Status, Control Point results); this turns them into
+// The treadmill library speaks in codes (ftms-treadmill: Notice, Machine Status, Control Point results); this turns them into
 // text in the language of the app. No DOM, so it can be tested.
 
-import { OP_NAMES, type ControlPointResponse, type MachineEvent } from '../../core/protocol/ftms';
-import { TreadmillError, type Notice, type TreadmillErrorCode } from '../../core/protocol/notice';
+import { TreadmillError, type ControlPointResponse, type MachineEvent, type Notice, type TreadmillErrorCode } from 'ftms-treadmill';
+import { OP_NAMES } from 'ftms-treadmill/protocol';
+import type { LimitNote, LimitProblem } from '../../core/safety/limit-settings';
 import { t } from '../../i18n/i18n';
 
 /** Result codes of Control Point responses → key in the locale files */
@@ -48,7 +49,7 @@ export function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-export function noticeText(n: Notice): string {
+export function noticeText(n: Notice | LimitProblem | LimitNote): string {
   switch (n.code) {
     case 'device': return t.ble.device(n.name);
     case 'device-info': return t.ble[n.field](n.value);

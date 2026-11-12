@@ -3,11 +3,11 @@
 // No DOM here on purpose, so the order of these steps can be tested. Stop and Pause go out urgently, ahead of anything queued,
 // they end a start that is still being sent, and they are sent again if the treadmill did not take them.
 
-import { cmdPause, cmdRequestControl, cmdStart, cmdStop } from '../core/protocol/ftms';
-import type { Notice } from '../core/protocol/notice';
-import type { BeltPhaseTracker } from '../core/safety/belt-phase';
-import type { SpeedGovernor, StandstillDetector } from '../core/safety/safety';
-import type { BeltState } from './belt-state';
+import { cmdPause, cmdRequestControl, cmdStart, cmdStop } from '../protocol/ftms.ts';
+import type { Notice } from '../protocol/notice.ts';
+import type { BeltPhaseTracker } from '../safety/belt-phase.ts';
+import type { SpeedGovernor, StandstillDetector } from '../safety/safety.ts';
+import type { BeltState } from './belt-state.ts';
 
 /** How often a Stop or Pause is sent before the app says that it could not stop the belt */
 export const STOP_ATTEMPTS = 3;

@@ -3,7 +3,8 @@
 Walkflow is a vanilla TypeScript app (no framework) that runs in the browser as a PWA and in Electron as a desktop app.
 The code is split into **layers**. A layer may only use the layers below it, and the lower ones know nothing about the
 browser. That keeps the logic that matters (above all what limits and stops the belt) testable without a browser, and
-the UI replaceable.
+the UI replaceable. Everything that drives the treadmill is a library of its own in `packages/ftms-treadmill/`
+([LIBRARY.md](LIBRARY.md)); the app uses it like any npm package.
 
 ## The layers
 
@@ -12,8 +13,8 @@ src/
   main.ts             wires everything together (the only place that knows all parts)
   i18n/               texts per language, language choice, units (km/h or mph)
   core/               pure logic: no DOM, no storage, no network
-    protocol/           FTMS: parsers and commands
-    safety/             speed limit and ramp, standstill, incline rules, banner and button state, modes
+    safety/             the app's side of safety: the stored limit and step (format, confirmation above 6 km/h), the
+                        disclaimer, quiet and developer mode, speed presets, incline levels
     training/           workouts, the program runner, step panel logic, what the training view is about
     routes/             routes, GPX, route packages, the texts of a route, countries, map settings
     store/              the route store: its index (strict reading, entries from package files, filter) and the check of a download
@@ -21,8 +22,6 @@ src/
     history/            runs, statistics, CSV/TCX export
     id.ts               ids of things the person creates
   platform/           pure helpers around the shell: build settings, features that are on or off, version, the logic of the desktop update (two yeses, never while connected), CSP, MIME types, dev server address, opened files
-  device/             the treadmill: the Treadmill facade (treadmill.ts: connect, start, stop, speed, limits, what the
-                      treadmill reports), the belt commands and their order, the Web Bluetooth adapter, the simulator
   net/                the connection to other people's devices for sharing (not there yet, see docs/P2P.md); never the treadmill
   data/               IndexedDB storage (workouts, routes, runs)
   ui/                 everything that draws or listens
@@ -38,38 +37,50 @@ src/
     ui.ts store.ts      DOM lookups, log and download; the storage wrapper that never throws
 electron/             main process and preload of the desktop app
 tests/                tests about the project itself
+
+packages/ftms-treadmill/src/   the treadmill library, published to npm as ftms-treadmill
+  index.ts            the core entry point: createTreadmill, types, limits (pure, runs in Node)
+  web-bluetooth.ts sim.ts protocol.ts   the other entry points
+  protocol/           FTMS parsers and commands, the notice codes
+  safety/             speed limit, ramp (governor), standstill, belt phase, which buttons may be used, incline range
+  device/             the Treadmill facade (treadmill.ts), the belt commands and their order, reading the treadmill's reports,
+                      the Bluetooth client and write queue, the Web Bluetooth adapter, the simulator
 ```
 
 | Layer | May import from |
 | --- | --- |
 | `i18n`, `platform` | itself |
 | `core` | `i18n` |
-| `device` | `core` |
-| `net` | `core`, `i18n`, `platform` (never `device`, `ui`, or the FTMS commands) |
+| `net` | `core`, `i18n`, `platform` (never `ui`, and nothing of `ftms-treadmill`) |
 | `data` | `core` |
-| `ui` | `core`, `i18n`, `device`, `data`, `platform`, `net` |
+| `ui` | `core`, `i18n`, `data`, `platform`, `net` |
 | `electron/` | pure code of `src/` only: `i18n`, `platform`, `core` |
 
-`main.ts` may import from everything.
+`main.ts` may import from everything. Every layer may use the core of the treadmill library (`ftms-treadmill`, pure);
+only `ui` and `main.ts` choose the Web Bluetooth adapter (`ftms-treadmill/web-bluetooth`). The library itself imports
+nothing from `src/`.
 
 ## Rules (checked by `tests/architecture.test.ts`)
 
 1. **Layers only look downwards** (the table above). A new import that points up fails the test.
 2. **The pure layers (`i18n`, `core`, `platform`) know nothing about the browser**: no `document`, `window`, `localStorage`,
-   `indexedDB`, `navigator`. Code that needs them belongs in `ui`, `data` or `device`.
+   `indexedDB`, `navigator`. Code that needs them belongs in `ui` or `data`.
 3. **No import cycles at runtime.** A type-only import (`import type`) does not count, so two modules may describe each
    other's types; they may not call each other.
 4. **Every source file lives in a layer folder**; at the top of `src/` only `main.ts`, `env.d.ts` and `style.css` stay.
 5. **A test sits next to the code it tests** (`foo.ts`, `foo.test.ts`).
 6. **The desktop main process uses only pure code** of `src/`.
-7. **The treadmill parts (`core/protocol`, `core/safety`, `device`) have no texts**: no import from `i18n`. They speak in
-   codes (`core/protocol/notice.ts`), and `ui/live/treadmill-text.ts` turns them into text. They become a library of their
-   own ([LIBRARY.md](LIBRARY.md)).
+7. **The treadmill library stands on its own** (`packages/ftms-treadmill/src/`): it imports nothing outside its folder and
+   no package (its tests use `vitest`), so it has no texts: it speaks in codes (`Notice`), and `ui/live/treadmill-text.ts`
+   turns them into text. Only its Web Bluetooth adapter touches the browser.
+8. **The app uses the library only through its entry points** (`ftms-treadmill`, `/web-bluetooth`, `/sim`, `/protocol`),
+   never its files. In this repository they resolve to the sources (`tsconfig.json` paths, the alias in `vite.config.ts`).
+9. **Sharing never reaches the belt**: nothing that `net/` or `core/share/` runs imports `ftms-treadmill`.
 
 ## Principles
 
-- **Safety first, and testable.** Whatever limits or stops the belt lives in `core/safety` as pure functions, and its
-  test is written before the code. The banner, the button state and the quiet or developer mode never take anything
+- **Safety first, and testable.** Whatever limits or stops the belt lives in the treadmill library, as pure functions and a
+  facade tested for the order of its steps, and its test is written before the code. The banner, the button state and the quiet or developer mode never take anything
   away from Stop.
 - **Pure core, thin edges.** Decisions are pure functions that take values and return values (`controlAvailability`,
   `BeltBanner`, `readPackage`). The UI only reads them and draws. That is why a feature is mostly tests plus a little glue.
@@ -88,7 +99,7 @@ tests/                tests about the project itself
 | --- | --- |
 | a rule, a calculation, a parser, a state machine | `core/<domain>/` with a test next to it |
 | something that talks to the browser's storage | `data/` |
-| something that talks to Bluetooth | `device/` |
+| something that drives or reads the treadmill | `packages/ftms-treadmill/src/` (and its API in [LIBRARY.md](LIBRARY.md)) |
 | a part of the page for a feature | `ui/<feature>/` |
 | a part that several features use | `ui/components/` |
 | a text for people | `i18n/locales/en.ts`, `de.ts`, `fr.ts`, `uk.ts` |
@@ -97,12 +108,8 @@ tests/                tests about the project itself
 ## Known debt (small, on purpose not done in one go)
 
 - `src/main.ts` (about 250 lines) only creates the parts and wires them together. Everything that drives the belt is behind
-  the Treadmill facade (`device/treadmill.ts`, with `belt-commands.ts` and `reports.ts`, tested for the order of their steps:
-  a stop tells the program, forgets the ramp and goes out urgently); `ui/live/` only asks it and draws. It was checked by hand
-  in the demo; the real treadmill still has to confirm it (HARDWARE-TESTS.md, “Treadmill facade”).
+  the Treadmill facade of `ftms-treadmill`; `ui/live/` only asks it and draws.
 - `ui/routes/route-ui.ts` (about 355 lines) still holds the library list, the card in the training view and the map switch;
   `ui/workouts/workout-ui.ts` (about 270 lines) the library and the editor. The week plan, the step row, the elevation
   profile, the import, the library upkeep, the route details and the route editor are their own modules. What is left in
   both files is mostly the list and its state, which is what they are for.
-- The treadmill control (protocol, Bluetooth client, safety rules and the order of start and stop) is meant to become a
-  library of its own with a defined API, so that the app only draws. The draft and how far it is are in [LIBRARY.md](LIBRARY.md).

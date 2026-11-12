@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { TreadmillEventMap } from '../../device/treadmill';
+import type { TreadmillEventMap } from 'ftms-treadmill';
 import { newFigures, setupLiveData, type LiveDataHost } from './live-data';
 
 /** A treadmill that only hands on events, as the facade does */

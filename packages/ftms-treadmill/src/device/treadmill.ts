@@ -3,20 +3,20 @@
 // the belt phase, the order of start and stop), so that the app only draws and asks. It becomes the ftms-treadmill library.
 // No texts and no DOM: what it has to say is a Notice code, the app says it in its language.
 
-import { cmdRequestControl, cmdSetInclination, cmdSetSpeed, hex, OP, parseTrainingStatus, type ControlPointResponse, type MachineEvent, type Range, type TreadmillData } from '../core/protocol/ftms';
-import type { ConsoleBlock, Notice } from '../core/protocol/notice';
-import { BeltPhaseTracker, type BeltPhase } from '../core/safety/belt-phase';
-import { clampIncline, inclineSupport } from '../core/safety/incline';
+import { cmdRequestControl, cmdSetInclination, cmdSetSpeed, hex, OP, parseTrainingStatus, type ControlPointResponse, type MachineEvent, type Range, type TreadmillData } from '../protocol/ftms.ts';
+import type { ConsoleBlock, Notice } from '../protocol/notice.ts';
+import { BeltPhaseTracker, type BeltPhase } from '../safety/belt-phase.ts';
+import { clampIncline, inclineSupport } from '../safety/incline.ts';
 import {
   checkConsoleCommand, controlAvailability, DEFAULT_MAX_STEP, DEFAULT_SPEED_LIMIT, LIMIT_CONFIRM_ABOVE, LIMIT_MAX, LIMIT_MIN,
   MAX_STEP_MAX, MAX_STEP_MIN, SpeedGovernor, StandstillDetector,
-} from '../core/safety/safety';
-import { TreadmillClient, type BleAdapter, type ConnectResult } from './ble';
-import { setupBelt } from './belt-commands';
-import { BeltState } from './belt-state';
-import { setupReports, type ReportedEnd } from './reports';
+} from '../safety/safety.ts';
+import { TreadmillClient, type BleAdapter, type ConnectResult } from './ble.ts';
+import { setupBelt } from './belt-commands.ts';
+import { BeltState } from './belt-state.ts';
+import { setupReports, type ReportedEnd } from './reports.ts';
 
-export type { BeltPhase } from '../core/safety/belt-phase';
+export type { BeltPhase } from '../safety/belt-phase.ts';
 
 /** Who asked for a speed: a running workout or route, or the person (buttons, keys, presets) */
 export type CommandSource = 'program' | 'manual';
