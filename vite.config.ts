@@ -38,6 +38,16 @@ function csp(): Plugin {
 /** The treadmill library from its sources in this repository (packages/ftms-treadmill), through its entry points only */
 const treadmillLib = (entry: string) => fileURLToPath(new URL(`./packages/ftms-treadmill/src/${entry}.ts`, import.meta.url));
 
+/** What the service worker precaches; exported so tests/pwa-precache.test.ts checks these exact patterns against real files. */
+export const pwaWorkbox = {
+  globPatterns: ['**/*.{js,css,html,svg,png}'],
+  // The map (loaded only on request, needs the network anyway) and the country data stay out of the offline cache
+  globIgnores: ['**/map-view-*', '**/maplibre-gl-*', '**/countries-*', '**/assets/flags/**'],
+  // Flags are fetched when shown and kept after that
+  runtimeCaching: [{ urlPattern: ({ url }: { url: URL }) => url.pathname.includes('/assets/flags/'), handler: 'CacheFirst' as const, options: { cacheName: 'flags', expiration: { maxEntries: 80 } } }],
+  cleanupOutdatedCaches: true,
+};
+
 export default defineConfig({
   base: process.env.BASE_PATH ?? './',
   resolve: {
@@ -90,14 +100,7 @@ export default defineConfig({
           { src: 'icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png}'],
-        // The map (loaded only on request, needs the network anyway) and the country data stay out of the offline cache
-        globIgnores: ['**/map-view-*', '**/maplibre-gl-*', '**/countries-*', '**/assets/flags/**'],
-        // Flags are fetched when shown and kept after that
-        runtimeCaching: [{ urlPattern: ({ url }) => url.pathname.includes('/assets/flags/'), handler: 'CacheFirst', options: { cacheName: 'flags', expiration: { maxEntries: 80 } } }],
-        cleanupOutdatedCaches: true,
-      },
+      workbox: pwaWorkbox,
     }),
   ],
   test: {
