@@ -138,7 +138,7 @@ export const en = {
     unknown: 'Range: unknown. The log tells you whether the treadmill accepts incline via FTMS (Set Inclination: OK or not supported).',
     range: (min: number, max: number, step: number) => `Range: ${n(min)} – ${n(max)} % (step ${n(step)})`,
     levelsLabel: 'Incline levels',
-    levelsHint: 'How many levels your treadmill has (none: a slider over the whole range). The levels are spread evenly from the lowest to the highest incline the treadmill reports.',
+    levelsHint: 'How many levels your treadmill has. The levels are spread evenly from the lowest to the highest incline the treadmill reports.',
     levelsAria: 'Incline levels',
     levelsNone: 'none',
     levelButton: (num: number, pct: number) => `Level ${num}: ${n(pct, 1)} %`,

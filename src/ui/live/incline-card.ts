@@ -3,7 +3,7 @@
 // supports; the value that is sent is always inside the range the treadmill reported.
 
 import { cmdSetInclination, type Features, type Range } from '../../core/protocol/ftms';
-import { clampIncline, inclineSupport, levelsFromCount, parseLevelCount, type InclineSupport } from '../../core/safety/incline';
+import { clampIncline, inclineSupport, levelCountFromSlider, levelsFromCount, parseLevelCount, sliderFromLevelCount, type InclineSupport } from '../../core/safety/incline';
 import { t } from '../../i18n/i18n';
 import { $, $input, log } from '../ui';
 import { store } from '../store';
@@ -17,23 +17,25 @@ export interface InclineCardHost {
   send(bytes: Uint8Array): Promise<boolean>;
   /** The page shows a connection (the buttons can be pressed) */
   uiConnected(): boolean;
+  /** The incline levels setting changed: the figures redraw (the incline figure follows it) */
+  levelsChanged(): void;
 }
 
 export function setupInclineCard(host: InclineCardHost) {
   let range: Range | null = null;
   let shown = 0;
   let support: InclineSupport = { settable: false, reported: false };
-  /** How many levels the person says the treadmill's incline has; 0 = the slider over the range the treadmill reports */
+  /** How many levels the person says the treadmill's incline has; 0 = none: the incline is not shown in the training view */
   let levelCount = parseLevelCount(store.get(INCLINE_LEVELS_KEY));
 
   /** The setting "incline levels": the slider and the number beside it */
   function renderLevelCountField() {
-    $input('inclLevelsInput').value = String(levelCount);
+    $input('inclLevelsInput').value = sliderFromLevelCount(levelCount);
     $('inclLevelsValue').textContent = levelCount === 0 ? t.incline.levelsNone : String(levelCount);
   }
 
   function render() {
-    $('inclCard').hidden = !support.settable;
+    $('inclCard').hidden = !support.settable || levelCount === 0;
     $('inclTarget').textContent = t.incline.value(shown);
     const levels = levelsFromCount(levelCount, range ?? undefined);
     const box = $('inclLevels');
@@ -70,10 +72,11 @@ export function setupInclineCard(host: InclineCardHost) {
   }
 
   $input('inclLevelsInput').oninput = e => {
-    levelCount = parseLevelCount((e.target as HTMLInputElement).value);
+    levelCount = levelCountFromSlider((e.target as HTMLInputElement).value);
     store.set(INCLINE_LEVELS_KEY, String(levelCount));
     renderLevelCountField();
     render();
+    host.levelsChanged();
   };
   $input('inclSlider').oninput = e => { $('inclTarget').textContent = t.incline.value(parseFloat((e.target as HTMLInputElement).value)); };
   $input('inclSlider').onchange = e => void set(parseFloat((e.target as HTMLInputElement).value));
@@ -113,5 +116,7 @@ export function setupInclineCard(host: InclineCardHost) {
     },
     /** The treadmill reports the incline in its data (the figure is shown) */
     supportReported: () => support.reported,
+    /** Incline levels are set ("none" hides the incline in the training view) */
+    wanted: () => levelCount > 0,
   };
 }

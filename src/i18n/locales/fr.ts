@@ -139,7 +139,7 @@ export const fr: Messages = {
     unknown: 'Plage : inconnue. Le journal indique si le tapis accepte l’inclinaison via FTMS (Set Inclination: OK ou non pris en charge).',
     range: (min: number, max: number, step: number) => `Plage : ${n(min)} – ${n(max)} % (pas ${n(step)})`,
     levelsLabel: 'Niveaux d’inclinaison',
-    levelsHint: 'Combien de niveaux a votre tapis (aucun : un curseur sur toute la plage). Les niveaux sont répartis régulièrement de l’inclinaison la plus basse à la plus haute indiquée par le tapis.',
+    levelsHint: 'Combien de niveaux a votre tapis. Les niveaux sont répartis régulièrement de l’inclinaison la plus basse à la plus haute indiquée par le tapis.',
     levelsAria: 'Niveaux d’inclinaison',
     levelsNone: 'aucun',
     levelButton: (num: number, pct: number) => `Niveau ${num} : ${n(pct, 1)} %`,

@@ -19,6 +19,8 @@ export interface ReadoutHost {
   programActive(): boolean;
   /** The treadmill said it can change its incline (the figure is hidden until then) */
   inclineReported(): boolean;
+  /** The person set incline levels in the settings ("none" hides everything about the incline in training) */
+  inclineWanted(): boolean;
   /** The highest speed that may be sent: the chart's axis follows it */
   effectiveMax(): number;
   /** The speed the belt is being regulated to, if any */
@@ -68,7 +70,7 @@ export function setupReadout(host: ReadoutHost) {
     $('vSpeed').textContent = connected ? f(cur.speed === undefined ? undefined : toSpeed(cur.speed), 1) : '–';
     $('vDist').textContent = f(cur.dist === undefined ? undefined : toDist(cur.dist), 2);
     $('vIncl').textContent = f(cur.incl, 1);
-    $('statIncl').hidden = !host.inclineReported() && cur.incl === undefined;
+    $('statIncl').hidden = !host.inclineWanted() || (!host.inclineReported() && cur.incl === undefined);
     $('vTime').textContent = cur.time === undefined ? '–' : fmtTime(cur.time);
     $('vHr').textContent = cur.hr === undefined ? '–' : String(cur.hr);
     $('vKcal').textContent = cur.kcal === undefined ? '–' : String(cur.kcal);
