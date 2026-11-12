@@ -766,6 +766,7 @@ export const fr: Messages = {
     licenseTitle: 'Licence',
     license: 'Licence MIT, sans garantie.',
     source: 'Code source : ',
+    version: (version: string) => `Version ${version}`,
     footer: (version: string) => `Walkflow ${version} · licence MIT · projet indépendant, sans lien avec le fabricant`,
     imprint: 'Mentions légales',
     privacyLink: 'Confidentialité',

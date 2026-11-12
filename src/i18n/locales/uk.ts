@@ -772,6 +772,7 @@ export const uk = {
     licenseTitle: 'Ліцензія',
     license: 'Ліцензія MIT, без гарантій.',
     source: 'Вихідний код: ',
+    version: (version: string) => `Версія ${version}`,
     footer: (version: string) => `Walkflow ${version} · ліцензія MIT · незалежний проєкт, не пов’язаний із виробником`,
     imprint: 'Правова інформація',
     privacyLink: 'Конфіденційність',

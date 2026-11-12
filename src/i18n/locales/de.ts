@@ -763,6 +763,7 @@ export const de: Messages = {
     licenseTitle: 'Lizenz',
     license: 'MIT-Lizenz, ohne Gewährleistung.',
     source: 'Quellcode: ',
+    version: (version: string) => `Version ${version}`,
     footer: (version: string) => `Walkflow ${version} · MIT-Lizenz · unabhängiges Projekt, nicht mit dem Hersteller verbunden`,
     imprint: 'Impressum',
     privacyLink: 'Datenschutz',

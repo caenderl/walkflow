@@ -15,6 +15,7 @@ export function renderInfo() {
   }));
   $('infoTested').textContent = t.info.tested(t.info.testedDevice, t.info.testedFeatures, t.info.untestedFeatures);
   $('infoAffiliation').textContent = t.info.notAffiliated;
+  $('infoVersion').textContent = t.info.version(APP_VERSION);
   $('footerVersion').textContent = t.info.footer(APP_VERSION);
 
   const source = GITHUB_REPO ? `https://github.com/${GITHUB_REPO}` : '';
