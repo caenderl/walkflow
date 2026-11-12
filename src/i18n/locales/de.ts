@@ -137,7 +137,7 @@ export const de: Messages = {
     unknown: 'Range: unbekannt. Ob das Band die Steigung per FTMS annimmt, sagt dir das Log (Set Inclination: OK oder nicht unterstützt).',
     range: (min: number, max: number, step: number) => `Range: ${n(min)} – ${n(max)} % (Step ${n(step)})`,
     levelsLabel: 'Steigungsstufen',
-    levelsHint: 'Wie viele Stufen dein Laufband hat. Die Stufen verteilen sich gleichmäßig von der niedrigsten bis zur höchsten Steigung, die das Band meldet.',
+    levelsHint: 'Die höchste Stufe deines Laufbands: 5 heißt Stufe 0 bis 5. Die Stufen verteilen sich gleichmäßig von der niedrigsten bis zur höchsten Steigung, die das Band meldet.',
     levelsAria: 'Steigungsstufen',
     levelsNone: 'keine',
     levelButton: (num: number, pct: number) => `Stufe ${num}: ${n(pct, 1)} %`,

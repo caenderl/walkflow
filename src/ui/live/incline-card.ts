@@ -48,8 +48,8 @@ export function setupInclineCard(host: InclineCardHost) {
       b.disabled = !host.uiConnected();
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(Math.abs(l - shown) < 0.05));
-      b.textContent = String(i + 1);
-      b.title = b.ariaLabel = t.incline.levelButton(i + 1, l);
+      b.textContent = String(i);
+      b.title = b.ariaLabel = t.incline.levelButton(i, l);
       b.onclick = () => void set(l);
       return b;
     }));

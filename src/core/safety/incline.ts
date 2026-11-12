@@ -59,12 +59,13 @@ export function sliderFromLevelCount(count: number): string {
 }
 
 /**
- * The levels of a treadmill with `count` of them: spread evenly over the range the treadmill reported, both ends
- * included. Always inside that range; none without a valid count or a range.
+ * The levels of a treadmill whose highest level is `count`: level 0 to level `count`, so `count` + 1 of them (a sPad 500 has
+ * 0 to 5), spread evenly over the range the treadmill reported, both ends included. Always inside that range; none without a
+ * valid count or a range.
  */
 export function levelsFromCount(count: number, range: Range | undefined): number[] {
   if (!validCount(count) || !range || !(range.max > range.min)) return [];
-  return Array.from({ length: count }, (_, i) => round1(Math.min(range.max, Math.max(range.min, range.min + ((range.max - range.min) * i) / (count - 1)))));
+  return Array.from({ length: count + 1 }, (_, i) => round1(Math.min(range.max, Math.max(range.min, range.min + ((range.max - range.min) * i) / count))));
 }
 
 /** The value that is sent: inside the reported range, with the 0.1 % resolution of the protocol. */

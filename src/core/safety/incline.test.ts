@@ -50,14 +50,15 @@ describe('parseLevelCount', () => {
 describe('levelsFromCount', () => {
   const range = (min: number, max: number, step = 0.5): Range => ({ min, max, step });
 
-  it('spreads the levels evenly over the range the treadmill reported, both ends included', () => {
-    expect(levelsFromCount(5, range(0, 10))).toEqual([0, 2.5, 5, 7.5, 10]);
-    expect(levelsFromCount(2, range(0, 12))).toEqual([0, 12]);
-    expect(levelsFromCount(3, range(-2, 6))).toEqual([-2, 2, 6]);
+  it('runs from level 0 to the highest level, spread evenly over the range the treadmill reported, both ends included', () => {
+    expect(levelsFromCount(5, range(0, 5))).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(levelsFromCount(5, range(0, 10))).toEqual([0, 2, 4, 6, 8, 10]);
+    expect(levelsFromCount(2, range(0, 12))).toEqual([0, 6, 12]);
+    expect(levelsFromCount(2, range(-2, 6))).toEqual([-2, 2, 6]);
   });
 
   it('rounds to 0.1 %, the resolution of the protocol', () => {
-    expect(levelsFromCount(4, range(0, 10))).toEqual([0, 3.3, 6.7, 10]);
+    expect(levelsFromCount(3, range(0, 10))).toEqual([0, 3.3, 6.7, 10]);
   });
 
   it('stays inside the range, always', () => {
