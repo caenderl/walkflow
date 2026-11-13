@@ -30,7 +30,7 @@
     "electron": "45.2.3",
     "electron-builder": "26.18.0",
     "esbuild": "0.28.2",
-    "ftms-treadmill": "0.1.2",
+    "ftms-treadmill": "0.2.0",
     "knip": "6.45.1",
     "maplibre-gl": "6.17.0",
     "oxlint": "1.93.0",
