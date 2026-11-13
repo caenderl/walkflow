@@ -50,14 +50,18 @@ npm run dev                                     # Demo (no treadmill) in the con
   to `site/` or the Pages workflow are `docs(site)` or `chore(site)`, never `feat(site)` (that would open a release).
 - `main` takes changes only through pull requests with CI (`test`) green.
 
-## Releases
+## How work is done here
 
-Releases are drafts made by release-please. When the maintainer says "release": check the release pull request's changelog,
-squash-merge it, watch the *Release Please* run, check the draft has the `.exe` with `.blockmap`, the `.AppImage`,
-`latest.yml`, `latest-linux.yml` and `SHA256SUMS.txt`, publish it (`gh release edit vX.Y.Z --draft=false --latest`), watch
-the *Pages* run (dispatch `pages.yml` if none starts) and check that https://walkflow-app.github.io/ links the new
-downloads. Stop and ask before publishing if the release contains `safety`, Bluetooth, ramp or stop changes: name the
-HARDWARE-TESTS.md checks that have to be done first.
+- **Bigger features start as a spec** (skill `write-spec`, in `docs/specs/`); code starts once the maintainer set it to
+  `accepted`. Small fixes need none.
+- **Before opening a pull request**, run the reviewers that apply and fix what they find (or say in the pull request why not):
+  - `safety-reviewer` when the diff touches `src/core/safety/`, `src/ui/live/`, Bluetooth, the `ftms-treadmill` version, or
+    anything that ends in a call that drives the belt;
+  - `docs-i18n-reviewer` for every change to behaviour, settings, UI texts or the site;
+  - `architect` for a spec, a refactor, or a change across layers or repositories.
+- **Treadmill checks**: skill `hardware-check` writes them into HARDWARE-TESTS.md, and reads a log the maintainer pastes.
+- **Website**: agent `site-editor`.
+- **"release"**: skill `release` (the whole chain, publishing included; it stops before publishing safety changes).
 
 ## Never without being asked
 

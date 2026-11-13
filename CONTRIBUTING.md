@@ -61,7 +61,8 @@ request; Dependabot keeps the GitHub Actions, which are pinned by commit, and th
 - **Small and focused.** One change per pull request, with the tests that show it works.
 - **Through a pull request only.** `main` takes no direct pushes; a pull request is merged once CI (`test`) is green.
 - **Working with an AI agent?** `CLAUDE.md` holds the rules an agent needs (safety, hardware checks, texts, releases) and
-  `.claude/settings.json` the commands it may and may not run; `.github/CODEOWNERS` names what needs a human review.
+  `.claude/settings.json` the commands it may and may not run, `.claude/skills/` and `.claude/agents/` the ways of working (release,
+  hardware checks, specs) and the reviewers (safety, docs and texts, architecture, the site); `.github/CODEOWNERS` names what needs a human review.
 - **No new dependency without asking first** (open an issue). What the app runs is bundled at build time and kept small on purpose:
   besides its own code only the treadmill library, the map library and the sharing library.
 - **Texts.** The app is in English, German, French and Ukrainian. A new text needs all four (`src/i18n/locales/`); a test checks that

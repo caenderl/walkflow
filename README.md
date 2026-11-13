@@ -132,7 +132,7 @@ The source is split into layers, each in its own folder; a layer only uses the o
 | `electron/` | Main process and preload of the desktop app (uses only pure code of `src/`) |
 | `tests/` | Tests about the project itself (structure rules); unit tests sit next to their code |
 | `public/legal/<lang>/` | Legal notice and privacy pages per language |
-| `CLAUDE.md`, `.claude/` | Rules and allowed commands for AI agents working on the repository |
+| `CLAUDE.md`, `.claude/` | Rules, allowed commands, skills and reviewer agents for AI agents working on the repository |
 | `site/` | The product page for GitHub Pages (English and German, plain HTML and CSS, screenshots in `site/img/`); `npm run build:pages` puts it at the root and the web app under `app/` |
 
 Everything that drives the treadmill (FTMS protocol, Bluetooth, speed limit, ramp, start and stop) is the library
