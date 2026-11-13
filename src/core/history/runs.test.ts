@@ -359,7 +359,7 @@ describe('backup file', () => {
       { ...good, track: { ...good.track, speed: [300, null, 1e9] } },
       { ...good, track: { ...good.track, hr: [90, 'x', 100] } },
       { ...good, track: { ...good.track, speed: [0, 0, 0] } },
-      { ...good, track: { t: Array.from({ length: RUN_MAX_SAMPLES + 1 }, (_, i) => i * 1000), speed: new Array(RUN_MAX_SAMPLES + 1).fill(300) } },
+      { ...good, track: { t: Array.from({ length: RUN_MAX_SAMPLES + 1 }, (_, i) => i * 1000), speed: Array.from({ length: RUN_MAX_SAMPLES + 1 }, () => 300) } },
       null,
     ];
     const tampered = { ...good, summary: { dist: 99999 } };

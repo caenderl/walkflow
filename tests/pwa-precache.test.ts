@@ -40,7 +40,7 @@ describe('PWA precache (what the app needs offline)', () => {
   it('takes the app shell, its code and styles, icons and legal pages, and leaves out the map, countries and flags', async () => {
     const { manifestEntries, warnings } = await getManifest({ globDirectory: dir, globPatterns: pwaWorkbox.globPatterns, globIgnores: pwaWorkbox.globIgnores });
     expect(warnings).toEqual([]);
-    expect(manifestEntries?.map(e => e.url).sort()).toEqual([
+    expect(manifestEntries.map(e => e.url).sort()).toEqual([
       'assets/index-abc123.css',
       'assets/index-abc123.js',
       'assets/share-hub-abc123.js',

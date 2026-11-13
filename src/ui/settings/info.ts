@@ -25,7 +25,7 @@ export function renderInfo() {
   if (source) links.push(link(source, t.info.sourceLink));
   // Nothing in return, no feature depends on it.
   links.push(link(DONATION_URL, t.info.donation));
-  const support = $('supportLink') as HTMLAnchorElement;
+  const support = $<HTMLAnchorElement>('supportLink');
   support.href = DONATION_URL;
   $('footerLinks').replaceChildren(...links.flatMap((a, i) => (i ? [' · ', a] : [a])));
 }

@@ -24,18 +24,18 @@ import { onThemeChange } from '../theme';
 import { fmtDistance, type ProgramStep } from '../../core/training/program';
 import { getRouteStore, type RouteStore } from '../../data/route-store';
 import {
-  analyzeRoute, DistanceTracker, gradeAhead, minutesLeft, pointAt, readRoute,
+  analyzeRoute, DistanceTracker, gradeAhead, minutesLeft, pointAt,
   ROUTE_SPEED_MAX, ROUTE_SPEED_MIN, routeSpeed, walkSeconds, walkSteps, type Route, type RouteStats,
 } from '../../core/routes/routes';
 import { getRunStore } from '../../data/run-store';
 import { COMMUNITY_ENABLED } from '../../platform/features';
 import { $, $button, download } from '../ui';
-import { button, el, iconButton } from '../components/elements';
+import { el, iconButton } from '../components/elements';
 import { store } from '../store';
 import { getWorkoutStore } from '../../data/workout-store';
 import { todayGoal, type DayGoal } from '../../core/training/workouts';
 
-export const SELECTED_STORAGE_KEY = 'walkflow.route';
+const SELECTED_STORAGE_KEY = 'walkflow.route';
 const MAP_STORAGE_KEY = 'walkflow.map';
 /** How often the standing against today's goal is read again while data keeps coming in */
 const GOAL_REFRESH_MS = 60_000;

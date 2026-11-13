@@ -76,6 +76,10 @@ the app.
    its repository.
 8. **Sharing never reaches the belt**: nothing that `net/` or `core/share/` runs imports `ftms-treadmill`.
 
+Next to these, `npm run lint` (oxlint with type information, then knip) catches what the types alone do not: an unhandled promise
+(a `tm.stop()` without `await`), a check that can never be true, an export or file that nothing uses. How to run it and how to
+switch a rule off for one line is in [CONTRIBUTING.md](../CONTRIBUTING.md#static-analysis).
+
 ## The treadmill library
 
 `ftms-treadmill` comes from npm at an exact version (`package.json`), like any other package; nothing of it is built here.

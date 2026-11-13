@@ -26,7 +26,7 @@ export function parseRich(s: string): RichSegment[] {
   const out: RichSegment[] = [];
   let last = 0;
   for (const m of s.matchAll(/\*\*(.+?)\*\*|`(.+?)`/g)) {
-    const at = m.index ?? 0;
+    const at = m.index;
     if (at > last) out.push({ text: s.slice(last, at) });
     out.push(m[1] !== undefined ? { text: m[1], tag: 'b' } : { text: m[2] ?? '', tag: 'code' });
     last = at + m[0].length;
@@ -35,7 +35,7 @@ export function parseRich(s: string): RichSegment[] {
   return out;
 }
 
-export function setRich(el: Element, s: string) {
+function setRich(el: Element, s: string) {
   el.replaceChildren(...parseRich(s).map(seg => {
     if (!seg.tag) return document.createTextNode(seg.text);
     const e = document.createElement(seg.tag);
@@ -62,12 +62,13 @@ function apply(attr: string, set: (el: HTMLElement, v: string) => void) {
   for (const el of document.querySelectorAll<HTMLElement>(`[${attr}]`)) {
     const path = el.getAttribute(attr) ?? '';
     const v = lookup(t, path);
+    // oxlint-disable-next-line no-console -- a missing text is a bug in the locale files; the console is where a developer sees it
     if (v === undefined) console.warn(`i18n: no text for "${path}"`);
     else set(el, v);
   }
 }
 
-export function applyTranslations() {
+function applyTranslations() {
   document.documentElement.lang = lang;
   document.querySelector('meta[name="description"]')?.setAttribute('content', t.meta.description);
   apply('data-i18n', (el, v) => { el.textContent = v; });
@@ -81,6 +82,7 @@ export function applyTranslations() {
 export function initLanguage() {
   let param: string | null = null;
   try { param = new URLSearchParams(location.search).get('lang'); } catch { /* no location */ }
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- navigator.languages is missing in older WebViews
   const l = detectLanguage({ param, stored: store.get(LANG_STORAGE_KEY), preferred: navigator.languages ?? [navigator.language] });
   // A link with ?lang= is an explicit choice
   if (isLang(param?.trim().toLowerCase())) store.set(LANG_STORAGE_KEY, l);

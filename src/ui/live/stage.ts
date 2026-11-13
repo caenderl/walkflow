@@ -24,7 +24,7 @@ export function loadChosen() {
     set(next: Active) { kind = next; store.set(ACTIVE_STORAGE_KEY, next ?? ''); },
   };
 }
-export type Chosen = ReturnType<typeof loadChosen>;
+type Chosen = ReturnType<typeof loadChosen>;
 
 export interface StageHost {
   chosen: Chosen;

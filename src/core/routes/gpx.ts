@@ -33,6 +33,7 @@ function decode(s: string): string {
   });
 }
 
+// oxlint-disable-next-line no-control-regex -- removes control characters from the GPX file's name, on purpose
 const cleanName = (s: string) => decode(s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, ROUTE_NAME_MAX).trim();
 
 /** The text right after the tag that ends at `from`: CDATA or plain text up to the next tag */

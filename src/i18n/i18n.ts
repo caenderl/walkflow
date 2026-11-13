@@ -12,7 +12,7 @@ export type Lang = 'en' | 'de' | 'fr' | 'uk';
 export type Text = () => string;
 
 export const LANGS: readonly Lang[] = ['en', 'de', 'fr', 'uk'];
-export const DEFAULT_LANG: Lang = 'en';
+const DEFAULT_LANG: Lang = 'en';
 export const LANG_STORAGE_KEY = 'walkflow.lang';
 
 const MESSAGES: Record<Lang, Messages> = { en, de, fr, uk };

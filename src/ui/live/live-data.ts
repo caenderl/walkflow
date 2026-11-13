@@ -93,7 +93,7 @@ export function setupLiveData(host: LiveDataHost) {
 
   // The banner shows what the belt does: a start under way, a stop under way
   tm.on('phase', p => { if (p === 'starting') banner.startRequested(host.now()); else banner.stopRequested(host.now()); });
-  tm.on('stopFailed', host.stopFailed);
+  tm.on('stopFailed', failed => host.stopFailed(failed));
 
   tm.on('machineStatus', ({ event, hex }) => {
     host.log(t.machine.status(hex, event ? describeMachineStatus(event) : null));
@@ -102,7 +102,7 @@ export function setupLiveData(host: LiveDataHost) {
   tm.on('trainingStatus', ({ hex, text }) => host.log(t.machine.training(hex, text)));
   tm.on('controlResponse', r => host.log(`← ${describeControlPointResponse(r)}`));
   tm.on('notice', n => host.log(noticeText(n)));
-  tm.on('log', host.log);
+  tm.on('log', msg => host.log(msg));
 
   return {
     /** Where the samples come from; the history keeps demo runs apart */

@@ -23,7 +23,7 @@ describe('flags', () => {
   });
 
   it('every flag is a plain SVG: no script, no event handlers, no outside references', () => {
-    const raw = import.meta.glob('./flags/*.svg', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+    const raw = import.meta.glob<string>('./flags/*.svg', { query: '?raw', import: 'default', eager: true });
     expect(Object.keys(raw).length).toBe(codes.length);
     for (const [file, svg] of Object.entries(raw)) {
       expect(svg, file).toMatch(/<svg[\s>]/);

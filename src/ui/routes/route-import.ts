@@ -24,7 +24,7 @@ export interface RouteImportHost {
 type Failure = 'unreadable' | 'packageTooLarge' | 'packageNewer' | 'packageInvalid';
 
 export function setupRouteImport(host: RouteImportHost) {
-  const { setStatus } = host;
+  const setStatus: RouteImportHost['setStatus'] = text => host.setStatus(text);
   async function importFile(file: File) {
     const fail = (key: 'unreadable' | 'tooLarge' | 'unsafe' | 'noPoints' | 'packageTooLarge' | 'packageNewer' | 'packageInvalid' | 'isWorkoutPackage') => setStatus(() => t.routes[key]);
     if (file.size > GPX_MAX_CHARS) { fail('tooLarge'); return; }

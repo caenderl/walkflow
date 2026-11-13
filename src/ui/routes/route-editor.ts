@@ -21,12 +21,12 @@ export function buildEditor(r: Route, host: EditorHost): Editor {
   const text = el('textarea', { maxLength: ROUTE_DESCRIPTION_MAX, rows: 3, placeholder: t.routes.descriptionPlaceholder, value: routeDescription(r, lang)?.text ?? '' });
   const status = el('p', { className: 'hint' });
   status.setAttribute('role', 'status');
-  const save = button(t.routes.save, host.save);
+  const save = button(t.routes.save, () => host.save());
   save.classList.add('primary');
   const root = el('div', { className: 'rt-edit grid' },
     el('label', { className: 'hint field' }, el('span', { textContent: t.routes.speed }), speed),
     el('label', { className: 'hint field' }, el('span', { textContent: t.routes.description }), text),
-    el('div', { className: 'row' }, save, button(t.common.cancel, host.cancel)),
+    el('div', { className: 'row' }, save, button(t.common.cancel, () => host.cancel())),
     status);
   return { id: r.id, el: root, speed, text, status };
 }

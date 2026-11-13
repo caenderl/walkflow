@@ -5,7 +5,7 @@ import { t } from '../../i18n/i18n';
 import { cssColor } from '../theme';
 import { toSpeed } from '../../i18n/units';
 
-export const CHART_WINDOW_MS = 5 * 60 * 1000;
+const CHART_WINDOW_MS = 5 * 60 * 1000;
 /** Longer gaps between two samples are not bridged by the line (no data, e.g. connection closed) */
 const GAP_MS = 10_000;
 
@@ -174,7 +174,7 @@ export function drawBarChart(c: HTMLCanvasElement, values: readonly number[], o:
     }
     if (rows[i]!.length && (n - 1 - i) % every === 0) {
       g.fillStyle = o.active === i ? cssColor('--fg') : label;
-      rows[i]!.forEach((text, line) => g.fillText(text, labelX(i, g.measureText(text).width), H - B + 12 + line * 12 - 1));
+      rows[i]!.forEach((text, row) => g.fillText(text, labelX(i, g.measureText(text).width), H - B + 12 + row * 12 - 1));
     }
   });
   return centres;

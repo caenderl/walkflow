@@ -8,13 +8,13 @@
 import { isRevision, plainName, readLangMap, readRoute, ROUTE_NAME_MAX, type Route, type RouteMeta } from './routes';
 
 export const PACKAGE_FORMAT = 'walkflow-route';
-export const PACKAGE_VERSION = 1;
+const PACKAGE_VERSION = 1;
 /** A package of a few thousand points is well below this */
 export const PACKAGE_MAX_CHARS = 2_000_000;
 /** Language key for a text whose language is not known (a text the person wrote) */
-export const UNDETERMINED = 'und';
+const UNDETERMINED = 'und';
 
-export type PackagePoint = [lat: number, lon: number] | [lat: number, lon: number, ele: number];
+type PackagePoint = [lat: number, lon: number] | [lat: number, lon: number, ele: number];
 
 export interface RoutePackage {
   format: typeof PACKAGE_FORMAT;
@@ -105,7 +105,7 @@ export function readPackage(text: string, id: string, now: number): PackageResul
   const points: { lat: number; lon: number; ele?: number }[] = [];
   for (const pt of v.points as unknown[]) {
     if (!Array.isArray(pt) || (pt.length !== 2 && pt.length !== 3) || !pt.every(n => typeof n === 'number')) return { ok: false, reason: 'invalid' };
-    points.push(pt.length === 3 ? { lat: pt[0] as number, lon: pt[1] as number, ele: pt[2] as number } : { lat: pt[0] as number, lon: pt[1] as number });
+    points.push(pt.length === 3 ? { lat: pt[0] as number, lon: pt[1] as number, ele: pt[2] } : { lat: pt[0] as number, lon: pt[1] as number });
   }
 
   // "und" is a text without a known language: it is the description, the others are translations

@@ -19,5 +19,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      # oxlint with type information (TypeScript 7), then knip: unused files, exports and dependencies
+      - run: npm run lint
       - run: npm test
       - run: npm run build

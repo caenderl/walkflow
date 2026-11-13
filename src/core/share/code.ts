@@ -6,8 +6,8 @@ import { sha256Hex } from './hash';
 
 /** No I, L, O, 0 or 1: nothing that can be mistaken for something else when it is read out or typed */
 export const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-export const CODE_GROUPS = 2;
-export const CODE_GROUP_LENGTH = 5;
+const CODE_GROUPS = 2;
+const CODE_GROUP_LENGTH = 5;
 const CODE_LENGTH = CODE_GROUPS * CODE_GROUP_LENGTH;
 
 /** `random` fills the array with random bytes (crypto.getRandomValues); it is passed in so the code can be tested */
@@ -34,7 +34,7 @@ function groupCode(chars: string): string {
 /** What was typed, as the code it stands for; null if it is not a code. Case, spaces and dashes do not matter. */
 export function readShareCode(input: string): string | null {
   const chars = input.toUpperCase().replace(/[\s-]+/g, '');
-  if (chars.length !== CODE_LENGTH || ![...chars].every(c => CODE_ALPHABET.includes(c))) return null;
+  if (chars.length !== CODE_LENGTH || !chars.split('').every(c => CODE_ALPHABET.includes(c))) return null;
   return groupCode(chars);
 }
 

@@ -3,9 +3,9 @@
 // security policy and the request filter of the desktop app allow exactly this address and nothing else on that host.
 
 /** The name of the repository the store is kept in, under the same owner as the app */
-export const STORE_REPO = 'route-store';
+const STORE_REPO = 'route-store';
 /** The branch the app reads the store from */
-export const STORE_BRANCH = 'main';
+const STORE_BRANCH = 'main';
 
 /**
  * The address the store is at, without a trailing slash, or null. `override` is an address for trying the store out (a local

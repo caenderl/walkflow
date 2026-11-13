@@ -40,7 +40,6 @@ export const fromSpeed = (v: number): number => (imperial() ? v * KM_PER_MILE : 
 /** Long distances: km or miles */
 export const distUnit = (): string => (imperial() ? 'mi' : 'km');
 export const toDist = (m: number): number => (imperial() ? m / (KM_PER_MILE * 1000) : m / 1000);
-export const fromDist = (v: number): number => (imperial() ? v * KM_PER_MILE * 1000 : v * 1000);
 
 /** Short distances and heights: metres or feet */
 export const shortUnit = (): string => (imperial() ? 'ft' : 'm');

@@ -9,7 +9,7 @@ export { START_MS } from 'ftms-treadmill';
 /** How long the red stays after the belt stands */
 export const STOP_HOLD_MS = 3000;
 
-export type BannerKind = 'none' | 'start' | 'stopping' | 'stopped' | 'offline';
+type BannerKind = 'none' | 'start' | 'stopping' | 'stopped' | 'offline';
 export interface BannerState {
   kind: BannerKind;
   /** 0 (not to be seen) to 1 (full colour) */

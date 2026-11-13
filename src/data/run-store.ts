@@ -33,7 +33,7 @@ export class MemoryRunStore implements RunStore {
   async all() { return [...this.runs.values()].sort((a, b) => a.summary.start - b.summary.start); }
 }
 
-export class IdbRunStore implements RunStore {
+class IdbRunStore implements RunStore {
   readonly persistent = true;
 
   private constructor(private readonly db: IDBDatabase) {}
@@ -81,6 +81,7 @@ export class IdbRunStore implements RunStore {
       request(tracks.getAllKeys()),
       request(tracks.getAll() as IDBRequest<Track[]>),
     ]);
+    // oxlint-disable-next-line typescript/no-base-to-string -- the keys of the track store are run ids, always strings
     const byId = new Map(keys.map((k, i) => [String(k), values[i]!]));
     return sums
       .flatMap(summary => { const track = byId.get(summary.id); return track ? [{ summary, track }] : []; })

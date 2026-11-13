@@ -14,7 +14,7 @@ import type { JoinOptions, Room, Transport } from './transport';
 type JsonValue = null | string | number | boolean | JsonValue[] | { [key: string]: JsonValue };
 
 /** Trystero keeps rooms of different apps apart by this */
-export const APP_ID = 'walkflow';
+const APP_ID = 'walkflow';
 /** A package of 2,000,000 characters is at most 6 MB as text, and a little more with the escapes of JSON */
 const MAX_MESSAGE_BYTES = 16 * 1024 * 1024;
 const HANDSHAKE_TIMEOUT_MS = 10_000;
@@ -76,7 +76,7 @@ async function join(name: string, { password, maxPeers }: JoinOptions): Promise<
   room.onPeerJoin = peer => { admitted.add(peer); out.joined(peer); };
   room.onPeerLeave = peer => { admitted.delete(peer); out.left(peer); };
   out.send = (peer, data) => { void action.send(data as JsonValue, { target: peer }).catch(() => undefined); };
-  out.leave = () => room.leave();
+  out.leave = () => { void room.leave().catch(() => undefined); };
   return out;
 }
 

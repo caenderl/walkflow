@@ -6,7 +6,7 @@ import { store } from './store';
 
 export type ThemeChoice = 'system' | 'dark' | 'light';
 export const THEMES: readonly ThemeChoice[] = ['system', 'dark', 'light'];
-export const THEME_STORAGE_KEY = 'walkflow.theme';
+const THEME_STORAGE_KEY = 'walkflow.theme';
 
 export type Palette = 'standard' | 'lagoon' | 'candy';
 export const PALETTES: readonly Palette[] = ['standard', 'lagoon', 'candy'];
@@ -28,6 +28,7 @@ let choice: ThemeChoice = 'system';
 let palette: Palette = 'standard';
 const listeners = new Set<(c: ThemeChoice) => void>();
 const paletteListeners = new Set<(p: Palette) => void>();
+// oxlint-disable-next-line typescript/no-unnecessary-condition -- matchMedia is missing outside a browser (tests, old WebViews)
 const systemDark = () => window.matchMedia?.('(prefers-color-scheme: dark)');
 
 export function currentTheme(): ThemeChoice {
@@ -40,6 +41,7 @@ export function currentPalette(): Palette {
 
 /** Whether the page is dark right now: the chosen theme, or the system's */
 export function isDark(): boolean {
+  // oxlint-disable-next-line typescript/no-unnecessary-condition, typescript/no-unnecessary-type-conversion -- systemDark() is undefined without matchMedia, see above
   return effectiveTheme(choice, !!systemDark()?.matches) === 'dark';
 }
 
@@ -77,6 +79,7 @@ export function initTheme() {
   palette = parsePalette(store.get(PALETTE_STORAGE_KEY));
   if (palette !== 'standard') document.documentElement.dataset.palette = palette;
   apply(parseTheme(store.get(THEME_STORAGE_KEY)));
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- systemDark() is undefined without matchMedia, see above
   systemDark()?.addEventListener('change', () => { if (choice === 'system') apply('system'); });
 }
 

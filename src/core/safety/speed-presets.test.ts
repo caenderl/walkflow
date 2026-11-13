@@ -106,6 +106,7 @@ describe('presetCommand', () => {
     expect(presetCommand(stored, 'slow', 2)).toBeNull();
   });
 
+  // oxlint-disable-next-line vitest/expect-expect -- the expect sits in the loops below (a null speed is a disabled button and needs no check)
   it('never returns a speed above the maximum for any preset and limit', () => {
     for (let max = 0; max <= 12; max += 0.1) {
       for (const key of PRESET_KEYS) {

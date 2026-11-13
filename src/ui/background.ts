@@ -35,6 +35,7 @@ export function setupBackground(host: BackgroundHost) {
 
   async function acquireWakeLock() {
     if (wakeLock && !wakeLock.released) return;
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- the Wake Lock API is missing in Firefox and older Safari
     try { wakeLock = (await navigator.wakeLock?.request('screen')) ?? null; } catch { wakeLock = null; }
   }
 

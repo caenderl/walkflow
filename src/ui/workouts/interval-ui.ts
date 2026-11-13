@@ -43,7 +43,7 @@ export function setupInterval() {
       $('ivLeft').textContent = fmtLength(programLength(steps));
       $('ivLeftLabel').textContent = t.interval.total;
       $('ivLeft').classList.remove('iv-ending');
-      ($('ivBar') as HTMLProgressElement).value = 0;
+      $<HTMLProgressElement>('ivBar').value = 0;
       drawStrip(steps);
       rects.forEach(r => r.setAttribute('class', 'iv-todo'));
       $('ivNext').replaceChildren(...upcoming(steps, -1, NEXT_COUNT).map(s => Object.assign(document.createElement('li'), { textContent: describe(s) })));
@@ -57,7 +57,7 @@ export function setupInterval() {
       const left = p.left;
       $('ivLeft').textContent = !left ? '–' : 'sec' in left ? fmtTime(left.sec) : fmtDistance(left.meters);
       $('ivLeftLabel').textContent = !left ? '' : 'sec' in left ? t.interval.timeLeft : t.interval.distanceLeft;
-      ($('ivBar') as HTMLProgressElement).value = Math.round(p.fraction * 1000);
+      $<HTMLProgressElement>('ivBar').value = Math.round(p.fraction * 1000);
       $('ivLeft').classList.toggle('iv-ending', step !== undefined && endingSoon(left));
 
       drawStrip(p.steps);

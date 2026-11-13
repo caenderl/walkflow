@@ -25,7 +25,7 @@ import {
 } from '../../core/training/workouts';
 import { serializeWorkoutPackage, workoutPackage, workoutPackageFileName } from '../../core/training/workout-package';
 
-export const SELECTED_STORAGE_KEY = 'walkflow.workout';
+const SELECTED_STORAGE_KEY = 'walkflow.workout';
 const TEMPLATE_PREFIX = 'tpl:';
 const DEFAULT_SELECTED = `${TEMPLATE_PREFIX}intervals`;
 

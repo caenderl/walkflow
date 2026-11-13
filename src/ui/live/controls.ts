@@ -44,6 +44,7 @@ export function setupControls(host: ControlsHost) {
     if (isText) return;
     if (e.code === 'Space' || e.key === 'Escape') {
       e.preventDefault();
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- the focus may be on an element without blur(); nothing here may throw before the stop below
       (document.activeElement as HTMLElement | null)?.blur?.();
       void host.belt.stop();
     } else if (tag !== 'INPUT' && e.key === 'ArrowUp') {

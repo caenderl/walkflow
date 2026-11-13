@@ -80,6 +80,7 @@ export function setupHistory(host: HistoryHost) {
     else if (desktop) storage = 'desktop';
     else {
       let persisted = false;
+      // oxlint-disable-next-line typescript/no-unnecessary-condition, typescript/no-unnecessary-type-conversion -- the Storage API is missing in some browsers and WebViews
       try { persisted = !!(await navigator.storage?.persisted?.()); } catch { /* not supported */ }
       storage = persisted ? 'persisted' : 'best-effort';
     }
@@ -99,6 +100,7 @@ export function setupHistory(host: HistoryHost) {
     if (persistAsked || desktop) return;
     persistAsked = true;
     try {
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- the Storage API is missing in some browsers and WebViews
       if (!(await navigator.storage?.persisted?.())) await navigator.storage?.persist?.();
     } catch { /* not supported */ }
     await checkStorage();

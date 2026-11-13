@@ -19,9 +19,11 @@ export function setupInstall() {
   const button = $button('installBtn');
   let prompt: InstallPromptEvent | null = null;
   let installed = false;
+  // oxlint-disable-next-line typescript/no-unnecessary-condition -- matchMedia is missing outside a browser (tests, old WebViews)
   const standalone = () => window.matchMedia?.('(display-mode: standalone)').matches || window.matchMedia?.('(display-mode: window-controls-overlay)').matches;
 
   function render() {
+    // oxlint-disable-next-line typescript/no-unnecessary-type-conversion -- standalone() is undefined without matchMedia, see above
     const state = installState({ web: BUILD_TARGET === 'web', standalone: !!standalone(), installed, promptReady: prompt !== null });
     box.hidden = state === 'none';
     button.hidden = state !== 'offer';

@@ -100,7 +100,7 @@ const fromWindow = (e: IpcMainEvent | IpcMainInvokeEvent) => !!win && e.sender =
 const releasesUrl = () => (__GITHUB_REPO__ ? `https://github.com/${__GITHUB_REPO__}/releases` : '');
 
 function isAllowedExternal(url: string): boolean {
-  return /^https:\/\/github\.com\//.test(url) || url === DONATION_URL;
+  return url.startsWith('https://github.com/') || url === DONATION_URL;
 }
 
 async function serve(request: Request): Promise<Response> {
@@ -126,15 +126,15 @@ function setMenu() {
   // Deliberately without "Reload": a reload cuts the Bluetooth connection and the belt would keep running without the app.
   // Electron's role labels are English only, so every item gets its label from the locale files.
   const m = t.electron;
-  const app = 'Walkflow';
+  const name = 'Walkflow';
   const mac = process.platform === 'darwin';
   const template: MenuItemConstructorOptions[] = [
     ...(mac ? [{
-      label: app,
+      label: name,
       submenu: [
-        { role: 'about', label: m.about(app) }, { type: 'separator' },
-        { role: 'hide', label: m.hide(app) }, { role: 'hideOthers', label: m.hideOthers }, { role: 'unhide', label: m.showAll },
-        { type: 'separator' }, { role: 'quit', label: m.quit(app) },
+        { role: 'about', label: m.about(name) }, { type: 'separator' },
+        { role: 'hide', label: m.hide(name) }, { role: 'hideOthers', label: m.hideOthers }, { role: 'unhide', label: m.showAll },
+        { type: 'separator' }, { role: 'quit', label: m.quit(name) },
       ],
     } satisfies MenuItemConstructorOptions] : []),
     { label: m.menuEdit, submenu: [{ role: 'copy', label: m.copy }, { role: 'paste', label: m.paste }, { role: 'selectAll', label: m.selectAll }] },
@@ -297,8 +297,10 @@ if (selfUpdate) {
   autoUpdater.allowPrerelease = false;
   autoUpdater.allowDowngrade = false;
   updater = {
+    // oxlint-disable-next-line typescript/no-unnecessary-type-conversion -- the version comes from a YAML file on the update server, which may read as a number
     onAvailable: cb => { autoUpdater.on('update-available', info => cb(String(info.version))); },
     onProgress: cb => { autoUpdater.on('download-progress', p => cb(p.percent)); },
+    // oxlint-disable-next-line typescript/no-unnecessary-type-conversion -- the version comes from a YAML file on the update server, which may read as a number
     onDownloaded: cb => { autoUpdater.on('update-downloaded', info => cb(String(info.version))); },
     onError: cb => { autoUpdater.on('error', e => cb(e)); },
     check: () => autoUpdater.checkForUpdates(),
@@ -373,12 +375,14 @@ if (!app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
       const ok = ALLOWED_PERMISSIONS.has(permission);
       if (!ok) console.log(`Permission denied: ${permission}`);
+      // oxlint-disable-next-line promise/no-callback-in-promise -- Electron's permission callback, which has to be called here
       callback(ok);
     });
     // No requests to remote hosts from the renderer, except the map servers of this build (only used once the map is on) and the relays for sharing
     session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
       const ok = isAllowedRequest(details.url, { origin: ORIGIN, devOrigin: DEV_ORIGIN, mapOrigins: MAP_ORIGINS, relays: RELAYS, store: STORE_BASE });
       if (!ok) console.log(`Blocked: ${details.url}`);
+      // oxlint-disable-next-line promise/no-callback-in-promise -- Electron's request callback, which has to be called here
       callback({ cancel: !ok });
     });
     // Until the renderer reports its language: the system languages

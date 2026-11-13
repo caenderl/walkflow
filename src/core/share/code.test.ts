@@ -7,7 +7,7 @@ describe('newShareCode', () => {
   it('has two groups of five characters from the alphabet', () => {
     const code = newShareCode(b => crypto.getRandomValues(b));
     expect(code).toMatch(/^[A-Z2-9]{5}-[A-Z2-9]{5}$/);
-    expect([...code.replace('-', '')].every(c => CODE_ALPHABET.includes(c))).toBe(true);
+    expect(code.replace('-', '').split('').every(c => CODE_ALPHABET.includes(c))).toBe(true);
   });
 
   it('never contains a character that can be mistaken for another', () => {

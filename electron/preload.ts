@@ -1,6 +1,9 @@
 // Preload (sandboxed): gives the web app a small, fixed API. No Node access in the renderer.
 import { contextBridge, ipcRenderer } from 'electron';
 
+// The renderer may call these with anything, whatever the types say: the values are made into what main expects before they go over IPC.
+/* oxlint-disable typescript/no-unnecessary-type-conversion, typescript/no-unnecessary-boolean-literal-compare -- see above */
+
 contextBridge.exposeInMainWorld('walkflowDesktop', {
   platform: process.platform,
   connectionChanged: (connected: boolean) => ipcRenderer.send('app:connection', connected === true),
