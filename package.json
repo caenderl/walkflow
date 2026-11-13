@@ -27,7 +27,7 @@
     "electron": "44.9.3",
     "electron-builder": "26.18.0",
     "esbuild": "0.28.2",
-    "ftms-treadmill": "0.1.1",
+    "ftms-treadmill": "0.1.2",
     "maplibre-gl": "6.15.0",
     "trystero": "0.26.0",
     "typescript": "7.0.2",
