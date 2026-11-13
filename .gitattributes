@@ -1,2 +1,0 @@
-tests/fixtures/route-store/routes/*.walkflow -text
-tests/fixtures/route-store/index.json -text
