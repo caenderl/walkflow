@@ -11,7 +11,8 @@ In the route-store repository:
 ```
 index.json          what the app reads first: one entry per route file
 routes/*.walkflow   route packages ([format](ROUTE-PACKAGE.md)), as exported by the app
-README.md           how to add a route
+README.md           how to add a route, and how a route is reviewed
+scripts/, tests/    the map of a route that CI writes into a pull request, and its tests
 ```
 
 `index.json` is written by CI from the route files after a merge (`scripts/build-store.mjs` in this repository, logic in
@@ -120,7 +121,7 @@ come first, and the route is the shortest way over paths and streets from one to
    instead of a year) rather than pick one. A name is up to 80 characters, a waypoint text up to 300, a description up to 1000; a longer
    one is refused. Keep the languages of the existing routes (`en`, `de`, `fr`, `uk`) and have the French and Ukrainian read.
 5. **Open a pull request** in the route-store repository from a branch with that one route file only: one route per pull request
-   (see [Reviewing a route](#reviewing-a-route)), and its CI writes a map of it into the pull request. `index.json` is written by CI
+   (see [Reviewing a route](#reviewing-a-route)), and the CI of that repository writes a map of it into the pull request. `index.json` is written by CI
    after the merge.
 
 The script asks Nominatim for one outline and Overpass for one area per route and keeps the answers in a folder in the temporary
@@ -131,27 +132,11 @@ pieces on a made-up lake, without the network, and checks that what the script w
 
 ## Reviewing a route
 
-**One route per pull request.** A review looks at one map and one set of texts, and a route that is not right can be sent back without
-holding up the others. The check of the route-store repository fails a pull request that adds, changes, deletes or renames more than
-one file in `routes/`. A failed check only blocks the merge if the repository requires it (Settings → Branches → require the status
-check `check`); a maintainer can always merge anyway.
-
-**The map.** What a reviewer wants to see is where the route goes, and GitHub shows a `geojson` code block in Markdown as a map on
-OpenStreetMap, in a pull request as well. So the route-store repository has a workflow, `Route preview`, that writes one comment with a
-map of the route file for every pull request that changes a route (`scripts/route-preview-pr.mjs`, which uses
-`scripts/route-preview.mjs`): the route is the red line, the start green, the goal red, the waypoints blue (a click shows their text).
-
-- The comment is **changed on every push**, not added to, and it names the commit it was made from. The map is made from the file in the
-  pull request, so it cannot differ from what would be merged. If the route is changed in the pull request, nothing has to be done.
-- The workflow runs on `pull_request_target`, because only that may write a comment on a pull request from a fork. That is safe as long as
-  it never runs code of the pull request, and it does not: it takes the script from `main` of this repository, reads the route file
-  through the GitHub API as text and only parses it as JSON. The texts of the file are written into the map so that no text can end
-  the code block, and outside the map there are only numbers and the file name. A change to these two scripts is a change to what a
-  pull request of a stranger can make the bot write, so it is reviewed like a change to the checks.
-- A file bigger than a comment takes (65,536 characters) is thinned out for the map, up to a few metres from its line; the comment
-  says so. The texts of the route are read in the diff of the file, as before.
-- On your own computer: `node scripts/route-preview.mjs routes/x.walkflow > map.md` writes the same Markdown; paste it into any
-  comment on GitHub, or open the `.walkflow` file in the app (**Routes → Import GPX file or route package**).
+A pull request in the route-store repository takes **one route**, and the CI of that repository writes a **map of it** into the pull
+request as a comment (GitHub shows a `geojson` code block as a map on OpenStreetMap), changed on every push. Both are done and
+described in the route-store repository itself (its README, "Reviewing a route"; the scripts and their tests are in its `scripts/` and
+`tests/`), so that the store does not depend on this repository for them. What belongs here is the making of a route: after
+`make-route.mjs` has written the file, open its pull request with that one file and look at the map in it.
 
 ## What it does not do
 
