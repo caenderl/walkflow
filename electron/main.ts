@@ -1,5 +1,5 @@
 // Electron main process. Loads only the locally bundled web app via its own scheme app://walkflow/.
-import { readFile, stat } from 'node:fs/promises';
+import { open, readFile } from 'node:fs/promises';
 import { basename, join, normalize, sep } from 'node:path';
 import {
   app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeTheme, powerSaveBlocker, protocol, screen, session, shell,
@@ -76,9 +76,16 @@ async function flushOpen() {
   for (let path = pendingOpen.shift(); path !== undefined; path = pendingOpen.shift()) {
     const name = basename(path);
     try {
-      const info = await stat(path);
-      if (!info.isFile() || info.size > OPEN_MAX_BYTES) win.webContents.send('app:open-package', { name, error: 'tooLarge' });
-      else win.webContents.send('app:open-package', { name, text: await readFile(path, 'utf8') });
+      // One handle for the check and the read, and never more than the limit read, even if the file changes in between
+      const file = await open(path, 'r');
+      try {
+        const buf = Buffer.alloc(OPEN_MAX_BYTES + 1);
+        const { bytesRead } = (await file.stat()).isFile() ? await file.read(buf, 0, buf.length, 0) : { bytesRead: buf.length };
+        if (bytesRead > OPEN_MAX_BYTES) win.webContents.send('app:open-package', { name, error: 'tooLarge' });
+        else win.webContents.send('app:open-package', { name, text: buf.toString('utf8', 0, bytesRead) });
+      } finally {
+        await file.close();
+      }
     } catch {
       win.webContents.send('app:open-package', { name, error: 'unreadable' });
     }

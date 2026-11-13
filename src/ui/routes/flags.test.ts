@@ -17,7 +17,7 @@ describe('flags', () => {
   });
 
   it('gives the address of the flag, or null', () => {
-    expect(flagUrl('DE')).toMatch(/^data:image\/svg|\.svg/);
+    expect(flagUrl('DE')).toMatch(/^(?:data:image\/svg|.+\.svg$)/);
     expect(flagUrl('ZZ')).toBeNull();
     expect(flagUrl('../x')).toBeNull();
   });

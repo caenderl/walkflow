@@ -13,7 +13,7 @@
 //   --dry             writes no package and runs no check (with --preview: only the picture)
 //   --force           writes the package even if the route looks wrong (a piece could not be routed, the loop does not close,
 //                     its length is far from the outline's)
-//   --cache <dir>     where answers of Nominatim and Overpass are kept (default: a folder in the system's temp folder)
+//   --cache <dir>     where answers of Nominatim and Overpass are kept (default: ~/.cache/walkflow-make-route, or $XDG_CACHE_HOME)
 //
 // It needs the network (Nominatim for the outline, Overpass for the paths; both are free services: it asks for one outline and one
 // area per route, and keeps the answers so a second run asks for nothing). No dependencies; the check at the end uses esbuild from
@@ -21,8 +21,8 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -404,10 +404,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function cached(dir, key, get) {
   const file = join(dir, `${createHash('sha1').update(key).digest('hex').slice(0, 16)}.json`);
-  if (existsSync(file)) return JSON.parse(readFileSync(file, 'utf8'));
+  try { return JSON.parse(readFileSync(file, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
   const v = await get();
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(file, JSON.stringify(v));
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  writeFileSync(file, JSON.stringify(v), { mode: 0o600 });
   return v;
 }
 
@@ -450,7 +450,7 @@ export async function fetchWays(bbox, cacheDir) {
 // ---------------------------------------------------------------- the command
 
 function parseArgs(argv) {
-  const o = { spec: undefined, root: undefined, preview: undefined, cache: join(tmpdir(), 'walkflow-make-route'), dry: false, force: false };
+  const o = { spec: undefined, root: undefined, preview: undefined, cache: join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'walkflow-make-route'), dry: false, force: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry') o.dry = true;
