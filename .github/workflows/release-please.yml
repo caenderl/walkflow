@@ -3,8 +3,6 @@ name: Release Please
 # On every push to main, release-please keeps a release pull request up to date: next version (SemVer, from the
 # Conventional Commit titles) and CHANGELOG.md. Merging it creates the tag and a draft release; the desktop app is
 # then built here and attached to it. The draft is published by hand after the hardware checks.
-# The treadmill library (packages/ftms-treadmill) gets its own version, changelog and draft pre-release
-# (ftms-treadmill-v<version>) in the same release pull request; publishing that draft publishes it to npm (npm-publish.yml).
 # Config: release-please-config.json, current version: .release-please-manifest.json.
 on:
   push:

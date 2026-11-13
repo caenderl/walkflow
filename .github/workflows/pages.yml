@@ -48,7 +48,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # The app's releases only (tags v…); the treadmill library has releases of its own (ftms-treadmill-v…)
+          # The app's releases only (tags v…); up to 0.1.1 the treadmill library had its releases here too (ftms-treadmill-v…)
           tag=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq '[.[] | select(.draft | not) | select(.prerelease | not) | select(.tag_name | startswith("v"))][0].tag_name')
           echo "Latest release: $tag"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"

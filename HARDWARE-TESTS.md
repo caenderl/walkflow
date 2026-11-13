@@ -139,7 +139,7 @@ The settings dialog and the training view only change what is shown, plus one se
 
 ## Treadmill facade (branch `feat/ftms-treadmill-lib`, confirmed on a treadmill)
 
-Everything that drives the belt now sits behind one object (`packages/ftms-treadmill/src/device/treadmill.ts`, docs/LIBRARY.md); the training view
+Everything that drives the belt now sits behind one object (`device/treadmill.ts` of the library [ftms-treadmill](https://github.com/walkflow-app/ftms-treadmill), then still in this repository); the training view
 only asks it and draws. The commands and their order are meant to be exactly as before, and the log is meant to read
 exactly as before. Checked in the demo, then on a sPad 500 (2026-11-12): the whole list passed, after the fixes noted below. The list was run once, with the log open
 (Settings → General → Developer mode shows the experiment console and its log).
