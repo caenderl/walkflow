@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/walkflow-app/walkflow/compare/v0.7.0...v0.7.1) (2026-11-13)
+
+
+### Safety
+
+* **treadmill:** ftms-treadmill 0.2.0, ended comes once per run of the belt ([#32](https://github.com/walkflow-app/walkflow/issues/32)) ([21f9c3d](https://github.com/walkflow-app/walkflow/commit/21f9c3df00874bc3bd2bf89cc1dcea4a7261c3f4))
+
 ## [0.7.0](https://github.com/walkflow-app/walkflow/compare/v0.6.0...v0.7.0) (2026-11-12)
 
 
