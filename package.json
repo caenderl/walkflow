@@ -6,16 +6,13 @@
   "license": "MIT",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "dev": "vite",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.electron.json && npm run typecheck -w ftms-treadmill",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.electron.json",
     "build:pages": "npm run typecheck && node scripts/build-pages.mjs",
     "build:desktop": "node scripts/build-desktop.mjs",
     "electron": "node scripts/build-desktop.mjs && electron .",
@@ -30,6 +27,7 @@
     "electron": "44.9.3",
     "electron-builder": "26.18.0",
     "esbuild": "0.28.2",
+    "ftms-treadmill": "0.1.1",
     "maplibre-gl": "6.15.0",
     "trystero": "0.26.0",
     "typescript": "7.0.2",

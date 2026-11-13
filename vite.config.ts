@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
@@ -35,9 +34,6 @@ function csp(): Plugin {
   };
 }
 
-/** The treadmill library from its sources in this repository (packages/ftms-treadmill), through its entry points only */
-const treadmillLib = (entry: string) => fileURLToPath(new URL(`./packages/ftms-treadmill/src/${entry}.ts`, import.meta.url));
-
 /** What the service worker precaches; exported so tests/pwa-precache.test.ts checks these exact patterns against real files. */
 export const pwaWorkbox = {
   globPatterns: ['**/*.{js,css,html,svg,png}'],
@@ -50,12 +46,6 @@ export const pwaWorkbox = {
 
 export default defineConfig({
   base: process.env.BASE_PATH ?? './',
-  resolve: {
-    alias: [
-      { find: /^ftms-treadmill$/, replacement: treadmillLib('index') },
-      { find: /^ftms-treadmill\/(web-bluetooth|sim|protocol)$/, replacement: treadmillLib('$1') },
-    ],
-  },
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __GITHUB_REPO__: JSON.stringify(githubRepo),
@@ -104,7 +94,7 @@ export default defineConfig({
     }),
   ],
   test: {
-    include: ['src/**/*.test.ts', 'tests/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
     // theme.test.ts reads style.css (?raw); without this Vitest replaces CSS with an empty string
     css: true,
   },

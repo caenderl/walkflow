@@ -1,6 +1,5 @@
-// The rules of the project structure (docs/ARCHITECTURE.md), checked on the source files (src/, electron/ and the treadmill
-// library in packages/ftms-treadmill/). A change that breaks one fails
-// here, so the structure does not erode: layers only look downwards, the pure layers know nothing about the browser, and
+// The rules of the project structure (docs/ARCHITECTURE.md), checked on the source files (src/ and electron/). A change
+// that breaks one fails here, so the structure does not erode: layers only look downwards, the pure layers know nothing about the browser, and
 // there are no cycles at runtime.
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -28,13 +27,10 @@ const ELECTRON_MAY_IMPORT = ['i18n', 'platform', 'core'];
 const ROOT_FILES = ['main.ts', 'env.d.ts', 'style.css'];
 /** What reaches other people's devices must never be able to drive the belt: no FTMS commands, no treadmill connection */
 const SHARING = ['src/net/', 'src/core/share/'];
-/** The treadmill library (docs/LIBRARY.md): it drives the belt, speaks in codes and stands on its own */
-const LIB = join(ROOT, 'packages', 'ftms-treadmill', 'src');
+/** The treadmill library (npm package ftms-treadmill, its own repository): it drives the belt and speaks in codes */
 const LIB_NAME = 'ftms-treadmill';
 /** The only ways into the library */
 const LIB_ENTRIES = [LIB_NAME, `${LIB_NAME}/web-bluetooth`, `${LIB_NAME}/sim`, `${LIB_NAME}/protocol`];
-/** The one file of the library that touches the browser */
-const LIB_BROWSER = join(LIB, 'device', 'web-bluetooth.ts');
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
@@ -73,8 +69,6 @@ function resolveTs(from: string, spec: string): string | null {
 }
 
 const sources = walk(SRC).filter(p => p.endsWith('.ts') && !p.endsWith('.test.ts') && !p.endsWith('.d.ts'));
-const libSources = walk(LIB).filter(p => p.endsWith('.ts') && !p.endsWith('.test.ts'));
-const libFiles = walk(LIB).filter(p => p.endsWith('.ts'));
 const layerOf = (file: string) => relative(SRC, file).split(sep)[0]!;
 const rel = (file: string) => relative(ROOT, file);
 
@@ -130,35 +124,8 @@ describe('project structure', () => {
     for (const file of [...walk(SRC), ...walk(join(ROOT, 'electron'))].filter(p => p.endsWith('.ts'))) {
       const text = readFileSync(file, 'utf8');
       for (const { spec } of packageImportsOf(text)) if (isLib(spec) && !LIB_ENTRIES.includes(spec)) bad.push(`${rel(file)} → ${spec}`);
-      for (const { spec } of importsOf(text)) {
-        const target = resolveTs(file, spec) ?? normalize(join(dirname(file), spec));
-        if (target.startsWith(join(ROOT, 'packages'))) bad.push(`${rel(file)} → ${rel(target)}`);
-      }
     }
     expect(bad).toEqual([]);
-  });
-
-  it('keeps the treadmill library on its own: nothing from the app, no texts, no other package', () => {
-    const bad: string[] = [];
-    for (const file of libFiles) {
-      const text = readFileSync(file, 'utf8');
-      for (const { spec } of importsOf(text)) {
-        const target = resolveTs(file, spec);
-        if (!target || !target.startsWith(LIB)) bad.push(`${rel(file)} → ${spec}`);
-      }
-      // Tests may use the test runner; the library itself has no dependencies
-      for (const { spec } of packageImportsOf(text)) if (!(file.endsWith('.test.ts') && spec === 'vitest')) bad.push(`${rel(file)} → ${spec}`);
-    }
-    expect(bad).toEqual([]);
-  });
-
-  it('keeps the browser out of the treadmill library, except its Web Bluetooth adapter', () => {
-    const found: string[] = [];
-    for (const file of libSources.filter(f => f !== LIB_BROWSER)) {
-      const hit = code(readFileSync(file, 'utf8')).replace(/'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/g, "''").match(/\b(document\.|window\.|localStorage|sessionStorage|indexedDB|navigator\.|HTMLElement|Bluetooth[A-Z]\w*)/);
-      if (hit) found.push(`${rel(file)}: ${hit[0]}`);
-    }
-    expect(found).toEqual([]);
   });
 
   it('lets only the ui choose Web Bluetooth: the pure layers use the core of the library', () => {
@@ -181,8 +148,8 @@ describe('project structure', () => {
 
   it('has no import cycles at runtime (a type-only import does not count)', () => {
     const graph = new Map<string, string[]>();
-    for (const file of [...sources, ...libSources]) {
-      const deps = importsOf(readFileSync(file, 'utf8')).filter(i => !i.typeOnly).map(i => resolveTs(file, i.spec)).filter((p): p is string => !!p && (p.startsWith(SRC) || p.startsWith(LIB)));
+    for (const file of sources) {
+      const deps = importsOf(readFileSync(file, 'utf8')).filter(i => !i.typeOnly).map(i => resolveTs(file, i.spec)).filter((p): p is string => !!p && p.startsWith(SRC));
       graph.set(file, deps);
     }
     const cycles: string[] = [];
@@ -215,7 +182,7 @@ describe('project structure', () => {
   });
 
   it('keeps a test next to the code it tests', () => {
-    const tests = [...walk(SRC), ...walk(LIB)].filter(p => p.endsWith('.test.ts'));
+    const tests = walk(SRC).filter(p => p.endsWith('.test.ts'));
     const orphans = tests.filter(t => !statSync(t.replace(/\.test\.ts$/, '.ts'), { throwIfNoEntry: false })?.isFile());
     expect(orphans.map(rel)).toEqual([]);
   });

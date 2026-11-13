@@ -49,7 +49,7 @@ const now = () => performance.now();
 // ---------- State ----------
 /**
  * The treadmill: the connection, what is known about the belt, and everything that drives it (limit, ramp, start and stop,
- * standstill). The training view only asks it and draws what it says (docs/LIBRARY.md).
+ * standstill). The training view only asks it and draws what it says (ftms-treadmill, docs/ARCHITECTURE.md).
  */
 const tm = createTreadmill();
 /** The latest figures and the samples since the page was opened */

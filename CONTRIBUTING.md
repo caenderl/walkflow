@@ -25,11 +25,11 @@ npm test
   becomes the commit message that the release notes and the version are made from. Types: `feat`, `fix`, `perf`, `revert`, and
   **`safety`** for anything that changes the speed limit, the ramp, stopping, or the warnings; `docs`, `refactor`, `test`, `build`,
   `ci`, `style`, `chore` do not appear in the release notes. Example: `fix(routes): keep the progress when a route is updated`.
-- **Safety first.** Code that decides what is sent to the treadmill (`packages/ftms-treadmill/`, above all `device/treadmill.ts` and `device/belt-commands.ts`, and the app's `src/core/safety/`)
+- **Safety first.** Code that decides what is sent to the treadmill (the app's `src/core/safety/`, and the library [`ftms-treadmill`](https://github.com/walkflow-app/ftms-treadmill), which has its own repository)
   gets its test first, and the change must not weaken a limit, a delay or a warning. If you are not sure, say so in the pull request.
 - **Small and focused.** One change per pull request, with the tests that show it works.
 - **No new dependency without asking first** (open an issue). What the app runs is bundled at build time and kept small on purpose:
-  besides its own code only the map library and the sharing library.
+  besides its own code only the treadmill library, the map library and the sharing library.
 - **Texts.** The app is in English, German, French and Ukrainian. A new text needs all four (`src/i18n/locales/`); a test checks that
   they have the same shape. If you cannot write one of them, put a clear English text there and say so, and it will be fixed.
 - **Structure.** `docs/ARCHITECTURE.md` describes the layers. `npm test` checks them: lower layers do not import higher ones, nothing

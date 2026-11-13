@@ -3,8 +3,8 @@
 Walkflow is a vanilla TypeScript app (no framework) that runs in the browser as a PWA and in Electron as a desktop app.
 The code is split into **layers**. A layer may only use the layers below it, and the lower ones know nothing about the
 browser. That keeps the logic that matters (above all what limits and stops the belt) testable without a browser, and
-the UI replaceable. Everything that drives the treadmill is a library of its own in `packages/ftms-treadmill/`
-([LIBRARY.md](LIBRARY.md)); the app uses it like any npm package.
+the UI replaceable. Everything that drives the treadmill is a library of its own, the npm package `ftms-treadmill`
+([its repository](https://github.com/walkflow-app/ftms-treadmill), design and API in [its LIBRARY.md](https://github.com/walkflow-app/ftms-treadmill/blob/main/docs/LIBRARY.md)); the app pins a version of it.
 
 ## The layers
 
@@ -38,7 +38,7 @@ src/
 electron/             main process and preload of the desktop app
 tests/                tests about the project itself
 
-packages/ftms-treadmill/src/   the treadmill library, published to npm as ftms-treadmill
+node_modules/ftms-treadmill/   the treadmill library (npm; repository walkflow-app/ftms-treadmill), its sources roughly:
   index.ts            the core entry point: createTreadmill, types, limits (pure, runs in Node)
   web-bluetooth.ts sim.ts protocol.ts   the other entry points
   protocol/           FTMS parsers and commands, the notice codes
@@ -57,8 +57,8 @@ packages/ftms-treadmill/src/   the treadmill library, published to npm as ftms-t
 | `electron/` | pure code of `src/` only: `i18n`, `platform`, `core` |
 
 `main.ts` may import from everything. Every layer may use the core of the treadmill library (`ftms-treadmill`, pure);
-only `ui` and `main.ts` choose the Web Bluetooth adapter (`ftms-treadmill/web-bluetooth`). The library itself imports
-nothing from `src/`.
+only `ui` and `main.ts` choose the Web Bluetooth adapter (`ftms-treadmill/web-bluetooth`). The library knows nothing about
+the app.
 
 ## Rules (checked by `tests/architecture.test.ts`)
 
@@ -70,12 +70,18 @@ nothing from `src/`.
 4. **Every source file lives in a layer folder**; at the top of `src/` only `main.ts`, `env.d.ts` and `style.css` stay.
 5. **A test sits next to the code it tests** (`foo.ts`, `foo.test.ts`).
 6. **The desktop main process uses only pure code** of `src/`.
-7. **The treadmill library stands on its own** (`packages/ftms-treadmill/src/`): it imports nothing outside its folder and
-   no package (its tests use `vitest`), so it has no texts: it speaks in codes (`Notice`), and `ui/live/treadmill-text.ts`
-   turns them into text. Only its Web Bluetooth adapter touches the browser.
-8. **The app uses the library only through its entry points** (`ftms-treadmill`, `/web-bluetooth`, `/sim`, `/protocol`),
-   never its files. In this repository they resolve to the sources (`tsconfig.json` paths, the alias in `vite.config.ts`).
-9. **Sharing never reaches the belt**: nothing that `net/` or `core/share/` runs imports `ftms-treadmill`.
+7. **The app uses the treadmill library only through its entry points** (`ftms-treadmill`, `/web-bluetooth`, `/sim`,
+   `/protocol`), never its files. The library has no texts: it speaks in codes (`Notice`), and `ui/live/treadmill-text.ts`
+   turns them into text. Its own rules (no dependencies, only its Web Bluetooth adapter touches the browser) are checked in
+   its repository.
+8. **Sharing never reaches the belt**: nothing that `net/` or `core/share/` runs imports `ftms-treadmill`.
+
+## The treadmill library
+
+`ftms-treadmill` comes from npm at an exact version (`package.json`), like any other package; nothing of it is built here.
+A change to how the belt is driven is made in [its repository](https://github.com/walkflow-app/ftms-treadmill), released there (after the hardware checks) and
+then taken over here by raising the version. To try a change in the app before it is released: `npm run build` in a
+checkout of the library, then `npm link ../ftms-treadmill` here (`npm install` puts the published version back).
 
 ## Principles
 
@@ -99,7 +105,7 @@ nothing from `src/`.
 | --- | --- |
 | a rule, a calculation, a parser, a state machine | `core/<domain>/` with a test next to it |
 | something that talks to the browser's storage | `data/` |
-| something that drives or reads the treadmill | `packages/ftms-treadmill/src/` (and its API in [LIBRARY.md](LIBRARY.md)) |
+| something that drives or reads the treadmill | the library's repository, [walkflow-app/ftms-treadmill](https://github.com/walkflow-app/ftms-treadmill); then a release of it and a new pinned version here |
 | a part of the page for a feature | `ui/<feature>/` |
 | a part that several features use | `ui/components/` |
 | a text for people | `i18n/locales/en.ts`, `de.ts`, `fr.ts`, `uk.ts` |

@@ -15,12 +15,7 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "allowImportingTsExtensions": true,
-    // The treadmill library from its sources in this repository (packages/ftms-treadmill), through its entry points only
-    "paths": {
-      "ftms-treadmill": ["./packages/ftms-treadmill/src/index.ts"],
-      "ftms-treadmill/*": ["./packages/ftms-treadmill/src/*.ts"]
-    }
+    "allowImportingTsExtensions": true
   },
   "include": ["src"]
 }

@@ -21,6 +21,3 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      # The treadmill library builds on its own and packs only what it should
-      - run: npm run build -w ftms-treadmill
-      - run: npm pack -w ftms-treadmill --dry-run

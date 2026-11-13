@@ -129,12 +129,14 @@ The source is split into layers, each in its own folder; a layer only uses the o
 | `src/ui/` | Everything that draws or listens: views per feature, components, theme, desktop integration; vanilla TS |
 | `src/main.ts` | Wires it all together |
 | `electron/` | Main process and preload of the desktop app (uses only pure code of `src/`) |
-| `packages/ftms-treadmill/` | The treadmill library, published to npm as [`ftms-treadmill`](packages/ftms-treadmill/README.md): FTMS protocol, Bluetooth, speed limit, ramp, start and stop ([docs/LIBRARY.md](docs/LIBRARY.md)) |
 | `tests/` | Tests about the project itself (structure rules); unit tests sit next to their code |
 | `public/legal/<lang>/` | Legal notice and privacy pages per language |
 | `site/` | The product page for GitHub Pages (English and German, plain HTML and CSS, screenshots in `site/img/`); `npm run build:pages` puts it at the root and the web app under `app/` |
 
-A second BLE path (e.g. native) only implements `BleAdapter`/`BleDevice` of `ftms-treadmill` (`packages/ftms-treadmill/src/device/ble.ts`).
+Everything that drives the treadmill (FTMS protocol, Bluetooth, speed limit, ramp, start and stop) is the library
+[`ftms-treadmill`](https://github.com/walkflow-app/ftms-treadmill), its own repository and npm package; the app pins a version of it
+([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-treadmill-library)). A second BLE path (e.g. native) only implements
+`BleAdapter`/`BleDevice` of `ftms-treadmill`.
 
 ### Translations
 
