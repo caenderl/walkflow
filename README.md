@@ -199,8 +199,7 @@ Prepared in `electron-builder.config.cjs`: once the secrets `CSC_LINK`, `CSC_KEY
 
 ## Support
 
-<!-- Placeholder: only add a link once provider and terms are settled. -->
-Support this project: *(link to follow)*
+Support this project on [Ko-fi](https://ko-fi.com/walkflowapp), the same link as the button under "Info, safety & privacy" in the app.
 
 There is no entitlement to support and no feature depends on support.
 
