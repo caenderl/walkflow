@@ -26,7 +26,7 @@ const dist = (p, a, b) => {
 };
 
 function simplify(ring, eps) {
-  const keep = new Array(ring.length).fill(false);
+  const keep = Array.from({ length: ring.length }, () => false);
   keep[0] = keep[ring.length - 1] = true;
   const stack = [[0, ring.length - 1]];
   while (stack.length) {

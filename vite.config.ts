@@ -61,7 +61,7 @@ export default defineConfig({
     assetsInlineLimit: file => (file.includes('/flags/') ? false : undefined),
     rollupOptions: {
       output: {
-        assetFileNames: asset => (asset.originalFileNames?.some(f => f.includes('/flags/')) ? 'assets/flags/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
+        assetFileNames: asset => (asset.originalFileNames.some(f => f.includes('/flags/')) ? 'assets/flags/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
       },
     },
   },

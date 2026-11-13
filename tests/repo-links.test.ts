@@ -16,7 +16,7 @@ function files(path: string): string[] {
 describe('links to the project repository', () => {
   it('name one owner everywhere', () => {
     const owners = new Map<string, string[]>();
-    for (const f of ['README.md', 'SECURITY.md', ...files('.github'), ...files('site').filter(f => /\.(html|js|css)$/.test(f)), ...files('docs')]) {
+    for (const f of ['README.md', 'SECURITY.md', ...files('.github'), ...files('site').filter(s => /\.(html|js|css)$/.test(s)), ...files('docs')]) {
       for (const m of readFileSync(`${ROOT}${f}`, 'utf8').matchAll(/github\.com\/([A-Za-z0-9-]+)\/walkflow\b/g)) {
         owners.set(m[1]!, [...(owners.get(m[1]!) ?? []), f]);
       }

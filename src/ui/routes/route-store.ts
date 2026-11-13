@@ -110,7 +110,7 @@ export function setupRouteStore(host: RouteStoreHost) {
     if (!open) return;
     const parsed = text === null ? null : parseIndex(text);
     if (!parsed || !parsed.ok) {
-      message = () => (parsed && !parsed.ok && parsed.reason === 'newer' ? t.routeStore.newer : text === null ? t.routeStore.failed : t.routeStore.invalid);
+      message = () => (parsed?.reason === 'newer' ? t.routeStore.newer : text === null ? t.routeStore.failed : t.routeStore.invalid);
       routes = null;
     } else {
       routes = parsed.index.routes;

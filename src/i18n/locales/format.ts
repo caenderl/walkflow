@@ -4,7 +4,7 @@ import { KM_PER_MILE, toDist, toShort, toSpeed, units } from '../units';
 
 /** The names of the units and of hours and minutes in a language (the values are always km/h, metres and seconds) */
 export interface UnitLabels { kmh: string; mph: string; km: string; mi: string; m: string; ft: string; h: string; min: string }
-export const LATIN_UNITS: UnitLabels = { kmh: 'km/h', mph: 'mph', km: 'km', mi: 'mi', m: 'm', ft: 'ft', h: 'h', min: 'min' };
+const LATIN_UNITS: UnitLabels = { kmh: 'km/h', mph: 'mph', km: 'km', mi: 'mi', m: 'm', ft: 'ft', h: 'h', min: 'min' };
 
 export type NumberFormat = (value: number, digits?: number) => string;
 

@@ -17,13 +17,13 @@ describe('flags', () => {
   });
 
   it('gives the address of the flag, or null', () => {
-    expect(flagUrl('DE')).toMatch(/^data:image\/svg|\.svg/);
+    expect(flagUrl('DE')).toMatch(/^(?:data:image\/svg|.+\.svg$)/);
     expect(flagUrl('ZZ')).toBeNull();
     expect(flagUrl('../x')).toBeNull();
   });
 
   it('every flag is a plain SVG: no script, no event handlers, no outside references', () => {
-    const raw = import.meta.glob('./flags/*.svg', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+    const raw = import.meta.glob<string>('./flags/*.svg', { query: '?raw', import: 'default', eager: true });
     expect(Object.keys(raw).length).toBe(codes.length);
     for (const [file, svg] of Object.entries(raw)) {
       expect(svg, file).toMatch(/<svg[\s>]/);

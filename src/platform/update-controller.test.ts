@@ -6,10 +6,10 @@ function fakeUpdater() {
   const cb: Record<string, (...a: never[]) => void> = {};
   const port: UpdaterPort & { calls: string[] } = {
     calls: [],
-    onAvailable: f => { cb.available = f as never; },
-    onProgress: f => { cb.progress = f as never; },
-    onDownloaded: f => { cb.downloaded = f as never; },
-    onError: f => { cb.error = f as never; },
+    onAvailable: f => { cb.available = f; },
+    onProgress: f => { cb.progress = f; },
+    onDownloaded: f => { cb.downloaded = f; },
+    onError: f => { cb.error = f; },
     check: vi.fn(async () => { port.calls.push('check'); }),
     download: vi.fn(async () => { port.calls.push('download'); }),
     quitAndInstall: vi.fn(() => { port.calls.push('install'); }),

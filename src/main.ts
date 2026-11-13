@@ -202,7 +202,7 @@ onThemeChange(readout.redrawChart);
 $button('connect').onclick = () => { connMenu.close(); void connection.connect('ble'); };
 $button('demo').onclick = () => { connMenu.close(); void connection.connect('demo'); };
 $button('disconnect').onclick = () => { connMenu.close(); void connection.disconnectClicked(); };
-$button('openConn').onclick = () => { connMenu.open(); $button('connect').disabled ? $button('demo').focus() : $button('connect').focus(); };
+$button('openConn').onclick = () => { connMenu.open(); if ($button('connect').disabled) $button('demo').focus(); else $button('connect').focus(); };
 $button('alarmAck').onclick = () => { $('alarm').hidden = true; };
 $button('stopAlarmAck').onclick = () => { $('stopAlarm').hidden = true; };
 $button('hiddenAck').onclick = () => { $('hiddenBanner').hidden = true; };

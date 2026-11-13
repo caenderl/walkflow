@@ -66,16 +66,17 @@ export interface RouteMeta {
 }
 
 /** A bound only so that nothing stored or read is unbounded; a package holds as many languages as it likes below it */
-export const ROUTE_LANGS_MAX = 64;
+const ROUTE_LANGS_MAX = 64;
 export const ROUTE_TAGS_MAX = 8;
 export const ROUTE_META_MAX = 80;
-export const ROUTE_SOURCE_MAX = 200;
+const ROUTE_SOURCE_MAX = 200;
 /** A language, as its ISO 639 code (en, de, fr, gsw …): no country or script (no de-CH, no ch_fr). "und" = not known. */
-export const LANG_KEY = /^[a-z]{2,3}$/;
+const LANG_KEY = /^[a-z]{2,3}$/;
 export const TAG_KEY = /^[a-z0-9-]{1,24}$/;
 
 /** Plain text: control characters out (a line break stays), cut to length; '' if nothing is left */
-export function cleanText(v: unknown, max: number): string {
+function cleanText(v: unknown, max: number): string {
+  // oxlint-disable-next-line no-control-regex -- removes control characters from untrusted text on purpose
   return typeof v === 'string' ? v.replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, '').trim().slice(0, max).trim() : '';
 }
 
@@ -126,7 +127,7 @@ export function readCredit(v: unknown): Credit {
 }
 
 /** The waypoints that are usable: a place on the map and a name; anything else is left out, and so is everything past the limit */
-export function readWaypoints(v: unknown): Waypoint[] | undefined {
+function readWaypoints(v: unknown): Waypoint[] | undefined {
   if (!Array.isArray(v)) return undefined;
   const out: Waypoint[] = [];
   for (const item of v as unknown[]) {
@@ -159,10 +160,10 @@ export const routeSpeed = (r: Route): number => r.defaultSpeed ?? DEFAULT_WALK_S
 
 export const ROUTE_MAX_POINTS = 5000;
 export const ROUTE_NAME_MAX = 80;
-export const ROUTE_WAYPOINTS_MAX = 50;
-export const WAYPOINT_TEXT_MAX = 300;
+const ROUTE_WAYPOINTS_MAX = 50;
+const WAYPOINT_TEXT_MAX = 300;
 /** The revision of a route package: a whole number from 1 */
-export const ROUTE_REVISION_MAX = 99999;
+const ROUTE_REVISION_MAX = 99999;
 export const isRevision = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= ROUTE_REVISION_MAX;
 /** The name of a route file in the route store: lower-case letters, digits, `.`, `_`, `-`, ending in `.walkflow` */
 export const STORE_FILE_NAME = /^[a-z0-9][a-z0-9._-]{0,80}\.walkflow$/;

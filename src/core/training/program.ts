@@ -117,7 +117,7 @@ export interface ProgramOptions {
   now?: () => number;
 }
 
-export const COUNTDOWN_MS = 4500;
+const COUNTDOWN_MS = 4500;
 
 export type ProgramPhase = 'idle' | 'starting' | 'countdown' | 'running';
 

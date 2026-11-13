@@ -1,5 +1,5 @@
 // Electron main process. Loads only the locally bundled web app via its own scheme app://walkflow/.
-import { readFile, stat } from 'node:fs/promises';
+import { open, readFile } from 'node:fs/promises';
 import { basename, join, normalize, sep } from 'node:path';
 import {
   app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeTheme, powerSaveBlocker, protocol, screen, session, shell,
@@ -76,9 +76,16 @@ async function flushOpen() {
   for (let path = pendingOpen.shift(); path !== undefined; path = pendingOpen.shift()) {
     const name = basename(path);
     try {
-      const info = await stat(path);
-      if (!info.isFile() || info.size > OPEN_MAX_BYTES) win.webContents.send('app:open-package', { name, error: 'tooLarge' });
-      else win.webContents.send('app:open-package', { name, text: await readFile(path, 'utf8') });
+      // One handle for the check and the read, and never more than the limit read, even if the file changes in between
+      const file = await open(path, 'r');
+      try {
+        const buf = Buffer.alloc(OPEN_MAX_BYTES + 1);
+        const { bytesRead } = (await file.stat()).isFile() ? await file.read(buf, 0, buf.length, 0) : { bytesRead: buf.length };
+        if (bytesRead > OPEN_MAX_BYTES) win.webContents.send('app:open-package', { name, error: 'tooLarge' });
+        else win.webContents.send('app:open-package', { name, text: buf.toString('utf8', 0, bytesRead) });
+      } finally {
+        await file.close();
+      }
     } catch {
       win.webContents.send('app:open-package', { name, error: 'unreadable' });
     }
@@ -100,7 +107,7 @@ const fromWindow = (e: IpcMainEvent | IpcMainInvokeEvent) => !!win && e.sender =
 const releasesUrl = () => (__GITHUB_REPO__ ? `https://github.com/${__GITHUB_REPO__}/releases` : '');
 
 function isAllowedExternal(url: string): boolean {
-  return /^https:\/\/github\.com\//.test(url) || url === DONATION_URL;
+  return url.startsWith('https://github.com/') || url === DONATION_URL;
 }
 
 async function serve(request: Request): Promise<Response> {
@@ -126,15 +133,15 @@ function setMenu() {
   // Deliberately without "Reload": a reload cuts the Bluetooth connection and the belt would keep running without the app.
   // Electron's role labels are English only, so every item gets its label from the locale files.
   const m = t.electron;
-  const app = 'Walkflow';
+  const name = 'Walkflow';
   const mac = process.platform === 'darwin';
   const template: MenuItemConstructorOptions[] = [
     ...(mac ? [{
-      label: app,
+      label: name,
       submenu: [
-        { role: 'about', label: m.about(app) }, { type: 'separator' },
-        { role: 'hide', label: m.hide(app) }, { role: 'hideOthers', label: m.hideOthers }, { role: 'unhide', label: m.showAll },
-        { type: 'separator' }, { role: 'quit', label: m.quit(app) },
+        { role: 'about', label: m.about(name) }, { type: 'separator' },
+        { role: 'hide', label: m.hide(name) }, { role: 'hideOthers', label: m.hideOthers }, { role: 'unhide', label: m.showAll },
+        { type: 'separator' }, { role: 'quit', label: m.quit(name) },
       ],
     } satisfies MenuItemConstructorOptions] : []),
     { label: m.menuEdit, submenu: [{ role: 'copy', label: m.copy }, { role: 'paste', label: m.paste }, { role: 'selectAll', label: m.selectAll }] },
@@ -297,8 +304,10 @@ if (selfUpdate) {
   autoUpdater.allowPrerelease = false;
   autoUpdater.allowDowngrade = false;
   updater = {
+    // oxlint-disable-next-line typescript/no-unnecessary-type-conversion -- the version comes from a YAML file on the update server, which may read as a number
     onAvailable: cb => { autoUpdater.on('update-available', info => cb(String(info.version))); },
     onProgress: cb => { autoUpdater.on('download-progress', p => cb(p.percent)); },
+    // oxlint-disable-next-line typescript/no-unnecessary-type-conversion -- the version comes from a YAML file on the update server, which may read as a number
     onDownloaded: cb => { autoUpdater.on('update-downloaded', info => cb(String(info.version))); },
     onError: cb => { autoUpdater.on('error', e => cb(e)); },
     check: () => autoUpdater.checkForUpdates(),
@@ -373,12 +382,14 @@ if (!app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
       const ok = ALLOWED_PERMISSIONS.has(permission);
       if (!ok) console.log(`Permission denied: ${permission}`);
+      // oxlint-disable-next-line promise/no-callback-in-promise -- Electron's permission callback, which has to be called here
       callback(ok);
     });
     // No requests to remote hosts from the renderer, except the map servers of this build (only used once the map is on) and the relays for sharing
     session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
       const ok = isAllowedRequest(details.url, { origin: ORIGIN, devOrigin: DEV_ORIGIN, mapOrigins: MAP_ORIGINS, relays: RELAYS, store: STORE_BASE });
       if (!ok) console.log(`Blocked: ${details.url}`);
+      // oxlint-disable-next-line promise/no-callback-in-promise -- Electron's request callback, which has to be called here
       callback({ cancel: !ok });
     });
     // Until the renderer reports its language: the system languages

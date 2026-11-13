@@ -34,7 +34,7 @@ export function upcoming(steps: readonly ProgramStep[], index: number, count: nu
 }
 
 /** The count of a timed step is in its last seconds: the panel blinks it red */
-export const ENDING_SOON_SECONDS = 10;
+const ENDING_SOON_SECONDS = 10;
 
 export function endingSoon(left: { sec: number } | { meters: number } | null): boolean {
   return left !== null && 'sec' in left && left.sec <= ENDING_SOON_SECONDS;

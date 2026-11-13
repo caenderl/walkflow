@@ -124,8 +124,8 @@ come first, and the route is the shortest way over paths and streets from one to
    (see [Reviewing a route](#reviewing-a-route)), and the CI of that repository writes a map of it into the pull request. `index.json` is written by CI
    after the merge.
 
-The script asks Nominatim for one outline and Overpass for one area per route and keeps the answers in a folder in the temporary
-folder of the system (`--cache`), so running it again asks for nothing. Overpass is often busy and answers `502`: the script tries
+The script asks Nominatim for one outline and Overpass for one area per route and keeps the answers in a folder of the user's
+cache (`~/.cache/walkflow-make-route`, or under `$XDG_CACHE_HOME`; `--cache` for another), only readable by the user, so running it again asks for nothing. Overpass is often busy and answers `502`: the script tries
 eight times with a growing pause, and running it again later is the way to go on. OpenStreetMap changes, so a run months later can give a
 slightly different track from the file in the store; the file in the store is what counts. `tests/make-route.test.ts` tests the
 pieces on a made-up lake, without the network, and checks that what the script writes is what the app itself would write.

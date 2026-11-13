@@ -10,7 +10,7 @@ export interface Totals {
   kcal: number;
 }
 
-export interface WeekTotal {
+interface WeekTotal {
   /** Local Monday 00:00 */
   start: number;
   dist: number;

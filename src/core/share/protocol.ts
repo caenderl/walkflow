@@ -74,6 +74,7 @@ const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'obj
 
 /** Control characters out, cut to length: shown as plain text */
 function cleanName(v: unknown, max = MAX_NAME_CHARS): string {
+  // oxlint-disable-next-line no-control-regex -- removes control characters from what a peer sent, on purpose
   return typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max).trim() : '';
 }
 
@@ -171,6 +172,7 @@ export class ShareSender {
 
   private set(items: readonly ShareItem[]) {
     // What the other side would refuse is not offered
+    // oxlint-disable-next-line oxc/no-map-spread -- copies on purpose: the caller's items stay as they are
     this.items = items.filter(i => i.text.length >= 1 && i.text.length <= MAX_ITEM_CHARS).slice(0, MAX_OFFER_ITEMS).map(i => ({ ...i, chars: i.text.length }));
   }
 

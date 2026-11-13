@@ -16,8 +16,39 @@ pull request, these have to pass (CI runs them):
 
 ```bash
 npm run typecheck
+npm run lint
 npm test
 ```
+
+## Static analysis
+
+`npm run lint` runs [oxlint](https://oxc.rs/docs/guide/usage/linter) with type information (`--type-aware`, built on
+TypeScript 7, which typescript-eslint cannot use) and then [knip](https://knip.dev), which finds unused files, exports and
+dependencies. The rules are in `.oxlintrc.json`, knip's entry points (the page, Electron, the scripts, the tests) in `knip.json`.
+Above all, no promise may be left unhandled: a forgotten `await` on `tm.stop()` fails the lint. Type information comes from the
+three projects that `tsconfig.json` refers to (`tsconfig.app.json` for `src/`, `tsconfig.node.json` for the config and `tests/`,
+`tsconfig.electron.json` for `electron/`).
+
+If a rule is wrong for one line, switch it off on that line and say why:
+
+```ts
+// oxlint-disable-next-line typescript/no-unnecessary-condition -- the Wake Lock API is missing in Firefox and older Safari
+```
+
+Typical cases are browser APIs that the types promise but not every browser has, and checks after an `await` that another call may
+have changed in the meantime. In safety code (`src/core/safety/`, anything that ends in a call that drives the belt) a finding that
+would change behaviour is not "fixed" in passing: it gets a test first, like any other safety change. Rules that are off for the
+whole app, and why:
+
+- `unicorn/prefer-add-event-listener`: the UI assigns `onclick` and the like on purpose, so a re-render replaces the handler
+  instead of adding a second one.
+- `unicorn/no-useless-spread`: listeners are copied before they are called, so a listener may unsubscribe while the others run.
+- `unicorn/no-array-sort`: what is sorted is a fresh copy, and `toSorted` is not in the ES2022 library the app is built against.
+- `typescript/consistent-return`: TypeScript already checks that every path of a function returns, also for exhaustive `switch`es.
+- `no-await-in-loop`: some steps (retries, ramps) are sequential on purpose.
+
+GitHub's CodeQL (default setup, extended queries) checks the code and the workflows for security problems on every push and pull
+request; Dependabot keeps the GitHub Actions, which are pinned by commit, and the dev dependencies current once a month.
 
 ## Pull requests
 

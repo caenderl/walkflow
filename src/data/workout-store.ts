@@ -34,7 +34,7 @@ export class MemoryWorkoutStore implements WorkoutStore {
 
 const PLAN_KEY = 'plan';
 
-export class IdbWorkoutStore implements WorkoutStore {
+class IdbWorkoutStore implements WorkoutStore {
   readonly persistent = true;
 
   private constructor(private readonly db: IDBDatabase) {}

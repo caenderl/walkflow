@@ -1,5 +1,6 @@
 // DOM helpers. Deliberately small, no framework.
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- like querySelector<T>: the caller names the element type it expects
 export function $<T extends HTMLElement = HTMLElement>(id: string): T {
   const el = document.getElementById(id);
   if (!el) throw new Error(`#${id} missing in the DOM`);

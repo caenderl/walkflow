@@ -1,8 +1,8 @@
 // The one IndexedDB database of the app: runs and their samples (run-store.ts), workouts and settings
 // (workout-store.ts), routes (route-store.ts). Opened once; a missing or blocked IndexedDB makes the stores fall back to memory.
 
-export const DB_NAME = 'walkflow';
-export const DB_VERSION = 3;
+const DB_NAME = 'walkflow';
+const DB_VERSION = 3;
 export const RUNS = 'runs';
 export const TRACKS = 'tracks';
 export const WORKOUTS = 'workouts';

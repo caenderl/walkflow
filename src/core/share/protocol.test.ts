@@ -68,6 +68,7 @@ describe('readMessage', () => {
     const msg = readMessage({ t: 'offer', items: [{ id: 'a', kind: 'route', name: `Line\u0000one\nand\u0007two ${'x'.repeat(200)}`, chars: 5, sha256: SHA }] });
     const name = msg?.t === 'offer' ? msg.items[0]!.name : '';
     expect(name.startsWith('Line one and two xxx')).toBe(true);
+    // oxlint-disable-next-line no-control-regex -- checks that the control characters are gone
     expect(name).not.toMatch(/[\u0000-\u001f]/);
     expect(name.length).toBeLessThanOrEqual(MAX_NAME_CHARS);
   });

@@ -26,7 +26,7 @@ export class MemoryRouteStore implements RouteStore {
   async delete(id: string) { this.routes.delete(id); }
 }
 
-export class IdbRouteStore implements RouteStore {
+class IdbRouteStore implements RouteStore {
   readonly persistent = true;
 
   private constructor(private readonly db: IDBDatabase) {}

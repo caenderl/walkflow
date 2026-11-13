@@ -319,8 +319,8 @@ describe('packageFileName', () => {
 describe('a package the app wrote comes out byte for byte the same when it is read and written again', () => {
   // This is what lets an item taken from the community be offered again with the same hash (docs/P2P.md)
   const again = (text: string) => {
-    const read = readPackage(text, 'id', 1);
-    return read.ok ? serializePackage(packageFromRoute(read.route)) : null;
+    const r = readPackage(text, 'id', 1);
+    return r.ok ? serializePackage(packageFromRoute(r.route)) : null;
   };
 
   it('for a route with translations, a place and a source, and one with a revision', () => {

@@ -10,10 +10,10 @@ import { sha256Hex } from '../share/hash';
 import { PACKAGE_MAX_CHARS, readPackage } from '../routes/route-package';
 import { analyzeRoute, isRevision, readLangMap, ROUTE_META_MAX, ROUTE_NAME_MAX, ROUTE_TAGS_MAX, STORE_FILE_NAME, TAG_KEY } from '../routes/routes';
 
-export const STORE_INDEX_VERSION = 1;
+const STORE_INDEX_VERSION = 1;
 /** An index of thousands of routes is well below this */
 export const STORE_INDEX_MAX_CHARS = 2_000_000;
-export const STORE_MAX_ROUTES = 2000;
+const STORE_MAX_ROUTES = 2000;
 
 /** What the list shows about one route file */
 export interface StoreRoute {
@@ -36,7 +36,7 @@ export interface StoreRoute {
   tags?: string[];
 }
 
-export interface StoreIndex { version: typeof STORE_INDEX_VERSION; routes: StoreRoute[] }
+interface StoreIndex { version: typeof STORE_INDEX_VERSION; routes: StoreRoute[] }
 
 export type IndexResult = { ok: true; index: StoreIndex } | { ok: false; reason: 'invalid' | 'newer' };
 export type EntryResult = { ok: true; entry: StoreRoute } | { ok: false; reason: 'unreadable' | 'tooLarge' | 'newer' | 'invalid' | 'fileName' };

@@ -17,7 +17,7 @@ export interface RunTag {
   completed: boolean;
 }
 
-export const RUN_TAG_NAME_MAX = 80;
+const RUN_TAG_NAME_MAX = 80;
 
 export interface RunSummary {
   /** Start time as a string; the same run from a backup gets the same id */
@@ -150,6 +150,7 @@ export function buildRun(samples: readonly Sample[], source: RunSource, tag?: Ru
   while (!moving(samples[last])) last--;
   const pts = samples.slice(first, last + 1);
   const start = Math.round(pts[0]!.ts);
+  // oxlint-disable-next-line oxc/no-map-spread -- copies on purpose: the recorded points stay as they are
   const track = encodeTrack(pts.map(p => ({ ...p, ts: p.ts - pts[0]!.ts + start })));
   const summary = summarize(String(start), source, decodeTrack(start, track));
   if (tag) summary.tag = tag;
@@ -309,8 +310,8 @@ export class RunRecorder {
 
 // ---------- Backup file ----------
 
-export const BACKUP_FORMAT = 'walkflow-backup';
-export const BACKUP_VERSION = 1;
+const BACKUP_FORMAT = 'walkflow-backup';
+const BACKUP_VERSION = 1;
 
 export interface BackupExtras {
   workouts?: readonly Workout[];

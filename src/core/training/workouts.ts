@@ -161,7 +161,7 @@ export interface WeekPlan {
   suggest?: (PlanSuggestion | null)[];
 }
 
-export const PLAN_MAX_MINUTES = 600;
+const PLAN_MAX_MINUTES = 600;
 
 function readSuggest(v: unknown): (PlanSuggestion | null)[] | undefined {
   if (!Array.isArray(v) || v.length !== 7) return undefined;
@@ -180,7 +180,7 @@ export function readPlan(v: unknown): WeekPlan | null {
   if (!v.minutes.every(m => isInt(m, 0, PLAN_MAX_MINUTES))) return null;
   // Damaged suggestions cost the suggestions, not the plan
   const suggest = readSuggest(v.suggest);
-  return { minutes: v.minutes as number[], ...(suggest ? { suggest } : {}) };
+  return { minutes: v.minutes, ...(suggest ? { suggest } : {}) };
 }
 
 /** From input fields: whatever was typed ends up as a whole number in range */
@@ -216,7 +216,7 @@ export function weekProgress(plan: WeekPlan, runs: readonly RunSummary[], now: n
   const monday = new Date(weekStart(now));
   const at = (offset: number) => new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + offset).getTime();
   const days = Array.from({ length: 8 }, (_, i) => at(i));
-  const done = new Array<number>(7).fill(0);
+  const done = Array.from({ length: 7 }, () => 0);
   for (const r of countable(runs)) {
     if (r.start < days[0]! || r.start >= days[7]!) continue;
     let i = 6;

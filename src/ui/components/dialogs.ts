@@ -3,7 +3,7 @@
 import { onLanguageChange, t } from '../../i18n/i18n';
 import { languageSelect } from '../i18n-dom';
 
-export interface DialogButton<T extends string> {
+interface DialogButton<T extends string> {
   id: T;
   label: string;
   kind?: 'primary' | 'stop';
@@ -104,7 +104,7 @@ function show<T extends string>(get: () => DialogOptions<T>): Promise<T> {
         if (b.kind) btn.classList.add(b.kind);
         if (i === 0 && check) {
           btn.disabled = !checked;
-          check.addEventListener('change', () => { btn.disabled = !check!.checked; });
+          check.addEventListener('change', () => { btn.disabled = !check.checked; });
         }
         btn.addEventListener('click', () => done(b.id));
         row.append(btn);

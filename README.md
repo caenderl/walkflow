@@ -91,6 +91,7 @@ npm run dev
 | --- | --- |
 | `npm test` | Vitest (FTMS parser, safety logic, program runner, simulator, export, runs and statistics, translations) |
 | `npm run typecheck` | TypeScript strict for app, config and Electron |
+| `npm run lint` | oxlint with type information and knip (unused files, exports, dependencies); rules and how to switch one off for a line in [CONTRIBUTING.md](CONTRIBUTING.md#static-analysis) |
 | `npm run build` | Web build to `dist/` (with service worker) |
 | `npm run electron` | Build the desktop variant and start Electron |
 | `npm run electron:dev` | Start Electron in watch mode: changes in `src/` show at once (hot reload), a change in `electron/` restarts the app |

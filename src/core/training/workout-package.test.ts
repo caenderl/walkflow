@@ -114,6 +114,7 @@ describe('readWorkoutPackage', () => {
   it('strips control characters from texts', () => {
     const r = readWorkoutPackage(file({ name: { en: 'Easy\u0000\u0007 one' }, description: { en: 'Line\u0000 text' } }), 'i', 1);
     expect(r.ok && r.workout.name).toBe('Easy one');
+    // oxlint-disable-next-line no-control-regex -- checks that the control character is gone
     expect(r.ok && r.workout.texts!.en).not.toMatch(/\u0000/);
   });
 });
