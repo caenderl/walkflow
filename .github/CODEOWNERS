@@ -1,0 +1,14 @@
+# Who has to look at what. Today one maintainer owns everything; the explicit lines mark what must never be merged
+# without a human review (safety, the release and deploy pipeline, the agent setup), for when agents open pull requests.
+*                               @caenderl
+
+src/core/safety/                @caenderl
+src/ui/live/                    @caenderl
+src/net/                        @caenderl
+src/core/share/                 @caenderl
+electron/                       @caenderl
+.github/                        @caenderl
+HARDWARE-TESTS.md               @caenderl
+CLAUDE.md                       @caenderl
+.claude/                        @caenderl
+public/legal/                   @caenderl

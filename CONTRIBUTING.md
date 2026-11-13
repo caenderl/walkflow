@@ -59,6 +59,9 @@ request; Dependabot keeps the GitHub Actions, which are pinned by commit, and th
 - **Safety first.** Code that decides what is sent to the treadmill (the app's `src/core/safety/`, and the library [`ftms-treadmill`](https://github.com/walkflow-app/ftms-treadmill), which has its own repository)
   gets its test first, and the change must not weaken a limit, a delay or a warning. If you are not sure, say so in the pull request.
 - **Small and focused.** One change per pull request, with the tests that show it works.
+- **Through a pull request only.** `main` takes no direct pushes; a pull request is merged once CI (`test`) is green.
+- **Working with an AI agent?** `CLAUDE.md` holds the rules an agent needs (safety, hardware checks, texts, releases) and
+  `.claude/settings.json` the commands it may and may not run; `.github/CODEOWNERS` names what needs a human review.
 - **No new dependency without asking first** (open an issue). What the app runs is bundled at build time and kept small on purpose:
   besides its own code only the treadmill library, the map library and the sharing library.
 - **Texts.** The app is in English, German, French and Ukrainian. A new text needs all four (`src/i18n/locales/`); a test checks that
