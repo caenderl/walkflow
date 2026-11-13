@@ -4,8 +4,12 @@
 //
 //   node scripts/make-route.mjs scripts/route-specs/berlin-schlachtensee.json --root ../route-store
 //
+// A spec without "osm" makes a route from one place to another instead of a loop: it goes through the "waypoints" in order (or through
+// "path", a list of [lat, lon], when it needs more places to be kept to the streets that are meant), on the paths and streets between them.
+//
 //   --root <dir>      the route-store checkout: writes <dir>/routes/<file>.walkflow, then runs the store check (build-store.mjs) on it
 //   --preview <file>  also writes an SVG: the outline in grey, the route in red, the waypoints in blue (open it in a browser)
+//   --streets         (a walk from one place to another) also prints the names of the streets and paths the route follows, in order
 //   --dry             writes no package and runs no check (with --preview: only the picture)
 //   --force           writes the package even if the route looks wrong (a piece could not be routed, the loop does not close,
 //                     its length is far from the outline's)
@@ -30,6 +34,8 @@ const NAME_MAX = 80, TEXT_MAX = 300, DESCRIPTION_MAX = 1000;
 /** A loop whose length is outside this part of the outline's length wandered off, or took a shortcut */
 const LENGTH_RATIO = [0.8, 1.2];
 const CLOSE_MAX = 30;
+/** A route through places that is longer than this many times the straight line between the stops took a detour */
+const DETOUR_MAX = 1.8;
 
 // ---------------------------------------------------------------- geometry
 
@@ -116,10 +122,10 @@ export function networkQuery([s, w, n, e]) {
 /**
  * The graph of the ways (elements of an Overpass answer with `out geom`), cut down to what is within `corr` metres of the ring, with
  * edges the dearer the further from the ring (1 + distance / pen), and to the largest connected part, so that a stub that leads
- * nowhere cannot be snapped to. Returns { pos: Map id → [lat, lon], adj: Map id → [[id, cost]] }.
+ * nowhere cannot be snapped to. Returns { pos: Map id → [lat, lon], adj: Map id → [[id, cost]], names: Map "a-b" → name of the way }.
  */
 export function buildGraph(elements, ring, { corr, pen }) {
-  const pos = new Map(), adj = new Map(), dist = new Map();
+  const pos = new Map(), adj = new Map(), dist = new Map(), names = new Map();
   const near = distToLine(ring);
   const dOf = id => { let v = dist.get(id); if (v === undefined) { v = near(pos.get(id)); dist.set(id, v); } return v; };
   const add = (a, b, c) => { let l = adj.get(a); if (!l) adj.set(a, l = []); l.push([b, c]); };
@@ -135,6 +141,7 @@ export function buildGraph(elements, ring, { corr, pen }) {
       const c = hav(pos.get(a), pos.get(b)) * f * (1 + (da + db) / 2 / pen);
       add(a, b, c);
       if (both) add(b, a, c);
+      if (way.tags.name) { names.set(`${a}-${b}`, way.tags.name); names.set(`${b}-${a}`, way.tags.name); }
     }
   }
   const comp = new Set();
@@ -148,7 +155,7 @@ export function buildGraph(elements, ring, { corr, pen }) {
   }
   const keep = new Set(best);
   for (const id of [...adj.keys()]) if (!keep.has(id)) adj.delete(id);
-  return { pos, adj };
+  return { pos, adj, names };
 }
 
 /** The id of the node of the graph nearest to p, if it is within maxDist metres, else null */
@@ -243,6 +250,63 @@ export function loopAround(ring, net, { step, snapDist, tol }) {
   return { points: pts, samples: samples.length, skipped, failed };
 }
 
+/**
+ * Takes out the places where the way leaves a node and comes back to it within `maxLen` metres in all (A B C B A becomes A, and so
+ * does a short loop round a block). A stop that is snapped to a node in a side street or at the end of a dead end would otherwise
+ * send the route there and back; a stop in what is cut out is at most half of `maxLen` from the route. A longer way out and back stays.
+ */
+export function dropLoops(ids, net, maxLen) {
+  // the length of a loop is measured along the way as it was walked, not along what is left of it after cutting out inner loops
+  const walked = [0];
+  for (let i = 1; i < ids.length; i++) walked[i] = walked[i - 1] + hav(net.pos.get(ids[i - 1]), net.pos.get(ids[i]));
+  const out = [], from = [], at = new Map();
+  ids.forEach((id, i) => {
+    const k = at.get(id);
+    if (k !== undefined && walked[i] - walked[from[k]] <= maxLen) {
+      for (let j = k + 1; j < out.length; j++) at.delete(out[j]);
+      out.length = from.length = k + 1;
+      return;
+    }
+    out.push(id); from.push(i); at.set(id, out.length - 1);
+  });
+  return out;
+}
+
+/**
+ * The route through places, from the first to the last (no loop): every stop is snapped to the graph (within `snapDist`) and the
+ * stops are joined in order by shortest paths. A stop with no path nearby is an error, because the route would skip a place. `failed`
+ * lists the pieces that could not be routed (the route then has a straight line there).
+ */
+export function routeVia(stops, net, { snapDist, tol, spur = 240 }) {
+  const nodes = [];
+  stops.forEach((p, i) => {
+    const id = snap(net, p, snapDist);
+    if (id == null) throw new Error(`Stop ${i + 1} (${p.join(', ')}) is not within ${snapDist} m of a path: move it onto a street, or raise snapDist and corr`);
+    if (nodes[nodes.length - 1] !== id) nodes.push(id);
+  });
+  if (nodes.length < 2) throw new Error('All stops snap to the same place: the route would have no length');
+  const path = [nodes[0]], failed = [];
+  for (let i = 1; i < nodes.length; i++) {
+    const seg = shortestPath(net, nodes[i - 1], nodes[i]);
+    if (seg) path.push(...seg.slice(1)); else failed.push([net.pos.get(nodes[i - 1]), net.pos.get(nodes[i])]);
+  }
+  const ids = dropLoops(path, net, spur), streets = [];
+  for (let i = 1; i < ids.length; i++) {
+    const n = net.names?.get(`${ids[i - 1]}-${ids[i]}`) ?? '(no name)';
+    if (streets[streets.length - 1] !== n) streets.push(n);
+  }
+  const pts = simplify(ids.map(id => net.pos.get(id)), tol).map(([a, b]) => [Math.round(a * 1e6) / 1e6, Math.round(b * 1e6) / 1e6]);
+  return { points: pts, failed, streets };
+}
+
+/** The places a route through places passes, in order: `path` if the spec has one (it may have more places than there are waypoints), else the waypoints */
+export const stopsOf = spec => (spec.path ?? (spec.waypoints ?? []).map(w => w.at));
+
+/** The box around some places, `margin` degrees bigger on every side: [south, west, north, east] */
+export function boxAround(points, margin) {
+  return [Math.min(...points.map(p => p[0])) - margin, Math.min(...points.map(p => p[1])) - margin * 1.6, Math.max(...points.map(p => p[0])) + margin, Math.max(...points.map(p => p[1])) + margin * 1.6];
+}
+
 // ---------------------------------------------------------------- the package
 
 /** "relation/62215" or "way/4317997" → { type, id } */
@@ -267,7 +331,13 @@ export function fillTexts(texts, { km, mi }) {
 export function checkSpec(spec) {
   const problems = [];
   if (!/^[a-z0-9._-]+$/.test(spec.file ?? '')) problems.push('"file" is the file name without .walkflow: lower-case letters, digits, . _ -');
-  try { parseOsm(spec.osm); } catch (e) { problems.push(e.message); }
+  if (spec.osm !== undefined) {
+    try { parseOsm(spec.osm); } catch (e) { problems.push(e.message); }
+  } else {
+    const stops = stopsOf(spec);
+    if (!Array.isArray(stops) || stops.length < 2) problems.push('without "osm" the route goes through places: at least two waypoints (or a "path" of at least two [lat, lon])');
+    else stops.forEach((p, i) => { if (!(Array.isArray(p) && p.length === 2 && p.every(Number.isFinite))) problems.push(`stop ${i + 1} has to be [lat, lon]`); });
+  }
   const langMap = (what, v, max, required) => {
     if (v === undefined && !required) return;
     if (!v || typeof v !== 'object' || !Object.keys(v).length) { problems.push(`${what} needs at least one language`); return; }
@@ -385,6 +455,7 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === '--dry') o.dry = true;
     else if (a === '--force') o.force = true;
+    else if (a === '--streets') o.streets = true;
     else if (a === '--root' || a === '--preview' || a === '--cache') {
       const v = argv[++i];
       if (!v || v.startsWith('--')) throw new Error(`${a} needs a value`);
@@ -401,37 +472,62 @@ function parseArgs(argv) {
 async function main() {
   let opts;
   try { opts = parseArgs(process.argv.slice(2)); } catch (e) {
-    console.error(`${e.message}\nUsage: node scripts/make-route.mjs <spec.json> --root <route-store checkout> [--preview <file.svg>] [--dry] [--force] [--cache <dir>]`);
+    console.error(`${e.message}\nUsage: node scripts/make-route.mjs <spec.json> --root <route-store checkout> [--preview <file.svg>] [--streets] [--dry] [--force] [--cache <dir>]`);
     process.exit(2);
   }
   const spec = JSON.parse(readFileSync(opts.spec, 'utf8'));
   checkSpec(spec);
-  const { ring, bbox, rings } = await fetchOutline(spec.osm, opts.cache);
-  if (rings > 1) console.error(`Note: the outline has ${rings} outer rings, only the longest is used`);
-  const margin = spec.margin ?? 0.004;
-  const ways = await fetchWays([bbox[0] - margin, bbox[1] - margin * 1.6, bbox[2] + margin, bbox[3] + margin * 1.6], opts.cache);
-  const net = buildGraph(ways.elements, ring, { corr: spec.corr ?? 60, pen: spec.pen ?? 15 });
-  const loop = loopAround(ring, net, { step: spec.step ?? 200, snapDist: spec.snapDist ?? 60, tol: spec.tol ?? 2.5 });
-
-  const length = Math.round(lengthOf(loop.points)), outline = Math.round(lengthOf(ring));
-  const closure = Math.round(hav(loop.points[0], loop.points[loop.points.length - 1]));
-  console.log(`${spec.file}: ${length} m (outline ${outline} m), ${loop.points.length} points, ${loop.failed.length} pieces not routed, ${loop.skipped} of ${loop.samples} samples without a path, closes within ${closure} m`);
   const problems = [];
-  for (const [a, b] of loop.failed) problems.push(`no way from ${a} to ${b}: a straight line there`);
-  if (closure > CLOSE_MAX) problems.push(`the loop does not close (${closure} m)`);
-  const ratio = length / outline;
-  if (ratio < LENGTH_RATIO[0] || ratio > LENGTH_RATIO[1]) problems.push(`the length is ${Math.round(ratio * 100)}% of the outline's: it wandered off or took a shortcut`);
+  let ring, route, summary;
+  if (spec.osm !== undefined) {
+    const outline = await fetchOutline(spec.osm, opts.cache);
+    ring = outline.ring;
+    if (outline.rings > 1) console.error(`Note: the outline has ${outline.rings} outer rings, only the longest is used`);
+    const margin = spec.margin ?? 0.004;
+    const { bbox } = outline;
+    const ways = await fetchWays([bbox[0] - margin, bbox[1] - margin * 1.6, bbox[2] + margin, bbox[3] + margin * 1.6], opts.cache);
+    const net = buildGraph(ways.elements, ring, { corr: spec.corr ?? 60, pen: spec.pen ?? 15 });
+    const loop = loopAround(ring, net, { step: spec.step ?? 200, snapDist: spec.snapDist ?? 60, tol: spec.tol ?? 2.5 });
+    route = loop.points;
+    const length = Math.round(lengthOf(route)), outlineLength = Math.round(lengthOf(ring));
+    const closure = Math.round(hav(route[0], route[route.length - 1]));
+    summary = `${length} m (outline ${outlineLength} m), ${route.length} points, ${loop.failed.length} pieces not routed, ${loop.skipped} of ${loop.samples} samples without a path, closes within ${closure} m`;
+    for (const [a, b] of loop.failed) problems.push(`no way from ${a} to ${b}: a straight line there`);
+    if (closure > CLOSE_MAX) problems.push(`the loop does not close (${closure} m)`);
+    const ratio = length / outlineLength;
+    if (ratio < LENGTH_RATIO[0] || ratio > LENGTH_RATIO[1]) problems.push(`the length is ${Math.round(ratio * 100)}% of the outline's: it wandered off or took a shortcut`);
+  } else {
+    // a route through places: the grey line in the picture joins the stops, and only ways near it are used
+    const stops = stopsOf(spec);
+    ring = stops;
+    const ways = await fetchWays(boxAround(stops, spec.margin ?? 0.003), opts.cache);
+    const net = buildGraph(ways.elements, stops, { corr: spec.corr ?? 250, pen: spec.pen ?? 200 });
+    const via = routeVia(stops, net, { snapDist: spec.snapDist ?? 80, tol: spec.tol ?? 2.5, spur: spec.spur ?? 240 });
+    route = via.points;
+    if (opts.streets) console.log(`Streets: ${via.streets.join(' > ')}`);
+    const length = Math.round(lengthOf(route)), straight = Math.round(lengthOf(stops));
+    summary = `${length} m (${stops.length} stops, ${straight} m in a straight line), ${route.length} points, ${via.failed.length} pieces not routed`;
+    for (const [a, b] of via.failed) problems.push(`no way from ${a} to ${b}: a straight line there`);
+    const ratio = length / straight;
+    if (ratio > DETOUR_MAX) problems.push(`the route is ${ratio.toFixed(1)} times as long as the straight line between the stops: it took a detour (add stops to \`path\`, or lower corr)`);
+  }
+  console.log(`${spec.file}: ${summary}`);
+  const near = distToLine(route);
+  for (const w of spec.waypoints ?? []) {
+    const d = near(w.at);
+    if (d > WAYPOINT_MAX_OFFSET) problems.push(`the waypoint "${Object.values(w.name)[0]}" is ${Math.round(d)} m from the route, the most is ${WAYPOINT_MAX_OFFSET} m`);
+  }
 
-  if (opts.preview) { writeFileSync(opts.preview, previewSvg(ring, loop.points, spec.waypoints)); console.log(`Picture: ${opts.preview}`); }
+  if (opts.preview) { writeFileSync(opts.preview, previewSvg(ring, route, spec.waypoints)); console.log(`Picture: ${opts.preview}`); }
   if (problems.length) {
-    console.error(`Looks wrong:\n- ${problems.join('\n- ')}\nLook at the picture (--preview), then change step, snapDist, corr or pen in the spec${opts.force ? '. Written anyway (--force).' : '.'}`);
+    console.error(`Looks wrong:\n- ${problems.join('\n- ')}\nLook at the picture (--preview), then change step, snapDist, corr or pen (or the stops) in the spec${opts.force ? '. Written anyway (--force).' : '.'}`);
     if (!opts.force) process.exit(1);
   }
   if (opts.dry) return;
 
   const target = join(resolve(opts.root), 'routes', `${spec.file}.walkflow`);
   mkdirSync(join(resolve(opts.root), 'routes'), { recursive: true });
-  writeFileSync(target, packageText(spec, loop.points));
+  writeFileSync(target, packageText(spec, route));
   console.log(`Written: ${target}`);
   const check = spawnSync(process.execPath, [fileURLToPath(new URL('./build-store.mjs', import.meta.url)), '--root', resolve(opts.root), '--check', '--files-only'], { encoding: 'utf8' });
   console.log(`${check.stdout}${check.stderr}`.trim());

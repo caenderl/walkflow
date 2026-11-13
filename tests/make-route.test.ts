@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { readPackage, serializePackage } from '../src/core/routes/route-package';
 // @ts-expect-error plain script without types, run by node
-import { buildGraph, checkSpec, collapseSpurs, fillTexts, hav, lengthOf, loopAround, packageText, parseOsm, sampleRing, shortestPath, simplify } from '../scripts/make-route.mjs';
+import { buildGraph, checkSpec, collapseSpurs, dropLoops, fillTexts, hav, lengthOf, loopAround, packageText, parseOsm, routeVia, sampleRing, shortestPath, simplify, stopsOf } from '../scripts/make-route.mjs';
 
 type Pt = [number, number];
 const nodeIds = new Map<string, number>();
@@ -141,6 +141,60 @@ describe('loopAround', () => {
   });
 });
 
+describe('routeVia', () => {
+  /** A street 1.1 km long going east, with a footpath as a shortcut next to it and a side street that leads nowhere */
+  const street: Pt[] = [[52.5, 13.4], [52.5, 13.405], [52.5, 13.41]];
+  const side: Pt[] = [[52.5, 13.405], [52.503, 13.405]];
+  const STOPS: Pt[] = [[52.5, 13.4], [52.5, 13.405], [52.5, 13.41]];
+  const OPT = { snapDist: 40, tol: 2.5 };
+
+  it('goes from the first stop to the last, through the others, and is not a loop', () => {
+    const net = buildGraph([way(1, street, { highway: 'pedestrian' }), way(2, side, { highway: 'residential' })], STOPS, { corr: 300, pen: 200 });
+    const r = routeVia(STOPS, net, OPT);
+    expect(r.failed).toEqual([]);
+    expect(r.points[0]).toEqual([52.5, 13.4]);
+    expect(r.points[r.points.length - 1]).toEqual([52.5, 13.41]);
+    expect(lengthOf(r.points)).toBeGreaterThan(hav(STOPS[0]!, STOPS[2]!) * 0.99);
+    expect(lengthOf(r.points)).toBeLessThan(hav(STOPS[0]!, STOPS[2]!) * 1.01);
+  });
+
+  it('keeps to the street between the stops even when a stop is a few metres off it', () => {
+    const net = buildGraph([way(1, street, { highway: 'pedestrian' })], STOPS, { corr: 300, pen: 200 });
+    const r = routeVia([[52.50003, 13.4], [52.49997, 13.41]], net, OPT);
+    expect(r.points.every((p: Pt) => Math.abs(p[0] - 52.5) < 1e-5)).toBe(true);
+  });
+
+  it('says which stop has no path near it, instead of leaving the place out', () => {
+    const net = buildGraph([way(1, street, { highway: 'pedestrian' })], STOPS, { corr: 300, pen: 200 });
+    expect(() => routeVia([STOPS[0]!, [52.502, 13.405], STOPS[2]!], net, OPT)).toThrow(/Stop 2 .* is not within 40 m of a path/);
+  });
+
+  it('refuses a stop on a part of the network that is cut off from the rest, and stops that are one place', () => {
+    const net = buildGraph([way(1, street.slice(0, 2), { highway: 'pedestrian' }), way(2, [[52.5002, 13.4052], [52.5002, 13.41]], { highway: 'pedestrian' })],
+      STOPS, { corr: 300, pen: 200 });
+    // only the larger part of the graph is kept, so the stop on the other part has no path near it
+    expect(() => routeVia(STOPS, net, OPT)).toThrow(/not within/);
+    expect(() => routeVia([STOPS[0]!, STOPS[0]!], buildGraph([way(1, street, { highway: 'pedestrian' })], STOPS, { corr: 300, pen: 200 }), OPT)).toThrow(/same place/);
+  });
+
+  it('cuts out a short way out and back (a stop snapped to a side street), but keeps a long one', () => {
+    // nodes 1..6 are on a line 10 m apart; 7 is a side street end
+    const pos = new Map<number, Pt>([1, 2, 3, 4, 5, 6, 7].map((id, i) => [id, [52.5, 13.4 + i * 0.00015] as Pt]));
+    const net = { pos, adj: new Map(), names: new Map() };
+    expect(dropLoops([1, 2, 3, 2, 1, 4], net, 240)).toEqual([1, 4]);
+    expect(dropLoops([1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 7], net, 20)).toEqual([1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 7]);
+    // the length is measured as it was walked, so a long spur is cut only at its tip (here the last two nodes), not bit by bit all the way
+    expect(dropLoops([1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 7], net, 60)).toEqual([1, 2, 3, 4, 3, 2, 1, 7]);
+    expect(dropLoops([1, 2, 3, 2, 4], net, 240)).toEqual([1, 2, 4]);
+  });
+
+  it('takes the stops from "path", else from the waypoints', () => {
+    const wp = [{ at: [1, 2], name: { en: 'A' } }, { at: [3, 4], name: { en: 'B' } }];
+    expect(stopsOf({ waypoints: wp })).toEqual([[1, 2], [3, 4]]);
+    expect(stopsOf({ waypoints: wp, path: [[1, 2], [2, 3], [3, 4]] })).toHaveLength(3);
+  });
+});
+
 describe('texts and specs', () => {
   it('writes the numbers with a point in English and a comma in most other languages', () => {
     expect(fillTexts({ en: 'About {km} km ({mi} miles)', de: 'Rund {km} km', uk: '{km} км', ja: '{km} km' }, { km: 5.31, mi: 3.3 }))
@@ -169,6 +223,15 @@ describe('texts and specs', () => {
     bad(s => { s.name = { 'de-CH': 'x' } as never; }, /not a language code/);
     bad(s => { s.waypoints[0]!.text = { en: 'x'.repeat(301) }; }, /text.en has 301/);
     bad(s => { (s.waypoints[0] as { at?: unknown }).at = [52.5]; }, /\.at has to be/);
+  });
+
+  it('takes a route from one place to another when there is no "osm", and wants two places for it', () => {
+    const via = () => ({ file: 'test-walk', name: { en: 'Test Walk' }, waypoints: [{ at: [52.5, 13.4], name: { en: 'A' } }, { at: [52.5, 13.41], name: { en: 'B' } }] as { at: unknown; name: { en: string } }[] });
+    expect(() => checkSpec(via())).not.toThrow();
+    const one = via(); one.waypoints.pop();
+    expect(() => checkSpec(one)).toThrow(/at least two/);
+    const bad = { ...via(), path: [[52.5, 13.4], [52.5]] };
+    expect(() => checkSpec(bad)).toThrow(/stop 2 has to be/);
   });
 });
 
