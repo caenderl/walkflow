@@ -58,6 +58,8 @@ request; Dependabot keeps the GitHub Actions, which are pinned by commit, and th
   `ci`, `style`, `chore` do not appear in the release notes. Example: `fix(routes): keep the progress when a route is updated`.
 - **Safety first.** Code that decides what is sent to the treadmill (the app's `src/core/safety/`, and the library [`ftms-treadmill`](https://github.com/walkflow-app/ftms-treadmill), which has its own repository)
   gets its test first, and the change must not weaken a limit, a delay or a warning. If you are not sure, say so in the pull request.
+  The CI job `safety-gate` fails a pull request that changes `src/core/safety/` or `src/ui/live/` without changing a test, and warns
+  when such a change has no `safety` title or no update of HARDWARE-TESTS.md.
 - **Small and focused.** One change per pull request, with the tests that show it works.
 - **Through a pull request only.** `main` takes no direct pushes; a pull request is merged once CI (`test`) is green.
 - **Working with an AI agent?** `CLAUDE.md` holds the rules an agent needs (safety, hardware checks, texts, releases) and
@@ -69,6 +71,13 @@ request; Dependabot keeps the GitHub Actions, which are pinned by commit, and th
   they have the same shape. If you cannot write one of them, put a clear English text there and say so, and it will be fixed.
 - **Structure.** `docs/ARCHITECTURE.md` describes the layers. `npm test` checks them: lower layers do not import higher ones, nothing
   from sharing can reach the treadmill commands, and the pure layers have no DOM.
+
+## Agents on GitHub
+
+Every new pull request gets a review by AI agents (`.github/workflows/agent-review.yml`): they check what this repository's
+`CLAUDE.md` asks for and post one comment with their verdict. Maintainers can ask for more with `@claude …` in a comment, or hand
+over an issue with the label `agent-ready` (`.github/workflows/claude.yml`); agents never take on issues labelled `safety` and
+never merge. Pull requests from forks are not reviewed by agents.
 
 ## Adding a route to the route store
 
