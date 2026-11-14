@@ -79,6 +79,10 @@ Every new pull request gets a review by AI agents (`.github/workflows/agent-revi
 over an issue with the label `agent-ready` (`.github/workflows/claude.yml`); agents never take on issues labelled `safety` and
 never merge. Pull requests from forks are not reviewed by agents.
 
+On a schedule: `relays.yml` checks the pinned relays every Monday and opens an issue "Relay check failed" when one fails twice
+(no agent); `docs-check.yml` has an agent read the docs against the code once a month and list what is no longer true in an
+issue "Docs out of date". Neither changes code; a fix is a pull request like any other.
+
 ## Adding a route to the route store
 
 Routes are files in their own repository, [walkflow-app/route-store](https://github.com/walkflow-app/route-store), and a pull request there is

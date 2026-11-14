@@ -1,0 +1,53 @@
+name: Relays
+
+# Checks every week that the pinned relays for sharing (src/platform/relays.ts) still pass a short-lived event on, with
+# `npm run relays:check` (docs/P2P.md → Relays). A relay that fails twice, two minutes apart, opens one issue "Relay check
+# failed" (or adds a comment to the open one); when all work again, the issue gets a comment and is closed. No agent, no secret.
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: relays
+
+jobs:
+  relays:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Check the relays (a second time after two minutes if one fails)
+        id: check
+        run: |
+          if npm run --silent relays:check > out.txt 2>&1; then echo "ok=true" >> "$GITHUB_OUTPUT"; cat out.txt; exit 0; fi
+          cat out.txt; sleep 120
+          if npm run --silent relays:check > out.txt 2>&1; then echo "ok=true" >> "$GITHUB_OUTPUT"; else echo "ok=false" >> "$GITHUB_OUTPUT"; fi
+          cat out.txt
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OK: ${{ steps.check.outputs.ok }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Relay check failed"
+          open=$(gh issue list --state open --search "\"$title\" in:title" --json number,title -q ".[] | select(.title == \"$title\") | .number" | head -1)
+          body=$(printf '%s\n\n```\n%s\n```\n\n%s\n' "The weekly relay check ($RUN) failed twice." "$(cat out.txt)" \
+            "A relay that fails for a week or more needs a replacement: \`npm run relays:check -- --default\` lists the ones that work (docs/P2P.md → Relays). A rate limit or a short outage is no reason to drop one.")
+          if [ "$OK" = "true" ]; then
+            [ -n "$open" ] && gh issue close "$open" --comment "All pinned relays work again ($RUN)."
+          elif [ -n "$open" ]; then
+            gh issue comment "$open" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+          true
