@@ -198,6 +198,10 @@ The first `feat` or `fix` after setting this up leads to version 0.1.0. A releas
 
 Prepared in `electron-builder.config.cjs`: once the secrets `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` are set as environment variables in the release workflow, the app is signed with a Developer ID, Hardened Runtime is enabled and it is notarized. Without them, macOS is signed ad hoc (needed so Apple Silicon Macs start the app at all).
 
+## Roadmap
+
+What is being done on the app and its site, what comes next and what may come later: [ROADMAP.md](ROADMAP.md).
+
 ## Support
 
 Support this project on [Ko-fi](https://ko-fi.com/walkflowapp), the same link as the button under "Info, safety & privacy" in the app.
