@@ -1,7 +1,7 @@
 # Sharing between devices (peer to peer)
 
-Status: **off in the first release** (see below), design, the pure core (`src/core/share/`) and both package formats are in; the connection and the screens are
-still to do. The core was first written for sending to one person with a code and has been extended for the community mode below.
+Status: **off in the first release** (see below). The design, the pure core (`src/core/share/`), both package formats, the
+connection (`src/net/`) and the Community view are in; *Share with a code* and *Receive with a code* are still to do. The core was first written for sending to one person with a code and has been extended for the community mode below.
 
 ## Off in the first release
 
@@ -255,8 +255,8 @@ connection (`src/net/`), the relays and the content security policy, and what is
 
 1. **Screens**. Done: the Community view (switch with the notice, the room language, the list with filters and *Hide*, *Take* with
    confirmation; `ui/community/community.ts`) and *Share with the community* in the ⋯ menu of a route or workout (asked about
-   the first time, with a badge *Shared*). Still to do: *Share with a code* and *Receive with a code*. Texts in German,
-   English and French.
+   the first time, with a badge *Shared*). Still to do: *Share with a code* and *Receive with a code*. Texts in all four
+   languages (en, de, fr, uk).
 2. **Checks without hardware** in the app: two windows exchange a route through the screens; a wrong code, a closed view and
    a stopped sender end cleanly. The desktop app has to be checked too (WebRTC and the relays from Electron).
 
