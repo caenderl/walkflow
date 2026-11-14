@@ -141,7 +141,8 @@ WebRTC data channel, encrypted end to end. The code is in `src/net/`:
   security policy allows exactly these hosts for connections (`connect-src`), no wildcard; a test and the built page both
   show that another host is blocked. `npm run relays:check` publishes a short-lived event on each relay and listens on a
   second connection; run it now and then and before a release (`-- --default` tries all 29 relays the library knows, to
-  find a replacement). A relay can rate-limit after many tests from one address; it is not a reason to drop it.
+  find a replacement). The workflow `relays.yml` runs it every Monday and opens an issue when a relay fails twice. A relay can
+  rate-limit after many tests from one address; it is not a reason to drop it.
 - **STUN**: by default Google (three servers) and Cloudflare, to find out how the device can be reached. They see the IP
   address of the device, like in any WebRTC call. Overridable with `rtcConfig`.
 

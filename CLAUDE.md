@@ -71,7 +71,8 @@ npm run dev                                     # Demo (no treadmill) in the con
 - **"release"**: skill `release` (the whole chain, publishing included; it stops before publishing safety changes).
 - **On GitHub:** `agent-review.yml` runs the reviewers on every new pull request and posts their verdicts (comment
   `@claude review` to run it again); `claude.yml` takes on `@claude …` requests and issues labelled `agent-ready`, never ones
-  labelled `safety`. Both only work on branches and pull requests; a maintainer merges.
+  labelled `safety`. Both only work on branches and pull requests; a maintainer merges. Scheduled: `docs-check.yml` (monthly,
+  an issue "Docs out of date"), `relays.yml` (weekly, an issue when a relay fails twice).
 
 ## Never without being asked
 
