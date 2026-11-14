@@ -13,13 +13,14 @@ Cloned side by side in one folder, so relative paths like `../ftms-treadmill` wo
 | `walkflow` (this one) | The app (PWA and Electron) and the product page (`site/`) | |
 | `ftms-treadmill` | The library that drives the belt (FTMS, BLE, safety, start and stop) | The app pins an exact npm version. A library change reaches the app only through a library release and a version bump here; to try it before that, `npm run build` there and `npm link ../ftms-treadmill` here. |
 | `route-store` | Routes for the in-app store, and the tooling to make them | |
-| `meta` | Internal planning, private to the organisation's members: specs across repositories, decisions, the setup | Read the decisions before proposing bigger work. Never copy internal notes from there into this public repository. |
+| `meta` | Internal planning, private to the organisation's members: specs across repositories, decisions, the setup | Read the decisions before proposing bigger work. Never copy internal notes from there into this public repository without the maintainer agreeing. |
 | `walkflow-app.github.io` | The deployed site | **Build output only.** `.github/workflows/pages.yml` replaces it on every deploy. Never edit it; change `site/` (or the app) here. |
 
 ## Roadmap
 
-[ROADMAP.md](ROADMAP.md) is the public plan of this repository (*Now*, *Next*, *Later, maybe*). Only the maintainer moves
-something into *Now*. When a pull request finishes or drops a roadmap item, update the roadmap in the same pull request.
+[ROADMAP.md](ROADMAP.md) is the public plan of this repository (*Now*, *Next*, *Later, maybe*, *Done recently*). Only the
+maintainer moves something into *Now*. When a pull request finishes a roadmap item, move it to *Done recently* in the same
+pull request; when it drops one, remove it.
 
 ## Rules
 

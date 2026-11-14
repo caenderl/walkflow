@@ -10,15 +10,15 @@ a Sportstech sPad 500.
 
 ## Now
 
-- **Hardware checks still open.** 63 items in [HARDWARE-TESTS.md](HARDWARE-TESTS.md) are not ticked, among them *Not yet
-  tested*: heart rate, program transitions, reconnecting, **the belt on a lost connection**, stop on a standing belt. Needs a
+- **Hardware checks still open.** 63 items in [HARDWARE-TESTS.md](HARDWARE-TESTS.md) are not ticked, among them heart rate,
+  incline levels, program transitions, reconnecting, **the belt on a lost connection** and stop on a standing belt. Needs a
   real treadmill. `needs-hardware`
 
 ## Next
 
 - **Community (sharing between devices) for a release.** Built but switched off ([docs/P2P.md](docs/P2P.md)). Open before it
   goes live: one room for everyone instead of one per language, a message when a room is full, the number of connections
-  measured, a test with several real devices and from the desktop app, Ukrainian texts. `spec`
+  measured, a test with several real devices and from the desktop app. `spec`
 - **Share and receive with a code** (sending to one person), the other half of the screens in [docs/P2P.md](docs/P2P.md).
 - **Docs that are out of date:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) says `src/net/` is "not there yet";
   [docs/P2P.md](docs/P2P.md) lists the screens' texts in three languages.
@@ -27,7 +27,8 @@ a Sportstech sPad 500.
 
 - **Incline:** a percent per level, configurable (the real slope of a level is unknown).
 - **macOS app signed and notarized** (prepared in `electron-builder.config.cjs`, needs an Apple Developer ID).
-- **Community extras** ([docs/P2P.md → Later](docs/P2P.md#later-maybe)): a signed catalogue that marks items as verified,
+- **Community extras** ([docs/P2P.md → Later](docs/P2P.md#later-maybe),
+  [→ Who can connect](docs/P2P.md#who-can-connect-and-what-protects-what)): a signed catalogue that marks items as verified,
   signatures of authors, devices on the same network without a relay (mDNS), running together with live figures (never control
   of someone else's belt).
 - **Pictures at waypoints** of store routes ([docs/ROUTE-STORE.md → Later](docs/ROUTE-STORE.md#later-maybe)), together with the
