@@ -55,7 +55,7 @@ npm run dev                                     # Demo (no treadmill) in the con
 - The pull request title becomes the squash commit and must be a Conventional Commit; release-please makes the version and
   the changelog from it (table in README → *Versions and releases*). `safety` for limit, ramp, stop or warnings. Changes only
   to `site/` or the Pages workflow are `docs(site)` or `chore(site)`, never `feat(site)` (that would open a release).
-- `main` takes changes only through pull requests with CI (`test`) green.
+- `main` takes changes only through pull requests with CI (`test` and `safety-gate`) green.
 
 ## How work is done here
 
