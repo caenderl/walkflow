@@ -1,7 +1,8 @@
 # Sharing between devices (peer to peer)
 
 Status: **off in the first release** (see below). The design, the pure core (`src/core/share/`), both package formats, the
-connection (`src/net/`) and the Community view are in; *Share with a code* and *Receive with a code* are still to do. The core was first written for sending to one person with a code and has been extended for the community mode below.
+connection (`src/net/`) and the Community view are in; *Share with a code* and *Receive with a code* are still to do. The
+core was first written for sending to one person with a code and has been extended for the community mode below.
 
 ## Off in the first release
 
