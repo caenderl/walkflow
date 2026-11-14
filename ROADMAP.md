@@ -20,8 +20,6 @@ a Sportstech sPad 500.
   goes live: one room for everyone instead of one per language, a message when a room is full, the number of connections
   measured, a test with several real devices and from the desktop app. `spec`
 - **Share and receive with a code** (sending to one person), the other half of the screens in [docs/P2P.md](docs/P2P.md).
-- **Docs that are out of date:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) says `src/net/` is "not there yet";
-  [docs/P2P.md](docs/P2P.md) lists the screens' texts in three languages.
 
 ## Later, maybe
 
@@ -36,6 +34,8 @@ a Sportstech sPad 500.
 
 ## Done recently
 
+- 2026-11-14: docs out of date fixed ([#41](https://github.com/walkflow-app/walkflow/issues/41)): `src/net/` and the
+  Community view are built, texts in four languages.
 - 2026-11-13: 0.7.1 (`ended` comes once per run of the belt, ftms-treadmill 0.2.0); route tooling moved into the route store;
   the treadmill library in its own repository.
 - 2026-11-12: 0.6.0 and 0.7.0: treadmill control moved into ftms-treadmill; incline as levels, set only while the belt runs.

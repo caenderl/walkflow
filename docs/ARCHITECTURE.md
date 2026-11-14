@@ -22,7 +22,7 @@ src/
     history/            runs, statistics, CSV/TCX export
     id.ts               ids of things the person creates
   platform/           pure helpers around the shell: build settings, features that are on or off, version, the logic of the desktop update (two yeses, never while connected), CSP, MIME types, dev server address, opened files
-  net/                the connection to other people's devices for sharing (not there yet, see docs/P2P.md); never the treadmill
+  net/                the connection to other people's devices for sharing (built, off in the first release: platform/features.ts, docs/P2P.md); never the treadmill
   data/               IndexedDB storage (workouts, routes, runs)
   ui/                 everything that draws or listens
     components/         reusable parts: dialogs, the "⋯" menu, the speed chart, element builders (el, button, iconButton)
@@ -117,9 +117,9 @@ checkout of the library, then `npm link ../ftms-treadmill` here (`npm install` p
 
 ## Known debt (small, on purpose not done in one go)
 
-- `src/main.ts` (about 250 lines) only creates the parts and wires them together. Everything that drives the belt is behind
+- `src/main.ts` (about 280 lines) only creates the parts and wires them together. Everything that drives the belt is behind
   the Treadmill facade of `ftms-treadmill`; `ui/live/` only asks it and draws.
-- `ui/routes/route-ui.ts` (about 355 lines) still holds the library list, the card in the training view and the map switch;
-  `ui/workouts/workout-ui.ts` (about 270 lines) the library and the editor. The week plan, the step row, the elevation
+- `ui/routes/route-ui.ts` (about 390 lines) still holds the library list, the card in the training view and the map switch;
+  `ui/workouts/workout-ui.ts` (about 310 lines) the library and the editor. The week plan, the step row, the elevation
   profile, the import, the library upkeep, the route details and the route editor are their own modules. What is left in
   both files is mostly the list and its state, which is what they are for.

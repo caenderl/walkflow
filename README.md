@@ -142,7 +142,7 @@ Everything that drives the treadmill (FTMS protocol, Bluetooth, speed limit, ram
 
 ### Translations
 
-All texts live in `src/i18n/locales/en.ts`, `de.ts` and `fr.ts`. `en.ts` defines the structure; TypeScript and `src/i18n/i18n.test.ts` check that every language has every text and that every `data-i18n` key in `index.html` exists. Safety texts must keep the same meaning and strength in every language.
+All texts live in `src/i18n/locales/en.ts`, `de.ts`, `fr.ts` and `uk.ts`. `en.ts` defines the structure; TypeScript and `src/i18n/i18n.test.ts` check that every language has every text and that every `data-i18n` key in `index.html` exists. Safety texts must keep the same meaning and strength in every language.
 
 Adding a language: copy `src/i18n/locales/en.ts`, translate it, register it in `src/i18n/i18n.ts` (`LANGS`, `MESSAGES`), add legal pages under `public/legal/<lang>/` and, for the macOS Bluetooth prompt, `build/lproj/<lang>.lproj/InfoPlist.strings`.
 
@@ -150,7 +150,7 @@ The FTMS terms in the log (`Set Speed`, `Request Control` …) stay English in e
 
 ### Themes
 
-Every colour is a token at the top of `src/style.css`, defined once as `light-dark(light, dark)`. The theme only sets `color-scheme` (`data-theme` on `<html>`; none = follow the system), so form controls and scrollbars follow too. The chart reads the same tokens; the legal pages use a copy in `public/legal/legal.css`. `src/ui/theme.test.ts` checks that every token used is defined and that the main text and control colours reach WCAG contrast (4.5:1 for text, 3:1 for controls) in both themes. Alarm and stop stay strong red in both. A palette (`data-palette` on `<html>`, chosen in the settings dialog, stored as `walkflow.palette`) overrides only the tokens that change, again as `light-dark()`, so it works in light and dark; the tests run every palette, and fail if one changes the reds of Stop or the alarm. Standard is the tokens at the top; Lagoon and Candy are the blocks `:root[data-palette="…"]` below them. Candy also tints the cards of each part of the app (`--sec-*`, `--tint-*`). A new palette is one more block plus its name in `PALETTES` (`src/ui/theme.ts`) and in the three locale files.
+Every colour is a token at the top of `src/style.css`, defined once as `light-dark(light, dark)`. The theme only sets `color-scheme` (`data-theme` on `<html>`; none = follow the system), so form controls and scrollbars follow too. The chart reads the same tokens; the legal pages use a copy in `public/legal/legal.css`. `src/ui/theme.test.ts` checks that every token used is defined and that the main text and control colours reach WCAG contrast (4.5:1 for text, 3:1 for controls) in both themes. Alarm and stop stay strong red in both. A palette (`data-palette` on `<html>`, chosen in the settings dialog, stored as `walkflow.palette`) overrides only the tokens that change, again as `light-dark()`, so it works in light and dark; the tests run every palette, and fail if one changes the reds of Stop or the alarm. Standard is the tokens at the top; Lagoon and Candy are the blocks `:root[data-palette="…"]` below them. Candy also tints the cards of each part of the app (`--sec-*`, `--tint-*`). A new palette is one more block plus its name in `PALETTES` (`src/ui/theme.ts`) and in the four locale files.
 
 ## Publishing
 
